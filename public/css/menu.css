@@ -1,0 +1,46 @@
+
+/* Estilo base para el botón */
+.btn-AsignarRol {
+    display: block; /* Hace que todos los botones tengan el mismo ancho */
+    width: 100%; /* Ocupa todo el ancho del contenedor */
+    text-align: center; /* Centra el texto dentro del botón */
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #080606;
+    padding: 10px 15px; /* Espaciado interno */
+    margin: 5px 0; /* Espaciado entre botones */
+    border-radius: 5px; /* Bordes redondeados */
+    transition: all 0.3s ease; /* Animación suave */
+    font-weight: 500;
+}
+
+/* Efecto hover para el botón */
+.btn-AsignarRol:hover {
+    background-color: #000000;
+    color: white;
+    transform: scale(1.05); /* Efecto de crecimiento al pasar el mouse */
+}
+
+/* Estilo para la lista de submenú */
+.submenu {
+    list-style: none;
+    padding-left: 0;
+}
+
+.submenu-item {
+    display: flex;
+    align-items: center; /* Alinea el ícono con el texto */
+    padding: 8px 10px;
+}
+
+/* Espaciado entre el icono y el texto */
+.submenu-item i {
+    width: 20px;
+    text-align: center;
+    color: #000000;
+}
+
+/* Ajuste para que el texto del botón no tenga subrayado */
+.submenu-item a {
+    text-decoration: none;
+}

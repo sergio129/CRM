@@ -1,0 +1,193 @@
+/* Estilos generales */
+body {
+    background-color: #f4f6f9;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Barra lateral */
+.sidebar {
+    background: #519eeb;
+    padding: 20px;
+    color: rgb(0, 0, 0);
+    height: 100vh;
+}
+
+.sidebar h4 {
+    border-bottom: 2px solid #ffffff55;
+    padding-bottom: 10px;
+}
+
+.sidebar .list-group-item {
+    background: transparent;
+    border: none;
+    color: rgb(0, 0, 0);
+    font-size: 18px;
+}
+
+.sidebar .list-group-item:hover {
+    background: #babec2;
+}
+
+.sidebar a {
+    text-decoration: none;
+    color: rgb(0, 0, 0);
+}
+
+/* Tarjetas */
+.card {
+    border-radius: 10px;
+    transition: transform 0.3s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+/* Buscador de clientes */
+.search-box {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+
+/*Probando estilo en la tarjeta Carga clientes*/
+/* Estilo para la tarjeta */
+.card-custom {
+    background-color: #d8671c;
+    border-color: #000000;
+}
+
+/* Estilo para el título e ícono */
+.card-custom .card-title,
+.card-custom .fa-file-invoice-dollar {
+    color: #000000;
+}
+
+/* Estilo para el botón */
+.btn-custom {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #721c24;
+}
+
+.btn-custom:hover {
+    background-color: #000000;
+    color: white;
+}
+
+
+/*Probando estilo en la tarjeta Gestion nomina*/
+/* Estilo para la tarjeta */
+.card-nomina {
+    background-color: #e78a8a;
+    border-color: #000000;
+}
+
+/* Estilo para el título e ícono */
+.card-nomina .card-title,
+.card-nomina .fa-file-invoice-dollar {
+    color: #000000;
+}
+
+/* Estilo para el botón */
+.btn-outline-danger {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+}
+
+.btn-outline-danger:hover {
+    background-color: #000000;
+    color: white;
+}
+
+
+
+
+/*Probando estilo en la tarjeta Administrativo*/
+/* Estilo para la tarjeta */
+.card-admin {
+    background-color: #3665ff;
+    border-color: #000000;
+}
+
+/* Estilo para el título e ícono */
+.card-admin .card-title,
+.card-admin .fa-file-invoice-dollar {
+    color: #000000;
+}
+
+/* Estilo para el botón */
+.btn-outline-admin {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+}
+
+.btn-outline-admin:hover {
+    background-color: #000000;
+    color: white;
+}
+
+
+/*Probando estilo en la tarjeta Usuarios*/
+/* Estilo para la tarjeta */
+.card-user {
+    background-color: #155724;
+    border-color: #000000;
+}
+
+/* Estilo para el título e ícono */
+.card-user .card-title,
+.card-user .fa-file-invoice-dollar {
+    color: #ffffff;
+}
+
+/* Estilo para el botón */
+.btn-outline-user {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+}
+
+.btn-outline-user:hover {
+    background-color: #000000;
+    color: white;
+}
+
+
+
+/*Probando estilo en la tarjeta clientes*/
+/* Estilo para la tarjeta */
+.card-clientes {
+    background-color: #cea11a;
+    border-color: #000000;
+}
+
+/* Estilo para el título e ícono */
+.card-clientes .card-title,
+.card-clientes .fa-file-invoice-dollar {
+    color: #ffffff;
+}
+
+/* Estilo para el botón */
+.btn-outline-clientes {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+}
+
+.btn-outline-clientes:hover {
+    background-color: #000000;
+    color: white;
+}

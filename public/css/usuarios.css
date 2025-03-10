@@ -1,0 +1,66 @@
+body {
+    background-color: #f4f6f9;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Navbar */
+.navbar {
+    margin-bottom: 20px;
+}
+
+/* Tabla de Usuarios */
+.table {
+    margin-top: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table th {
+    background-color: #343a40;
+    color: white;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Botón de búsqueda */
+.btn-primary {
+    width: 100%;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+
+
+
+/* Barra lateral */
+.sidebar {
+    background: #519eeb;
+    padding: 20px;
+    color: rgb(0, 0, 0);
+    height: 100vh;
+}
+
+.sidebar h4 {
+    border-bottom: 2px solid #ffffff55;
+    padding-bottom: 10px;
+}
+
+.sidebar .list-group-item {
+    background: transparent;
+    border: none;
+    color: rgb(0, 0, 0);
+    font-size: 18px;
+}
+
+.sidebar .list-group-item:hover {
+    background: #babec2;
+}
+
+.sidebar a {
+    text-decoration: none;
+    color: rgb(0, 0, 0);
+}
