@@ -160,10 +160,7 @@ async function saveEmployee() {
         hire_date: formattedHireDate,
         contract_type: document.getElementById("contractType").value,
         work_schedule: document.getElementById("workSchedule").value,
-        status: document.getElementById("status").value,
-        bank_account_number: document.getElementById("bankAccountNumber").value,
-        bank_account_type: document.getElementById("bankAccountType").value,
-        bank_name: document.getElementById("bankName").value
+        status: document.getElementById("status").value
     };
 
     try {
@@ -347,46 +344,73 @@ function uploadExcel() {
                 hire_date: employee["Fecha de Ingreso"],
                 contract_type: employee["Tipo de Contrato"],
                 work_schedule: employee["Horario de Trabajo"],
-                status: employee["Estado"],
-                bank_account_number: employee["Número de cuenta bancaria"],
-                bank_account_type: employee["Tipo de cuenta"],
-                bank_name: employee["Banco"]
+                status: employee["Estado"]
             };
 
             try {
-                const response = await fetch('/api/employees', {
-                    method: 'POST',
+                const existingEmployeeResponse = await fetch(`/api/employees?email=${employeeData.email}`, {
+                    method: 'GET',
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${localStorage.getItem("token")}`
-                    },
-                    body: JSON.stringify(employeeData),
+                    }
                 });
 
-                if (!response.ok) {
-                    throw new Error("Error al guardar el empleado desde Excel");
+                if (existingEmployeeResponse.ok) {
+                    const existingEmployee = await existingEmployeeResponse.json();
+                    if (existingEmployee) {
+                        // Actualizar empleado existente
+                        const updateResponse = await fetch(`/api/employees/${existingEmployee.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                            },
+                            body: JSON.stringify(employeeData),
+                        });
+
+                        if (!updateResponse.ok) {
+                            throw new Error("Error al actualizar el empleado desde Excel");
+                        }
+
+                        console.log(`Empleado ${employeeData.full_name} actualizado correctamente`);
+                    } else {
+                        // Crear nuevo empleado
+                        const createResponse = await fetch('/api/employees', {
+                            method: 'POST',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                            },
+                            body: JSON.stringify(employeeData),
+                        });
+
+                        if (!createResponse.ok) {
+                            throw new Error("Error al guardar el empleado desde Excel");
+                        }
+
+                        const savedEmployee = await createResponse.json();
+
+                        // Guardar información bancaria
+                        const bankInfoData = {
+                            employee_id: savedEmployee.id,
+                            bank_account_number: employee["Número de cuenta bancaria"],
+                            bank_account_type: employee["Tipo de cuenta"],
+                            bank_name: employee["Banco"]
+                        };
+
+                        await fetch('/api/bank_info', {
+                            method: 'POST',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                            },
+                            body: JSON.stringify(bankInfoData),
+                        });
+
+                        console.log(`Empleado ${employeeData.full_name} guardado correctamente`);
+                    }
                 }
-
-                const savedEmployee = await response.json();
-
-                // Guardar información bancaria
-                const bankInfoData = {
-                    employee_id: savedEmployee.id,
-                    bank_account_number: employee["Número de cuenta bancaria"],
-                    bank_account_type: employee["Tipo de cuenta"],
-                    bank_name: employee["Banco"]
-                };
-
-                await fetch('/api/bank_info', {
-                    method: 'POST',
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${localStorage.getItem("token")}`
-                    },
-                    body: JSON.stringify(bankInfoData),
-                });
-
-                console.log(`Empleado ${employeeData.full_name} guardado correctamente`);
             } catch (error) {
                 console.error(`Error al guardar el empleado ${employeeData.full_name}:`, error);
             }
