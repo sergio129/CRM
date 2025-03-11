@@ -45,21 +45,26 @@
     <div class="container mt-4">
         <h2 class="text-center">Gestión de Empleados</h2>
 
-        <!-- Botón para crear empleado -->
-        <button id="createEmployeeButton" class="btn btn-success mb-3">Crear Empleado</button>
-        <!-- Botón para redirigir a la página de nómina -->
-        <button id="goToPayrollButton" class="btn btn-primary mb-3" onclick="window.location.href='/nomina.html'">Ir a Nómina</button>
-        <!-- Botón para redirigir a la página de dashboard -->
-        <button id="goToDashboardButton" class="btn btn-secondary mb-3" onclick="window.location.href='/dashboard.html'">Ir a Dashboard</button>
-        <!-- Botón para cargar empleados desde Excel -->
-        <button id="uploadExcelButton" class="btn btn-info mb-3" onclick="document.getElementById('excelFileInput').click()">Cargar Empleados desde Excel</button>
-        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="uploadExcel()">
+        <!-- Botones de acciones -->
+        <div class="d-flex justify-content-between mb-3">
+            <div>
+                <button id="createEmployeeButton" class="btn btn-success">Crear Empleado</button>
+                <button id="deleteSelectedButton" class="btn btn-danger">Eliminar Seleccionados</button>
+            </div>
+            <div>
+                <button id="goToPayrollButton" class="btn btn-primary" onclick="window.location.href='/nomina.html'">Ir a Nómina</button>
+                <button id="goToDashboardButton" class="btn btn-secondary" onclick="window.location.href='/dashboard.html'">Ir a Dashboard</button>
+                <button id="uploadExcelButton" class="btn btn-info" onclick="document.getElementById('excelFileInput').click()">Cargar Empleados desde Excel</button>
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="uploadExcel()">
+            </div>
+        </div>
 
         <!-- Tabla de Empleados -->
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
+                        <th><input type="checkbox" id="selectAllCheckbox"></th>
                         <th>ID</th>
                         <th>Nombre Completo</th>
                         <th>Email</th>
@@ -74,6 +79,11 @@
                 <tbody id="employeeTableBody"></tbody>
             </table>
         </div>
+
+        <!-- Paginación -->
+        <nav>
+            <ul class="pagination justify-content-center" id="pagination"></ul>
+        </nav>
     </div>
 
     <!-- Modal para crear/editar empleado -->
@@ -205,6 +215,25 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                     <button type="button" class="btn btn-primary" onclick="saveBankInfo()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para eliminar empleados seleccionados -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Eliminar Empleados Seleccionados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar los empleados seleccionados?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteSelectedEmployees()">Eliminar</button>
                 </div>
             </div>
         </div>

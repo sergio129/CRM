@@ -1,14 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
-    loadEmployees();
+    loadEmployees(1); // Cargar la primera página de empleados
     loadRoles(); // Cargar roles al cargar la página
     loadIdTypes(); // Cargar tipos de identificación al cargar la página
 
     document.getElementById("createEmployeeButton").addEventListener("click", openEmployeeModal);
+    document.getElementById("deleteSelectedButton").addEventListener("click", openDeleteModal);
+    document.getElementById("selectAllCheckbox").addEventListener("change", toggleSelectAll);
 });
 
-async function loadEmployees() {
+async function loadEmployees(page = 1) {
     try {
-        const response = await fetch('/api/employees', {
+        const response = await fetch(`/api/employees?page=${page}&limit=30`, {
             method: "GET",
             headers: { 
                 "Content-Type": "application/json",
@@ -17,20 +19,23 @@ async function loadEmployees() {
         });
 
         if (!response.ok) {
-            throw new Error("Error al obtener empleados.");
+            const errorText = await response.text();
+            throw new Error(`Error al obtener empleados: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
-        const employees = await response.json();
+        const { employees, totalPages } = await response.json();
         renderEmployees(employees);
+        renderPagination(totalPages, page);
     } catch (error) {
         console.error("Error al obtener empleados:", error);
-        alert("Error al obtener empleados.");
+        alert("Error al obtener empleados: " + error.message);
     }
 }
 
 function renderEmployees(employees) {
     const html = employees.map(employee => `
         <tr>
+            <td><input type="checkbox" class="employee-checkbox" value="${employee.id}"></td>
             <td>${employee.id}</td>
             <td>${employee.full_name}</td>
             <td>${employee.email}</td>
@@ -49,6 +54,61 @@ function renderEmployees(employees) {
     `).join("");
 
     document.getElementById("employeeTableBody").innerHTML = html;
+}
+
+function renderPagination(totalPages, currentPage) {
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadEmployees(${i})">${i}</a>
+                 </li>`;
+    }
+    document.getElementById("pagination").innerHTML = html;
+}
+
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.employee-checkbox');
+    const selectAll = document.getElementById('selectAllCheckbox').checked;
+    checkboxes.forEach(checkbox => checkbox.checked = selectAll);
+    if (selectAll) {
+        openDeleteModal();
+    }
+}
+
+function openDeleteModal() {
+    const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked')).map(checkbox => checkbox.value);
+    if (selectedIds.length === 0) {
+        alert("Por favor, seleccione al menos un empleado para eliminar.");
+        return;
+    }
+    new bootstrap.Modal(document.getElementById("deleteModal")).show();
+}
+
+async function deleteSelectedEmployees() {
+    const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked')).map(checkbox => checkbox.value);
+
+    if (!confirm("¿Estás seguro de eliminar los empleados seleccionados?")) return;
+
+    try {
+        const response = await fetch('/api/employees/bulk-delete', {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({ ids: selectedIds }),
+        });
+
+        if (!response.ok) {
+            throw new Error("Error al eliminar los empleados seleccionados");
+        }
+
+        alert("Empleados eliminados correctamente");
+        loadEmployees();
+    } catch (error) {
+        console.error("Error al eliminar los empleados seleccionados:", error);
+        alert("Error al eliminar los empleados seleccionados");
+    }
 }
 
 async function loadRoles() {
@@ -255,7 +315,8 @@ async function deleteEmployee(employeeId) {
     }
 }
 
-async function saveBankInfo(employeeId) {
+async function saveBankInfo() {
+    const employeeId = document.getElementById("employeeId").value;
     const bankInfoData = {
         employee_id: employeeId,
         bank_account_number: document.getElementById("bankAccountNumber").value,
@@ -374,6 +435,24 @@ function uploadExcel() {
                         }
 
                         console.log(`Empleado ${employeeData.full_name} actualizado correctamente`);
+
+                        // Guardar información bancaria
+                        const bankInfoData = {
+                            employee_id: existingEmployee.id,
+                            bank_account_number: employee["Número de cuenta bancaria"],
+                            bank_account_type: employee["Tipo de cuenta"],
+                            bank_name: employee["Banco"]
+                        };
+
+                        await fetch('/api/bank_info', {
+                            method: 'POST',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                            },
+                            body: JSON.stringify(bankInfoData),
+                        });
+
                     } else {
                         // Crear nuevo empleado
                         const createResponse = await fetch('/api/employees', {

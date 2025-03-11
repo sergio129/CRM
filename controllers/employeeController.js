@@ -2,11 +2,18 @@ const Employee = require('../models/Employee');
 const { validationResult } = require('express-validator');
 
 exports.getEmployees = async (req, res) => {
+    const { page = 1, limit = 30 } = req.query;
+    const offset = (page - 1) * limit;
+
     try {
-        const employees = await Employee.findAll({
-            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule']
+        const { count, rows: employees } = await Employee.findAndCountAll({
+            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule'],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
         });
-        res.json(employees);
+
+        const totalPages = Math.ceil(count / limit);
+        res.json({ employees, totalPages });
     } catch (error) {
         console.error("Error al obtener empleados:", error);
         res.status(500).json({ message: "Error al obtener empleados", error });
@@ -105,5 +112,20 @@ exports.deleteEmployee = async (req, res) => {
     } catch (error) {
         console.error("Error al eliminar el empleado:", error);
         res.status(500).json({ message: "Error al eliminar el empleado", error });
+    }
+};
+
+exports.bulkDeleteEmployees = async (req, res) => {
+    const { ids } = req.body;
+    try {
+        await Employee.destroy({
+            where: {
+                id: ids
+            }
+        });
+        res.json({ message: "Empleados eliminados correctamente" });
+    } catch (error) {
+        console.error("Error al eliminar los empleados:", error);
+        res.status(500).json({ message: "Error al eliminar los empleados", error });
     }
 };
