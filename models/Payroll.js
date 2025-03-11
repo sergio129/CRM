@@ -1,23 +1,18 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../utils/database');
-const Employee = require('./Employee');
+const sequelize = require('../config/database');
 
 const Payroll = sequelize.define('Payroll', {
     id: {
         type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true
+        primaryKey: true,
+        autoIncrement: true
     },
-    employee_id: { // Agregar la columna employee_id
+    employee_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Employee,
-            key: 'id'
-        }
+        allowNull: false
     },
     salary: {
-        type: DataTypes.FLOAT,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },
     payment_date: {
@@ -25,14 +20,13 @@ const Payroll = sequelize.define('Payroll', {
         allowNull: false
     },
     status: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.ENUM('Pendiente', 'Pagado', 'Anulado'),
+        defaultValue: 'Pendiente'
     }
 }, {
     timestamps: false,
-    tableName: 'payrolls'
+    tableName: 'payrolls',
+    underscored: true
 });
-
-Payroll.belongsTo(Employee, { foreignKey: 'employee_id' });
 
 module.exports = Payroll;

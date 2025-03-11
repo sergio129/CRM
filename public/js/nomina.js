@@ -120,40 +120,104 @@ function openCreatePayrollModal() {
     modal.show();
 }
 
+function validateAndSavePayroll() {
+    const form = document.getElementById("payrollForm");
+    const inputs = form.querySelectorAll("input[required], select[required]");
+    let isValid = true;
+
+    inputs.forEach(input => {
+        if (!input.checkValidity()) {
+            input.classList.add("is-invalid");
+            isValid = false;
+        } else {
+            input.classList.remove("is-invalid");
+        }
+    });
+
+    if (isValid) {
+        savePayroll();
+    } else {
+        showToast("Por favor, complete todos los campos requeridos");
+    }
+}
+
 async function savePayroll() {
-    const payrollId = document.getElementById("payrollId").value;
-    const url = payrollId ? `/api/payrolls/${payrollId}` : "/api/payrolls";
-    const method = payrollId ? "PUT" : "POST";
-
-    const payrollData = {
-        employee_id: document.getElementById("employeeId").value,
-        salary: document.getElementById("salary").value,
-        payment_date: document.getElementById("paymentDate").value,
-        status: document.getElementById("status").value,
-    };
-
     try {
-        const response = await fetch(url, {
-            method,
+        const payrollData = {
+            employee_id: document.getElementById("employeeId").value,
+            periodo: document.getElementById("periodo").value,
+            tipo_pago: document.getElementById("tipoPago").value,
+            dias_trabajados: document.getElementById("diasTrabajados").value,
+            salario_base: document.getElementById("salarioBase").value, // Asegurarse de usar salario_base
+            horas_extras: document.getElementById("horasExtras").value,
+            valor_horas_extras: document.getElementById("valorHorasExtras").value,
+            bonificaciones: document.getElementById("bonificaciones").value,
+            comisiones: document.getElementById("comisiones").value,
+            prestamos: document.getElementById("prestamos").value,
+            otros_descuentos: document.getElementById("otrosDescuentos").value,
+            total_ingresos: document.getElementById("totalIngresos").value,
+            total_deducciones: document.getElementById("totalDeducciones").value,
+            neto_pagar: document.getElementById("netoPagar").value
+        };
+
+        const response = await fetch('/api/payrolls', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify(payrollData),
+            body: JSON.stringify(payrollData)
         });
 
         if (!response.ok) {
-            throw new Error("Error al guardar la nómina");
+            throw new Error('Error al guardar la nómina');
         }
 
-        const data = await response.json();
-        alert(`Nómina ${payrollId ? "actualizada" : "creada"} correctamente`);
-        loadPayrolls();
-        const modal = bootstrap.Modal.getInstance(document.getElementById("payrollModal"));
+        const result = await response.json();
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('payrollModal'));
         modal.hide();
+        
+        // Mostrar mensaje de éxito
+        showToast("Nómina creada correctamente");
+        
+        // Generar y descargar PDF
+        await generatePayrollPDF(result.payroll.id);
+        
+        // Recargar la lista de nóminas
+        loadPayrolls();
     } catch (error) {
-        console.error("Error al guardar la nómina:", error);
-        alert("Error al guardar la nómina");
+        console.error('Error:', error);
+        showToast('Error al guardar la nómina: ' + error.message);
+    }
+}
+
+async function generatePayrollPDF(payrollId) {
+    try {
+        const response = await fetch(`/api/payrolls/${payrollId}/pdf`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al generar el PDF');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nomina-${payrollId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error al generar PDF:', error);
+        showToast('Error al generar PDF: ' + error.message);
     }
 }
 
@@ -173,7 +237,7 @@ async function editPayroll(payrollId) {
         const payroll = await response.json();
 
         if (payroll.status === 'Pagado') {
-            alert("No se puede editar una nómina que ya ha sido pagada.");
+            showToast("No se puede editar una nómina que ya ha sido pagada.");
             return;
         }
 
@@ -181,13 +245,13 @@ async function editPayroll(payrollId) {
         document.getElementById("payrollId").value = payroll.id;
         document.getElementById("employeeId").value = payroll.employee_id;
         document.getElementById("salary").value = payroll.salary;
-        document.getElementById("paymentDate").value = payroll.payment_date.split('T')[0]; // Formatear la fecha
+        document.getElementById("paymentDate").value = payroll.payment_date.split('T')[0];
         document.getElementById("status").value = payroll.status;
 
         new bootstrap.Modal(document.getElementById("payrollModal")).show();
     } catch (error) {
         console.error("Error al editar la nómina:", error);
-        alert("Error al editar la nómina");
+        showToast("Error al editar la nómina: " + error.message);
     }
 }
 

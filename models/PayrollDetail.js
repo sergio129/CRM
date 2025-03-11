@@ -172,6 +172,9 @@ const PayrollDetail = sequelize.define('PayrollDetail', {
     observaciones: {
         type: DataTypes.TEXT
     }
+}, {
+    timestamps: false, // Deshabilitar timestamps
+    tableName: 'payroll_details'
 });
 
 // Establecer relaciones

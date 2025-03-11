@@ -36,13 +36,13 @@ function renderEmployees(employees) {
     const html = employees.map(employee => `
         <tr>
             <td><input type="checkbox" class="employee-checkbox" value="${employee.id}"></td>
-            <td>${employee.id_number}</td> <!-- Mostrar número de identificación -->
+            <td>${employee.id_number}</td>
             <td>${employee.full_name}</td>
             <td>${employee.email}</td>
             <td>${employee.phone}</td>
             <td>${employee.address}</td>
             <td>${employee.role}</td>
-            <td>${employee.salary}</td>
+            <td>${employee.salario_base}</td>
             <td>${employee.status}</td>
             <td>
                 <div class="d-flex justify-content-between">
@@ -231,7 +231,7 @@ async function saveEmployee() {
         phone: document.getElementById("phone").value,
         address: document.getElementById("address").value,
         role: document.getElementById("role").value,
-        salary: document.getElementById("salary").value,
+        salario_base: document.getElementById("salary").value, // Cambiar salary por salario_base
         id_type_id: document.getElementById("idType").value,
         id_number: document.getElementById("idNumber").value,
         department: document.getElementById("department").value,
@@ -290,7 +290,7 @@ async function editEmployee(employeeId) {
         document.getElementById("phone").value = employee.phone;
         document.getElementById("address").value = employee.address;
         document.getElementById("role").value = employee.role;
-        document.getElementById("salary").value = employee.salary;
+        document.getElementById("salary").value = employee.salario_base; // Cambiar salary por salario_base
         document.getElementById("idType").value = employee.id_type_id;
         document.getElementById("idNumber").value = employee.id_number;
         document.getElementById("department").value = employee.department;

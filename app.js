@@ -10,12 +10,21 @@ const employeeRoutes = require('./routes/employeeRoutes'); // Importa las rutas 
 const idTypeRoutes = require('./routes/idTypeRoutes'); // Importa las rutas de tipos de identificación
 const bankInfoRoutes = require('./routes/bankInfoRoutes'); // Importa las rutas de información bancaria
 const errorHandler = require('./middleware/errorHandler');
-const sequelize = require('./utils/database');
+const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
 
 dotenv.config();
 
 const app = express();
+
+// Probar conexión
+sequelize.authenticate()
+    .then(() => {
+        console.log('Conexión a la base de datos establecida correctamente.');
+    })
+    .catch(err => {
+        console.error('No se pudo conectar a la base de datos:', err);
+    });
 
 // Configuración de CORS
 app.use(
@@ -29,6 +38,9 @@ app.use(
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.static('public'));
+
+// IMPORTANTE: Importar los modelos y sus relaciones antes de las rutas
+require('./models/index');
 
 // Rutas
 app.use('/api/auth', authRoutes);

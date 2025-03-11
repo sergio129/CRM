@@ -7,7 +7,12 @@ exports.getEmployees = async (req, res) => {
 
     try {
         const { count, rows: employees } = await Employee.findAndCountAll({
-            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule'],
+            attributes: [
+                'id', 'full_name', 'email', 'phone', 'address', 'role', 
+                ['salario_base', 'salary'], // Mapear salario_base a salary en la respuesta
+                'status', 'id_type_id', 'id_number', 'department', 
+                'position', 'hire_date', 'contract_type', 'work_schedule'
+            ],
             limit: parseInt(limit),
             offset: parseInt(offset)
         });
