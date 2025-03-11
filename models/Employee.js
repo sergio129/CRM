@@ -66,7 +66,8 @@ const Employee = sequelize.define('Employee', {
     },
     tipo_contrato: {
         type: DataTypes.ENUM('Indefinido', 'Fijo', 'Obra', 'Aprendizaje'),
-        allowNull: false
+        allowNull: true, // Cambiado a true para permitir NULL
+        defaultValue: 'Indefinido'
     },
     salario_base: {
         type: DataTypes.DECIMAL(10, 2),

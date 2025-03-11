@@ -9,8 +9,9 @@ exports.getPayrolls = async (req, res) => {
         const payrolls = await Payroll.findAll({
             include: [{
                 model: Employee,
-                required: true,
-                attributes: ['full_name', 'id_number']
+                as: 'Employee',
+                attributes: ['full_name', 'id_number'],
+                required: true
             }],
             attributes: ['id', 'employee_id', 'salary', 'payment_date', 'status']
         });
@@ -31,6 +32,7 @@ exports.getPayrollById = async (req, res) => {
             include: [
                 {
                     model: Employee,
+                    as: 'Employee', // Agregar el alias aquí
                     attributes: ['id', 'full_name', 'id_number']
                 }
             ]
@@ -88,9 +90,10 @@ exports.createPayroll = async (req, res) => {
             status: 'Pendiente'
         });
 
-        // Crear el detalle de la nómina
+        // Crear el detalle de la nómina con el payroll_id
         const payrollDetail = await PayrollDetail.create({
             employee_id,
+            payroll_id: payroll.id, // Agregar esta línea
             periodo,
             fecha_pago: new Date(),
             dias_trabajados,
@@ -160,15 +163,14 @@ exports.deletePayroll = async (req, res) => {
 
 exports.generatePayrollPDF = async (req, res) => {
     try {
-        const payroll = await Payroll.findByPk(req.params.id, {
+        const payroll = await Payroll.findOne({
+            where: { id: req.params.id },
             include: [
                 {
                     model: Employee,
+                    as: 'Employee',
+                    required: true,
                     attributes: ['full_name', 'id_number']
-                },
-                {
-                    model: PayrollDetail,
-                    required: false
                 }
             ]
         });
@@ -177,10 +179,18 @@ exports.generatePayrollPDF = async (req, res) => {
             return res.status(404).json({ message: "Nómina no encontrada" });
         }
 
+        // Buscar el detalle de la nómina
+        const payrollDetail = await PayrollDetail.findOne({
+            where: { employee_id: payroll.employee_id }
+        });
+
+        // Función auxiliar para formatear números
+        const formatNumber = (value) => {
+            return Number(value || 0).toFixed(2);
+        };
+
         // Crear PDF
         const doc = new PDFDocument();
-        
-        // Configurar respuesta
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=nomina-${payroll.id}.pdf`);
         doc.pipe(res);
@@ -190,42 +200,55 @@ exports.generatePayrollPDF = async (req, res) => {
         doc.moveDown();
 
         // Información del empleado
-        doc.fontSize(12).text(`Empleado: ${payroll.Employee.full_name}`);
-        doc.text(`Documento: ${payroll.Employee.id_number}`);
-        doc.text(`Período: ${payroll.PayrollDetail.periodo}`);
-        doc.moveDown();
+        doc.fontSize(12)
+           .text(`Empleado: ${payroll.Employee.full_name}`)
+           .text(`Documento: ${payroll.Employee.id_number}`)
+           .text(`Fecha de Pago: ${new Date(payroll.payment_date).toLocaleDateString()}`);
 
-        // Ingresos
-        doc.fontSize(14).text('Ingresos', { underline: true });
-        doc.fontSize(12).text(`Salario Base: $${payroll.PayrollDetail.salario_base}`);
-        doc.text(`Horas Extras: $${payroll.PayrollDetail.valor_hora_extra_diurna}`);
-        doc.text(`Bonificaciones: $${payroll.PayrollDetail.bonificaciones}`);
-        doc.text(`Comisiones: $${payroll.PayrollDetail.comisiones}`);
-        doc.text(`Total Ingresos: $${payroll.PayrollDetail.total_ingresos}`);
-        doc.moveDown();
+        if (payrollDetail) {
+            doc.text(`Período: ${payrollDetail.periodo || 'N/A'}`);
+            doc.moveDown();
 
-        // Deducciones
-        doc.fontSize(14).text('Deducciones', { underline: true });
-        doc.fontSize(12).text(`Salud: $${payroll.PayrollDetail.aporte_salud_empleado}`);
-        doc.text(`Pensión: $${payroll.PayrollDetail.aporte_pension_empleado}`);
-        doc.text(`Préstamos: $${payroll.PayrollDetail.prestamos}`);
-        doc.text(`Otros Descuentos: $${payroll.PayrollDetail.otros_descuentos}`);
-        doc.text(`Total Deducciones: $${payroll.PayrollDetail.total_deducciones}`);
-        doc.moveDown();
+            // Ingresos
+            doc.fontSize(14).text('Ingresos', { underline: true });
+            doc.fontSize(12)
+               .text(`Salario Base: $${formatNumber(payroll.salary)}`)
+               .text(`Horas Extras: $${formatNumber(payrollDetail.valor_hora_extra_diurna)}`)
+               .text(`Bonificaciones: $${formatNumber(payrollDetail.bonificaciones)}`)
+               .text(`Comisiones: $${formatNumber(payrollDetail.comisiones)}`)
+               .text(`Total Ingresos: $${formatNumber(payrollDetail.total_ingresos)}`);
+            doc.moveDown();
 
-        // Neto a Pagar
-        doc.fontSize(16).text(`Neto a Pagar: $${payroll.PayrollDetail.neto_pagar}`, { underline: true });
+            // Deducciones
+            doc.fontSize(14).text('Deducciones', { underline: true });
+            doc.fontSize(12)
+               .text(`Salud: $${formatNumber(payrollDetail.aporte_salud_empleado)}`)
+               .text(`Pensión: $${formatNumber(payrollDetail.aporte_pension_empleado)}`)
+               .text(`Préstamos: $${formatNumber(payrollDetail.prestamos)}`)
+               .text(`Otros Descuentos: $${formatNumber(payrollDetail.otros_descuentos)}`)
+               .text(`Total Deducciones: $${formatNumber(payrollDetail.total_deducciones)}`);
+            doc.moveDown();
+
+            // Neto a Pagar
+            doc.fontSize(16).text(`Neto a Pagar: $${formatNumber(payrollDetail.neto_pagar)}`, { underline: true });
+        }
 
         // Firmas
         doc.moveDown(4);
-        doc.fontSize(12).text('_______________________', { align: 'left' });
-        doc.text('Firma Empleador', { align: 'left' });
-        doc.text('_______________________', { align: 'right' });
-        doc.text('Firma Empleado', { align: 'right' });
+        doc.fontSize(12)
+           .text('_______________________', { align: 'left' })
+           .text('Firma Empleador', { align: 'left' })
+           .moveDown()
+           .text('_______________________', { align: 'right' })
+           .text('Firma Empleado', { align: 'right' });
 
+        // Finalizar PDF
         doc.end();
     } catch (error) {
         console.error("Error al generar PDF:", error);
-        res.status(500).json({ message: "Error al generar PDF", error: error.message });
+        res.status(500).json({ 
+            message: "Error al generar PDF", 
+            error: error.message 
+        });
     }
 };

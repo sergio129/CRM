@@ -25,8 +25,7 @@ const Payroll = sequelize.define('Payroll', {
     }
 }, {
     timestamps: false,
-    tableName: 'payrolls',
-    underscored: true
+    tableName: 'payrolls'
 });
 
 module.exports = Payroll;

@@ -12,7 +12,15 @@ const PayrollDetail = sequelize.define('PayrollDetail', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Employee,
+            model: 'employees',
+            key: 'id'
+        }
+    },
+    payroll_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,  // Cambiar a true
+        references: {
+            model: 'payrolls',
             key: 'id'
         }
     },
@@ -176,8 +184,5 @@ const PayrollDetail = sequelize.define('PayrollDetail', {
     timestamps: false, // Deshabilitar timestamps
     tableName: 'payroll_details'
 });
-
-// Establecer relaciones
-PayrollDetail.belongsTo(Employee, { foreignKey: 'employee_id' });
 
 module.exports = PayrollDetail;

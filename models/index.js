@@ -8,11 +8,21 @@ const PayrollDetail = require('./PayrollDetail');
 const PayrollLoan = require('./PayrollLoan');
 
 // Establecer relaciones
-// IMPORTANTE: Las asociaciones deben definirse antes de exportar los modelos
-Employee.hasMany(Payroll, { foreignKey: 'employee_id' });
-Payroll.belongsTo(Employee, { foreignKey: 'employee_id' });
+Payroll.belongsTo(Employee, { 
+    foreignKey: 'employee_id',
+    as: 'Employee'
+});
 
-// Exportar modelos
+Employee.hasMany(Payroll, { 
+    foreignKey: 'employee_id'
+});
+
+Employee.hasMany(PayrollDetail, { foreignKey: 'employee_id' });
+PayrollDetail.belongsTo(Employee, { foreignKey: 'employee_id' });
+
+Employee.hasMany(PayrollLoan, { foreignKey: 'employee_id' });
+PayrollLoan.belongsTo(Employee, { foreignKey: 'employee_id' });
+
 module.exports = {
     sequelize,
     Employee,

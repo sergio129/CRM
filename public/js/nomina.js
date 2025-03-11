@@ -241,14 +241,39 @@ async function editPayroll(payrollId) {
             return;
         }
 
+        // Cargar datos en el formulario
+        const form = document.getElementById("payrollForm");
+        
+        // Limpiar el formulario antes de cargar los nuevos datos
+        form.reset();
+
+        // Establecer el título del modal
         document.getElementById("payrollModalLabel").textContent = "Editar Nómina";
+
+        // Cargar datos básicos
         document.getElementById("payrollId").value = payroll.id;
         document.getElementById("employeeId").value = payroll.employee_id;
-        document.getElementById("salary").value = payroll.salary;
-        document.getElementById("paymentDate").value = payroll.payment_date.split('T')[0];
-        document.getElementById("status").value = payroll.status;
+        document.getElementById("periodo").value = payroll.PayrollDetail?.periodo || '';
+        document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
+        document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
+        document.getElementById("salarioBase").value = payroll.salary || 0;
 
-        new bootstrap.Modal(document.getElementById("payrollModal")).show();
+        // Cargar datos de extras y bonificaciones
+        document.getElementById("horasExtras").value = payroll.PayrollDetail?.horas_extras_diurnas || 0;
+        document.getElementById("valorHorasExtras").value = payroll.PayrollDetail?.valor_hora_extra_diurna || 0;
+        document.getElementById("bonificaciones").value = payroll.PayrollDetail?.bonificaciones || 0;
+        document.getElementById("comisiones").value = payroll.PayrollDetail?.comisiones || 0;
+
+        // Cargar deducciones
+        document.getElementById("prestamos").value = payroll.PayrollDetail?.prestamos || 0;
+        document.getElementById("otrosDescuentos").value = payroll.PayrollDetail?.otros_descuentos || 0;
+
+        // Calcular y mostrar totales
+        calculateTotals();
+        
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById("payrollModal"));
+        modal.show();
     } catch (error) {
         console.error("Error al editar la nómina:", error);
         showToast("Error al editar la nómina: " + error.message);
@@ -281,10 +306,23 @@ async function deletePayroll(payrollId) {
 
 // Agregar función showToast si no existe
 function showToast(message) {
-    const toastElement = document.getElementById('successToast');
-    const toast = new bootstrap.Toast(toastElement);
-    toastElement.querySelector('.toast-body').textContent = message;
-    toast.show();
+    try {
+        const toastElement = document.getElementById('successToast');
+        if (!toastElement) {
+            console.error('Elemento toast no encontrado');
+            return;
+        }
+        const toastBody = toastElement.querySelector('.toast-body');
+        if (!toastBody) {
+            console.error('Elemento toast-body no encontrado');
+            return;
+        }
+        toastBody.textContent = message;
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+    } catch (error) {
+        console.error('Error al mostrar el toast:', error);
+    }
 }
 
 function calculateTotals() {
