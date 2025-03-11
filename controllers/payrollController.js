@@ -186,8 +186,33 @@ exports.generatePayrollPDF = async (req, res) => {
 
         // Función auxiliar para formatear números
         const formatNumber = (value) => {
-            return Number(value || 0).toFixed(2);
+            const num = parseFloat(value) || 0;
+            return num.toFixed(2);
         };
+
+        // Función para calcular aportes basado en el tipo de pago
+        const calcularAportes = (salario, tipoPago) => {
+            const porcentaje = tipoPago === 'Quincenal' ? 0.04 : 0.08;
+            const salud = parseFloat(salario) * porcentaje;
+            const pension = parseFloat(salario) * porcentaje;
+            return { salud, pension };
+        };
+
+        // Calcular aportes
+        const aportes = calcularAportes(payroll.salary, payrollDetail?.tipo_pago || 'Mensual');
+
+        // Calcular totales
+        const totalIngresos = parseFloat(payroll.salary) +
+            parseFloat(payrollDetail?.valor_hora_extra_diurna || 0) +
+            parseFloat(payrollDetail?.bonificaciones || 0) +
+            parseFloat(payrollDetail?.comisiones || 0);
+
+        const totalDeducciones = aportes.salud +
+            aportes.pension +
+            parseFloat(payrollDetail?.prestamos || 0) +
+            parseFloat(payrollDetail?.otros_descuentos || 0);
+
+        const netoPagar = totalIngresos - totalDeducciones;
 
         // Crear PDF
         const doc = new PDFDocument();
@@ -222,15 +247,15 @@ exports.generatePayrollPDF = async (req, res) => {
             // Deducciones
             doc.fontSize(14).text('Deducciones', { underline: true });
             doc.fontSize(12)
-               .text(`Salud: $${formatNumber(payrollDetail.aporte_salud_empleado)}`)
-               .text(`Pensión: $${formatNumber(payrollDetail.aporte_pension_empleado)}`)
-               .text(`Préstamos: $${formatNumber(payrollDetail.prestamos)}`)
-               .text(`Otros Descuentos: $${formatNumber(payrollDetail.otros_descuentos)}`)
-               .text(`Total Deducciones: $${formatNumber(payrollDetail.total_deducciones)}`);
+               .text(`Salud: $${formatNumber(aportes.salud)}`)
+               .text(`Pensión: $${formatNumber(aportes.pension)}`)
+               .text(`Préstamos: $${formatNumber(payrollDetail?.prestamos || 0)}`)
+               .text(`Otros Descuentos: $${formatNumber(payrollDetail?.otros_descuentos || 0)}`)
+               .text(`Total Deducciones: $${formatNumber(totalDeducciones)}`);
             doc.moveDown();
 
             // Neto a Pagar
-            doc.fontSize(16).text(`Neto a Pagar: $${formatNumber(payrollDetail.neto_pagar)}`, { underline: true });
+            doc.fontSize(16).text(`Neto a Pagar: $${formatNumber(netoPagar)}`, { underline: true });
         }
 
         // Firmas
