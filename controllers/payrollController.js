@@ -5,10 +5,10 @@ const { validationResult } = require('express-validator');
 exports.getPayrolls = async (req, res) => {
     try {
         const payrolls = await Payroll.findAll({
-            attributes: ['id', 'employee_id', 'salary', 'payment_date', 'status'], // Agregar employee_id
+            attributes: ['id', 'employee_id', 'salary', 'payment_date', 'status'],
             include: {
                 model: Employee,
-                attributes: ['full_name']
+                attributes: ['full_name', 'id_number'] // Incluir id_number
             }
         });
         res.json(payrolls);
@@ -21,10 +21,10 @@ exports.getPayrolls = async (req, res) => {
 exports.getPayrollById = async (req, res) => {
     try {
         const payroll = await Payroll.findByPk(req.params.id, {
-            attributes: ['id', 'employee_id', 'salary', 'payment_date', 'status'], // Agregar employee_id
+            attributes: ['id', 'employee_id', 'salary', 'payment_date', 'status'],
             include: {
                 model: Employee,
-                attributes: ['full_name']
+                attributes: ['full_name', 'id_number'] // Incluir id_number
             }
         });
 

@@ -34,4 +34,21 @@ INSERT IGNORE INTO id_types (type_name) VALUES ('Cédula de ciudadanía'), ('Cé
 CALL AddColumnIfNotExists('employees', 'id_type_id', 'INT NOT NULL');
 CALL AddColumnIfNotExists('employees', 'id_number', 'VARCHAR(50) NOT NULL');
 CALL AddColumnIfNotExists('employees', 'salary', 'FLOAT NOT NULL');
+CALL AddColumnIfNotExists('employees', 'department', 'VARCHAR(255)');
+CALL AddColumnIfNotExists('employees', 'position', 'VARCHAR(255)');
+CALL AddColumnIfNotExists('employees', 'hire_date', 'DATE');
+CALL AddColumnIfNotExists('employees', 'contract_type', 'VARCHAR(255)');
+CALL AddColumnIfNotExists('employees', 'work_schedule', 'VARCHAR(255)');
 ALTER TABLE employees ADD CONSTRAINT fk_id_type_id FOREIGN KEY (id_type_id) REFERENCES id_types(id) ON DELETE RESTRICT;
+
+-- Crear tabla de información bancaria si no existe
+CREATE TABLE IF NOT EXISTS bank_info (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    bank_account_number VARCHAR(50) NOT NULL,
+    bank_account_type VARCHAR(50) NOT NULL,
+    bank_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+);

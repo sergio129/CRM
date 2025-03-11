@@ -4,7 +4,7 @@ const { validationResult } = require('express-validator');
 exports.getEmployees = async (req, res) => {
     try {
         const employees = await Employee.findAll({
-            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number']
+            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule']
         });
         res.json(employees);
     } catch (error) {
@@ -16,7 +16,7 @@ exports.getEmployees = async (req, res) => {
 exports.getEmployeeById = async (req, res) => {
     try {
         const employee = await Employee.findByPk(req.params.id, {
-            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number']
+            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule']
         });
 
         if (!employee) return res.status(404).json({ message: "Empleado no encontrado" });
@@ -35,7 +35,7 @@ exports.createEmployee = async (req, res) => {
     }
 
     try {
-        const { full_name, email, phone, address, role, salary, status, id_type_id, id_number } = req.body;
+        const { full_name, email, phone, address, role, salary, status, id_type_id, id_number, department, position, hire_date, contract_type, work_schedule } = req.body;
         const newEmployee = await Employee.create({
             full_name,
             email,
@@ -45,7 +45,12 @@ exports.createEmployee = async (req, res) => {
             salary,
             status,
             id_type_id,
-            id_number
+            id_number,
+            department,
+            position,
+            hire_date,
+            contract_type,
+            work_schedule
         });
 
         res.status(201).json({ message: "Empleado creado correctamente", employee: newEmployee });
@@ -62,7 +67,7 @@ exports.updateEmployee = async (req, res) => {
     }
 
     try {
-        const { full_name, email, phone, address, role, salary, status, id_type_id, id_number } = req.body;
+        const { full_name, email, phone, address, role, salary, status, id_type_id, id_number, department, position, hire_date, contract_type, work_schedule } = req.body;
         const employee = await Employee.findByPk(req.params.id);
         if (!employee) return res.status(404).json({ message: "Empleado no encontrado" });
 
@@ -75,7 +80,12 @@ exports.updateEmployee = async (req, res) => {
             salary,
             status,
             id_type_id,
-            id_number
+            id_number,
+            department,
+            position,
+            hire_date,
+            contract_type,
+            work_schedule
         });
 
         res.json({ message: "Empleado actualizado correctamente", employee });

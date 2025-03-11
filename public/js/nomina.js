@@ -30,14 +30,15 @@ async function loadPayrolls() {
 function renderPayrolls(payrolls) {
     const html = payrolls.map(payroll => `
         <tr>
-            <td>${payroll.id}</td>
+            <td>${payroll.Employee.id_number}</td>
             <td>${payroll.Employee.full_name}</td>
             <td>${payroll.salary}</td>
             <td>${payroll.payment_date}</td>
             <td>${payroll.status}</td>
+            <td>${payroll.status === 'Pagado' ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-exclamation-circle text-warning"></i>'}</td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="editPayroll('${payroll.id}')">Editar</button>
-                <button class="btn btn-danger btn-sm" onclick="deletePayroll('${payroll.id}')">Eliminar</button>
+                <button class="btn btn-warning btn-sm" onclick="editPayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="deletePayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>Eliminar</button>
             </td>
         </tr>
     `).join("");
@@ -139,6 +140,11 @@ async function editPayroll(payrollId) {
         }
 
         const payroll = await response.json();
+
+        if (payroll.status === 'Pagado') {
+            alert("No se puede editar una nómina que ya ha sido pagada.");
+            return;
+        }
 
         document.getElementById("payrollModalLabel").textContent = "Editar Nómina";
         document.getElementById("payrollId").value = payroll.id;

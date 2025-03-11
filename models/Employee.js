@@ -11,7 +11,7 @@ const Employee = sequelize.define('Employee', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    id_type_id: { // Cambiar a id_type_id
+    id_type_id: {
         type: DataTypes.INTEGER,
         allowNull: false
     },
@@ -39,6 +39,26 @@ const Employee = sequelize.define('Employee', {
     salary: {
         type: DataTypes.FLOAT,
         allowNull: false
+    },
+    department: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    position: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    hire_date: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    contract_type: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    work_schedule: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     status: {
         type: DataTypes.STRING,

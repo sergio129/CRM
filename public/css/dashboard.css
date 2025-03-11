@@ -28,6 +28,20 @@ body {
     color: #dfe3ee;
 }
 
+/* Estilo personalizado para las opciones de la barra de navegación */
+.nav-link-custom {
+    color: #fff;
+    font-size: 16px;
+    transition: color 0.3s ease;
+}
+
+.nav-link-custom:hover {
+    color: #dfe3ee;
+    background-color: #365899;
+    border-radius: 5px;
+    padding: 5px 10px;
+}
+
 /* Contenedor principal */
 .container {
     max-width: 1200px;

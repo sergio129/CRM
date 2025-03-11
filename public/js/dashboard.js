@@ -188,3 +188,8 @@ function renderClientsPercentageChart(clients) {
         }
     });
 }
+
+function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "login.html";
+}

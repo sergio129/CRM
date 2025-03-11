@@ -12,7 +12,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">CRM</a>
+            <a class="navbar-brand" href="#">GESCOOP</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -51,6 +51,9 @@
         <button id="goToPayrollButton" class="btn btn-primary mb-3" onclick="window.location.href='/nomina.html'">Ir a Nómina</button>
         <!-- Botón para redirigir a la página de dashboard -->
         <button id="goToDashboardButton" class="btn btn-secondary mb-3" onclick="window.location.href='/dashboard.html'">Ir a Dashboard</button>
+        <!-- Botón para cargar empleados desde Excel -->
+        <button id="uploadExcelButton" class="btn btn-info mb-3" onclick="document.getElementById('excelFileInput').click()">Cargar Empleados desde Excel</button>
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="uploadExcel()">
 
         <!-- Tabla de Empleados -->
         <div class="table-responsive">
@@ -86,46 +89,74 @@
                         <input type="hidden" id="employeeId">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="fullName" class="form-label">Nombre Completo</label>
+                                <label for="fullName" class="form-label">Nombre Completo *</label>
                                 <input type="text" class="form-control" id="fullName" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="idType" class="form-label">Tipo de Identificación</label>
+                                <label for="idType" class="form-label">Tipo de Identificación *</label>
                                 <select class="form-select" id="idType" required></select>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="idNumber" class="form-label">Número de Identificación</label>
+                                <label for="idNumber" class="form-label">Número de Identificación *</label>
                                 <input type="number" class="form-control" id="idNumber" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="email" class="form-label">Email</label>
+                                <label for="email" class="form-label">Email *</label>
                                 <input type="email" class="form-control" id="email" required>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="phone" class="form-label">Teléfono</label>
+                                <label for="phone" class="form-label">Teléfono *</label>
                                 <input type="text" class="form-control" id="phone" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="address" class="form-label">Dirección</label>
+                                <label for="address" class="form-label">Dirección *</label>
                                 <input type="text" class="form-control" id="address" required>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="role" class="form-label">Rol</label>
+                                <label for="role" class="form-label">Rol *</label>
                                 <select class="form-select" id="role" required></select>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="salary" class="form-label">Salario</label>
+                                <label for="salary" class="form-label">Salario *</label>
                                 <input type="number" class="form-control" id="salary" required>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="department" class="form-label">Departamento *</label>
+                                <input type="text" class="form-control" id="department" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="position" class="form-label">Puesto *</label>
+                                <input type="text" class="form-control" id="position" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="hireDate" class="form-label">Fecha de Ingreso *</label>
+                                <input type="date" class="form-control" id="hireDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="contractType" class="form-label">Tipo de Contrato *</label>
+                                <select class="form-select" id="contractType" required>
+                                    <option value="Indefinido">Indefinido</option>
+                                    <option value="Temporal">Temporal</option>
+                                    <option value="Por obra">Por obra</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="mb-3">
-                            <label for="status" class="form-label">Estado</label>
+                            <label for="workSchedule" class="form-label">Horario de Trabajo *</label>
+                            <input type="text" class="form-control" id="workSchedule" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Estado *</label>
                             <select class="form-select" id="status" required>
                                 <option value="Activo">Activo</option>
                                 <option value="Inactivo">Inactivo</option>
@@ -133,15 +164,54 @@
                         </div>
                     </form>
                 </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-info" id="bankInfoButton" onclick="openBankInfoModal()" style="display: none;">Información Bancaria</button>
+                    <div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" class="btn btn-primary" onclick="validateAndSaveEmployee()">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para información bancaria -->
+    <div class="modal fade" id="bankInfoModal" tabindex="-1" aria-labelledby="bankInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bankInfoModalLabel">Información Bancaria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="bankInfoForm">
+                        <div class="mb-3">
+                            <label for="bankAccountNumber" class="form-label">Número de cuenta bancaria *</label>
+                            <input type="text" class="form-control" id="bankAccountNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bankAccountType" class="form-label">Tipo de cuenta *</label>
+                            <select class="form-select" id="bankAccountType" required>
+                                <option value="Corriente">Corriente</option>
+                                <option value="Ahorros">Ahorros</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bankName" class="form-label">Banco *</label>
+                            <input type="text" class="form-control" id="bankName" required>
+                        </div>
+                    </form>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="button" class="btn btn-primary" onclick="saveEmployee()">Guardar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveBankInfo()">Guardar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="js/empleados.js"></script>
 </body>
 </html>
