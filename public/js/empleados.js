@@ -46,8 +46,8 @@ function renderEmployees(employees) {
             <td>${employee.status}</td>
             <td>
                 <div class="d-flex justify-content-between">
-                    <button class="btn btn-warning btn-sm me-2" onclick="editEmployee('${employee.id}')">Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${employee.id}')">Eliminar</button>
+                    <button class="btn btn-warning btn-sm me-2" onclick="editEmployee('${employee.id_number}')">Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${employee.id_number}')">Eliminar</button>
                 </div>
             </td>
         </tr>
@@ -67,10 +67,12 @@ function renderPagination(totalPages, currentPage) {
 }
 
 function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const checkboxes = document.querySelectorAll('.employee-checkbox');
-    const selectAll = document.getElementById('selectAllCheckbox').checked;
-    checkboxes.forEach(checkbox => checkbox.checked = selectAll);
-    if (selectAll) {
+    checkboxes.forEach(checkbox => checkbox.checked = selectAllCheckbox.checked);
+    
+    // Solo abrir el modal si hay checkboxes seleccionados
+    if (selectAllCheckbox.checked && checkboxes.length > 0) {
         openDeleteModal();
     }
 }
@@ -79,15 +81,23 @@ function openDeleteModal() {
     const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked')).map(checkbox => checkbox.value);
     if (selectedIds.length === 0) {
         alert("Por favor, seleccione al menos un empleado para eliminar.");
+        // Desmarcar el checkbox principal si no hay selecciones
+        document.getElementById('selectAllCheckbox').checked = false;
         return;
     }
     new bootstrap.Modal(document.getElementById("deleteModal")).show();
 }
 
+// Agregar esta función para mostrar el toast
+function showToast(message) {
+    const toastElement = document.getElementById('successToast');
+    const toast = new bootstrap.Toast(toastElement);
+    toastElement.querySelector('.toast-body').textContent = message;
+    toast.show();
+}
+
 async function deleteSelectedEmployees() {
     const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked')).map(checkbox => checkbox.value);
-
-    if (!confirm("¿Estás seguro de eliminar los empleados seleccionados?")) return;
 
     try {
         const response = await fetch('/api/employees/bulk-delete', {
@@ -103,7 +113,16 @@ async function deleteSelectedEmployees() {
             throw new Error("Error al eliminar los empleados seleccionados");
         }
 
-        alert("Empleados eliminados correctamente");
+        // Desmarcar todos los checkboxes después de eliminar
+        document.getElementById('selectAllCheckbox').checked = false;
+        document.querySelectorAll('.employee-checkbox').forEach(checkbox => checkbox.checked = false);
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById("deleteModal"));
+        modal.hide();
+        
+        // Mostrar el toast en lugar del alert
+        showToast("Empleados eliminados correctamente");
         loadEmployees();
     } catch (error) {
         console.error("Error al eliminar los empleados seleccionados:", error);
@@ -238,19 +257,19 @@ async function saveEmployee() {
         }
 
         const data = await response.json();
-        alert(`Empleado ${employeeId ? "actualizado" : "creado"} correctamente`);
+        showToast(`Empleado ${employeeId ? "actualizado" : "creado"} correctamente`);
         loadEmployees();
         const modal = bootstrap.Modal.getInstance(document.getElementById("employeeModal"));
         modal.hide();
     } catch (error) {
         console.error("Error al guardar el empleado:", error);
-        alert("Error al guardar el empleado");
+        showToast("Error al guardar el empleado");
     }
 }
 
 async function editEmployee(employeeId) {
     try {
-        const response = await fetch(`/api/employees/${employeeId}`, {
+        const response = await fetch(`/api/employees/by-id-number/${employeeId}`, {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${localStorage.getItem("token")}`
@@ -263,6 +282,7 @@ async function editEmployee(employeeId) {
 
         const employee = await response.json();
 
+        // Rellenar el formulario con los datos del empleado
         document.getElementById("employeeModalLabel").textContent = "Editar Empleado";
         document.getElementById("employeeId").value = employee.id;
         document.getElementById("fullName").value = employee.full_name;
@@ -275,11 +295,11 @@ async function editEmployee(employeeId) {
         document.getElementById("idNumber").value = employee.id_number;
         document.getElementById("department").value = employee.department;
         document.getElementById("position").value = employee.position;
-        document.getElementById("hireDate").value = employee.hire_date ? employee.hire_date.split('T')[0] : ''; // Formatear la fecha
+        document.getElementById("hireDate").value = employee.hire_date ? employee.hire_date.split('T')[0] : '';
         document.getElementById("contractType").value = employee.contract_type;
         document.getElementById("workSchedule").value = employee.work_schedule;
         document.getElementById("status").value = employee.status;
-        document.getElementById("bankInfoButton").style.display = "block"; // Mostrar botón de información bancaria
+        document.getElementById("bankInfoButton").style.display = "block";
 
         // Cargar información bancaria
         loadBankInfo(employee.id);
@@ -287,15 +307,29 @@ async function editEmployee(employeeId) {
         new bootstrap.Modal(document.getElementById("employeeModal")).show();
     } catch (error) {
         console.error("Error al editar el empleado:", error);
-        alert("Error al editar el empleado");
+        showToast("Error al editar el empleado: " + error.message);
     }
 }
 
 async function deleteEmployee(employeeId) {
-    if (!confirm("¿Estás seguro de eliminar este empleado?")) return;
-
     try {
-        const response = await fetch(`/api/employees/${employeeId}`, {
+        // Primero obtener el empleado por número de identificación
+        const searchResponse = await fetch(`/api/employees/by-id-number/${employeeId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        });
+
+        if (!searchResponse.ok) {
+            throw new Error("No se encontró el empleado");
+        }
+
+        const employee = await searchResponse.json();
+
+        if (!confirm("¿Estás seguro de eliminar este empleado?")) return;
+
+        const deleteResponse = await fetch(`/api/employees/${employee.id}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
@@ -303,15 +337,15 @@ async function deleteEmployee(employeeId) {
             },
         });
 
-        if (!response.ok) {
+        if (!deleteResponse.ok) {
             throw new Error("Error al eliminar el empleado");
         }
 
-        alert("Empleado eliminado correctamente");
+        showToast("Empleado eliminado correctamente");
         loadEmployees();
     } catch (error) {
         console.error("Error al eliminar el empleado:", error);
-        alert("Error al eliminar el empleado");
+        showToast("Error al eliminar el empleado: " + error.message);
     }
 }
 
@@ -335,16 +369,16 @@ async function saveBankInfo() {
         });
 
         if (!response.ok) {
-            throw new Error("Error al guardar la información bancaria");
+            const errorText = await response.text();
+            throw new Error(`Error al guardar la información bancaria: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
-        const data = await response.json();
-        alert("Información bancaria guardada correctamente");
+        showToast("Información bancaria guardada correctamente");
         const modal = bootstrap.Modal.getInstance(document.getElementById("bankInfoModal"));
         modal.hide();
     } catch (error) {
         console.error("Error al guardar la información bancaria:", error);
-        alert("Error al guardar la información bancaria");
+        showToast("Error al guardar la información bancaria: " + error.message);
     }
 }
 
@@ -368,138 +402,159 @@ async function loadBankInfo(employeeId) {
         document.getElementById("bankName").value = bankInfo.bank_name;
     } catch (error) {
         console.error("Error al obtener la información bancaria:", error);
-        alert("Error al obtener la información bancaria");
+        showToast("Error al obtener la información bancaria");
     }
 }
 
-function uploadExcel() {
+async function uploadExcel() {
     const fileInput = document.getElementById('excelFileInput');
     const file = fileInput.files[0];
 
     if (!file) {
-        alert("Por favor, seleccione un archivo Excel.");
+        showToast("Por favor, seleccione un archivo Excel.");
         return;
     }
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+    try {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            console.log("Iniciando lectura del archivo Excel");
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        jsonData.forEach(async (employee) => {
-            const employeeData = {
-                full_name: employee["Nombre Completo"],
-                id_type_id: await getIdTypeId(employee["Tipo de Identificación"]),
-                id_number: employee["Número de Identificación"],
-                email: employee["Email"],
-                phone: employee["Teléfono"],
-                address: employee["Dirección"],
-                role: employee["Rol"],
-                salary: employee["Salario"],
-                department: employee["Departamento"],
-                position: employee["Puesto"],
-                hire_date: employee["Fecha de Ingreso"],
-                contract_type: employee["Tipo de Contrato"],
-                work_schedule: employee["Horario de Trabajo"],
-                status: employee["Estado"]
-            };
-
-            try {
-                const existingEmployeeResponse = await fetch(`/api/employees?email=${employeeData.email}`, {
-                    method: 'GET',
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${localStorage.getItem("token")}`
-                    }
-                });
-
-                if (existingEmployeeResponse.ok) {
-                    const existingEmployee = await existingEmployeeResponse.json();
-                    if (existingEmployee) {
-                        // Actualizar empleado existente
-                        const updateResponse = await fetch(`/api/employees/${existingEmployee.id}`, {
-                            method: 'PUT',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${localStorage.getItem("token")}`
-                            },
-                            body: JSON.stringify(employeeData),
-                        });
-
-                        if (!updateResponse.ok) {
-                            throw new Error("Error al actualizar el empleado desde Excel");
+            for (const row of jsonData) {
+                console.log("Procesando fila:", row);
+                try {
+                    // Formatear la fecha correctamente
+                    const hireDate = row["Fecha de Ingreso"];
+                    let formattedHireDate = null;
+                    
+                    if (hireDate) {
+                        // Si es un número de serie de Excel
+                        if (typeof hireDate === 'number') {
+                            formattedHireDate = new Date((hireDate - 25569) * 86400 * 1000).toISOString().split('T')[0];
+                        } else {
+                            // Si es una cadena de texto, intentar convertirla
+                            const date = new Date(hireDate);
+                            formattedHireDate = date.toISOString().split('T')[0];
                         }
-
-                        console.log(`Empleado ${employeeData.full_name} actualizado correctamente`);
-
-                        // Guardar información bancaria
-                        const bankInfoData = {
-                            employee_id: existingEmployee.id,
-                            bank_account_number: employee["Número de cuenta bancaria"],
-                            bank_account_type: employee["Tipo de cuenta"],
-                            bank_name: employee["Banco"]
-                        };
-
-                        await fetch('/api/bank_info', {
-                            method: 'POST',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${localStorage.getItem("token")}`
-                            },
-                            body: JSON.stringify(bankInfoData),
-                        });
-
-                    } else {
-                        // Crear nuevo empleado
-                        const createResponse = await fetch('/api/employees', {
-                            method: 'POST',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${localStorage.getItem("token")}`
-                            },
-                            body: JSON.stringify(employeeData),
-                        });
-
-                        if (!createResponse.ok) {
-                            throw new Error("Error al guardar el empleado desde Excel");
-                        }
-
-                        const savedEmployee = await createResponse.json();
-
-                        // Guardar información bancaria
-                        const bankInfoData = {
-                            employee_id: savedEmployee.id,
-                            bank_account_number: employee["Número de cuenta bancaria"],
-                            bank_account_type: employee["Tipo de cuenta"],
-                            bank_name: employee["Banco"]
-                        };
-
-                        await fetch('/api/bank_info', {
-                            method: 'POST',
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${localStorage.getItem("token")}`
-                            },
-                            body: JSON.stringify(bankInfoData),
-                        });
-
-                        console.log(`Empleado ${employeeData.full_name} guardado correctamente`);
                     }
+
+                    const employeeData = {
+                        full_name: row["Nombre Completo"],
+                        id_type_id: await getIdTypeId(row["Tipo de Identificación"]),
+                        id_number: row["Número de Identificación"],
+                        email: row["Email"],
+                        phone: row["Teléfono"],
+                        address: row["Dirección"],
+                        role: row["Rol"],
+                        salary: row["Salario"],
+                        department: row["Departamento"],
+                        position: row["Puesto"],
+                        hire_date: formattedHireDate,
+                        contract_type: row["Tipo de Contrato"],
+                        work_schedule: row["Horario de Trabajo"],
+                        status: row["Estado"]
+                    };
+
+                    console.log("Datos del empleado a guardar:", employeeData);
+
+                    // Primero crear o actualizar el empleado
+                    const employeeResponse = await createOrUpdateEmployee(employeeData);
+                    
+                    if (employeeResponse && employeeResponse.employee) {
+                        // Si el empleado se creó/actualizó correctamente, proceder con la información bancaria
+                        const bankData = {
+                            employee_id: employeeResponse.employee.id,
+                            bank_account_number: row["Número de cuenta bancaria"],
+                            bank_account_type: row["Tipo de cuenta"],
+                            bank_name: row["Banco"]
+                        };
+                        
+                        await createOrUpdateBankInfo(bankData);
+                        console.log(`Procesado exitosamente: ${employeeData.full_name}`);
+                    }
+                } catch (error) {
+                    console.error(`Error procesando fila: ${error.message}`);
                 }
-            } catch (error) {
-                console.error(`Error al guardar el empleado ${employeeData.full_name}:`, error);
+            }
+            
+            showToast("Carga de empleados desde Excel completada.");
+            loadEmployees();
+        };
+
+        reader.readAsArrayBuffer(file);
+    } catch (error) {
+        console.error("Error en la carga del archivo:", error);
+        showToast("Error en la carga del archivo: " + error.message);
+    }
+}
+
+async function createOrUpdateEmployee(employeeData) {
+    try {
+        // Buscar si existe el empleado por número de identificación
+        const searchResponse = await fetch(`/api/employees/search?id_number=${employeeData.id_number}`, {
+            method: 'GET',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
             }
         });
 
-        alert("Carga de empleados desde Excel completada.");
-        loadEmployees();
-    };
+        const existingEmployees = await searchResponse.json();
 
-    reader.readAsArrayBuffer(file);
+        if (existingEmployees && existingEmployees.length > 0) {
+            // Actualizar empleado existente
+            const updateResponse = await fetch(`/api/employees/${existingEmployees[0].id}`, {
+                method: 'PUT',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                },
+                body: JSON.stringify(employeeData)
+            });
+            return await updateResponse.json();
+        } else {
+            // Crear nuevo empleado
+            const createResponse = await fetch('/api/employees', {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                },
+                body: JSON.stringify(employeeData)
+            });
+            return await createResponse.json();
+        }
+    } catch (error) {
+        console.error("Error en createOrUpdateEmployee:", error);
+        throw error;
+    }
+}
+
+async function createOrUpdateBankInfo(bankData) {
+    try {
+        const response = await fetch('/api/bank_info', {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify(bankData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error al guardar información bancaria: ${response.statusText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Error en createOrUpdateBankInfo:", error);
+        throw error;
+    }
 }
 
 async function getIdTypeId(typeName) {
@@ -526,31 +581,47 @@ async function getIdTypeId(typeName) {
 }
 
 async function searchEmployeeByIdNumber() {
-    const idNumber = document.getElementById("searchIdNumber").value;
+    const idNumber = document.getElementById("searchIdNumber").value.trim();
     if (!idNumber) {
-        alert("Por favor, ingrese un número de identificación");
+        showToast("Por favor, ingrese un número de identificación");
         return;
     }
 
     try {
-        const response = await fetch(`/api/employees/search?id_number=${idNumber}`, {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const response = await fetch(`/api/employees/search?id_number=${encodeURIComponent(idNumber)}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                "Authorization": `Bearer ${token}`
             }
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            throw new Error("Error al buscar empleado");
+            if (response.status === 404) {
+                showToast(data.message || "No se encontró el empleado");
+                return;
+            }
+            throw new Error(data.message || "Error al buscar empleado");
         }
 
-        const employees = await response.json();
-        renderEmployees(employees);
-        document.getElementById("pagination").innerHTML = ''; // Ocultar paginación durante la búsqueda
+        if (Array.isArray(data) && data.length > 0) {
+            renderEmployees(data);
+            document.getElementById("pagination").innerHTML = '';
+        } else {
+            showToast("No se encontraron resultados");
+            loadEmployees(1); // Volver a cargar todos los empleados si no hay resultados
+        }
     } catch (error) {
         console.error("Error al buscar empleado:", error);
-        alert("Error al buscar empleado");
+        showToast(error.message);
     }
 }
 

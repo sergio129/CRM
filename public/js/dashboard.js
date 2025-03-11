@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     loadDashboardData();
+    loadDashboardStats();
 });
 
 async function searchClient() {
@@ -91,10 +92,18 @@ function toggleSubmenu(event) {
 
 async function loadDashboardData() {
     try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
         const [clientsResponse, employeesResponse, payrollsResponse] = await Promise.all([
-            fetch('/api/clients', { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } }),
-            fetch('/api/employees', { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } }),
-            fetch('/api/payrolls', { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } })
+            fetch('/api/clients', { headers: { "Authorization": `Bearer ${token}` } }),
+            fetch('/api/employees?page=1&limit=1000', { 
+                headers: { "Authorization": `Bearer ${token}` } 
+            }),
+            fetch('/api/payrolls', { headers: { "Authorization": `Bearer ${token}` } })
         ]);
 
         if (!clientsResponse.ok || !employeesResponse.ok || !payrollsResponse.ok) {
@@ -102,18 +111,50 @@ async function loadDashboardData() {
         }
 
         const clients = await clientsResponse.json();
-        const employees = await employeesResponse.json();
+        const employeesData = await employeesResponse.json();
         const payrolls = await payrollsResponse.json();
 
+        // Actualizar contadores
         document.getElementById("totalClients").textContent = clients.length;
-        document.getElementById("totalEmployees").textContent = employees.length;
+        document.getElementById("totalEmployees").textContent = employeesData.employees ? employeesData.employees.length : '0';
         document.getElementById("totalPayrolls").textContent = payrolls.length;
 
+        // Renderizar gráficos
         renderClientsChart(clients);
         renderClientsPercentageChart(clients);
     } catch (error) {
         console.error("Error al cargar datos del dashboard:", error);
-        alert("Error al cargar datos del dashboard.");
+        showToast("Error al cargar datos del dashboard");
+    }
+}
+
+async function loadDashboardStats() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const response = await fetch('/api/dashboard/stats', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al cargar estadísticas');
+        }
+
+        const stats = await response.json();
+        
+        // Actualizar estadísticas en el DOM
+        document.getElementById('totalEmployees').textContent = stats.totalEmployees || '0';
+        document.getElementById('totalPayrolls').textContent = stats.totalPayrolls || '0';
+        document.getElementById('totalUsers').textContent = stats.totalUsers || '0';
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al cargar estadísticas del dashboard');
     }
 }
 

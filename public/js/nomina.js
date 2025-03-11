@@ -1,29 +1,43 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadPayrolls();
-    loadEmployees(); // Cargar empleados al cargar la página
+    loadEmployeesForPayroll();
 
-    document.getElementById("createPayrollButton").addEventListener("click", openPayrollModal);
+    // Agregar el event listener para el botón de crear nómina
+    document.getElementById("createPayrollButton").addEventListener("click", openCreatePayrollModal);
+    
+    // Agregar el event listener para cuando se selecciona un empleado
+    document.getElementById("employeeId").addEventListener("change", updateSalary);
 });
 
 async function loadPayrolls() {
     try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
         const response = await fetch('/api/payrolls', {
             method: "GET",
             headers: { 
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                "Authorization": `Bearer ${token}`
             }
         });
 
         if (!response.ok) {
-            throw new Error("Error al obtener nóminas.");
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            throw new Error("Error al obtener nóminas");
         }
 
         const payrolls = await response.json();
         renderPayrolls(payrolls);
     } catch (error) {
         console.error("Error al obtener nóminas:", error);
-        alert("Error al obtener nóminas.");
+        showToast("Error al obtener nóminas: " + error.message);
     }
 }
 
@@ -46,32 +60,49 @@ function renderPayrolls(payrolls) {
     document.getElementById("payrollTableBody").innerHTML = html;
 }
 
-async function loadEmployees() {
+// Reemplazar loadEmployees por esta versión actualizada
+async function loadEmployeesForPayroll() {
     try {
-        const response = await fetch('/api/employees', {
-            method: "GET",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const response = await fetch('/api/employees/active', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             }
         });
 
         if (!response.ok) {
-            throw new Error("Error al obtener empleados.");
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            throw new Error('Error al cargar empleados');
         }
 
-        const employees = await response.json();
-        const employeeSelect = document.getElementById("employeeId");
-        employees.forEach(employee => {
-            const option = document.createElement("option");
-            option.value = employee.id;
-            option.textContent = employee.full_name;
-            option.dataset.salary = employee.salary; // Guardar el salario en el dataset
-            employeeSelect.appendChild(option);
-        });
+        const { employees } = await response.json();
+        const employeeSelect = document.getElementById('employeeId');
+        employeeSelect.innerHTML = '<option value="">Seleccione un empleado</option>';
+        
+        if (employees && employees.length > 0) {
+            employees.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee.id;
+                option.textContent = `${employee.full_name} - ${employee.id_number}`;
+                option.dataset.salary = employee.salary;
+                employeeSelect.appendChild(option);
+            });
+        } else {
+            showToast("No se encontraron empleados activos");
+        }
     } catch (error) {
-        console.error("Error al obtener empleados:", error);
-        alert("Error al obtener empleados.");
+        console.error('Error:', error);
+        showToast('Error al cargar la lista de empleados: ' + error.message);
     }
 }
 
@@ -82,11 +113,11 @@ function updateSalary() {
     document.getElementById("salary").value = salary;
 }
 
-function openPayrollModal() {
-    document.getElementById("payrollModalLabel").textContent = "Crear Nómina";
-    document.getElementById("payrollForm").reset();
-    document.getElementById("payrollId").value = "";
-    new bootstrap.Modal(document.getElementById("payrollModal")).show();
+function openCreatePayrollModal() {
+    document.getElementById('payrollForm').reset();
+    loadEmployeesForPayroll();
+    const modal = new bootstrap.Modal(document.getElementById('payrollModal'));
+    modal.show();
 }
 
 async function savePayroll() {
@@ -183,3 +214,39 @@ async function deletePayroll(payrollId) {
         alert("Error al eliminar la nómina");
     }
 }
+
+// Agregar función showToast si no existe
+function showToast(message) {
+    const toastElement = document.getElementById('successToast');
+    const toast = new bootstrap.Toast(toastElement);
+    toastElement.querySelector('.toast-body').textContent = message;
+    toast.show();
+}
+
+function calculateTotals() {
+    const salarioBase = parseFloat(document.getElementById('salarioBase').value) || 0;
+    const valorHorasExtras = parseFloat(document.getElementById('valorHorasExtras').value) || 0;
+    const bonificaciones = parseFloat(document.getElementById('bonificaciones').value) || 0;
+    const comisiones = parseFloat(document.getElementById('comisiones').value) || 0;
+
+    // Calcular deducciones
+    const aporteSalud = salarioBase * 0.04;
+    const aportePension = salarioBase * 0.04;
+    const prestamos = parseFloat(document.getElementById('prestamos').value) || 0;
+    const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
+
+    // Calcular totales
+    const totalIngresos = salarioBase + valorHorasExtras + bonificaciones + comisiones;
+    const totalDeducciones = aporteSalud + aportePension + prestamos + otrosDescuentos;
+    const netoPagar = totalIngresos - totalDeducciones;
+
+    // Actualizar campos
+    document.getElementById('totalIngresos').value = totalIngresos.toFixed(2);
+    document.getElementById('totalDeducciones').value = totalDeducciones.toFixed(2);
+    document.getElementById('netoPagar').value = netoPagar.toFixed(2);
+}
+
+// Agregar event listeners para recalcular cuando cambian los valores
+['salarioBase', 'valorHorasExtras', 'bonificaciones', 'comisiones', 'prestamos', 'otrosDescuentos'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calculateTotals);
+});

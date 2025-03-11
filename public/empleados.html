@@ -50,19 +50,26 @@
             <div>
                 <button id="createEmployeeButton" class="btn btn-success">Crear Empleado</button>
                 <button id="deleteSelectedButton" class="btn btn-danger">Eliminar Seleccionados</button>
+                <!-- Agregar estos elementos -->
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="form-control" style="display: inline-block; width: auto;">
+                <button onclick="uploadExcel()" class="btn btn-primary">Cargar Excel</button>
             </div>
             <div>
                 <button id="goToPayrollButton" class="btn btn-primary" onclick="window.location.href='/nomina.html'">Ir a Nómina</button>
                 <button id="goToDashboardButton" class="btn btn-secondary" onclick="window.location.href='/dashboard.html'">Ir a Dashboard</button>
-                <button id="uploadExcelButton" class="btn btn-info" onclick="document.getElementById('excelFileInput').click()">Cargar Empleados desde Excel</button>
-                <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="uploadExcel()">
             </div>
         </div>
 
-        <!-- Buscador de Empleados -->
-        <div class="input-group mb-3">
-            <input type="text" id="searchIdNumber" class="form-control" placeholder="Buscar empleado por número de identificación">
-            <button class="btn btn-primary" type="button" onclick="searchEmployeeByIdNumber()">Buscar</button>
+        <!-- Modificar el buscador -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchIdNumber" class="form-control" placeholder="Buscar por documento">
+                    <button class="btn btn-primary" type="button" onclick="searchEmployeeByIdNumber()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Tabla de Empleados -->
@@ -245,8 +252,20 @@
         </div>
     </div>
 
+    <!-- Agregar antes del cierre del body -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <!-- El mensaje se insertará aquí -->
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <script src="js/empleados.js"></script>
 </body>
 </html>

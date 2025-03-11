@@ -47,7 +47,9 @@
         <h2 class="text-center">Gestión de Nómina</h2>
 
         <!-- Botón para crear nómina -->
-        <button id="createPayrollButton" class="btn btn-success mb-3">Crear Nómina</button>
+        <div class="d-flex justify-content-between mb-3">
+            <button id="createPayrollButton" class="btn btn-success">Crear Nómina</button>
+        </div>
         <!-- Botón para redirigir a la página de empleados -->
         <button id="goToEmployeesButton" class="btn btn-primary mb-3" onclick="window.location.href='/empleados.html'">Ir a Empleados</button>
         <!-- Botón para redirigir a la página de dashboard -->
@@ -82,25 +84,97 @@
                 </div>
                 <div class="modal-body">
                     <form id="payrollForm">
-                        <input type="hidden" id="payrollId">
-                        <div class="mb-3">
-                            <label for="employeeId" class="form-label">Empleado</label>
-                            <select class="form-select" id="employeeId" required onchange="updateSalary()"></select>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="employeeId" class="form-label">Empleado</label>
+                                    <select class="form-select" id="employeeId" required></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="periodo" class="form-label">Período</label>
+                                    <input type="month" class="form-control" id="periodo" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="tipoPago" class="form-label">Tipo de Pago</label>
+                                    <select class="form-select" id="tipoPago" required>
+                                        <option value="Mensual">Mensual</option>
+                                        <option value="Quincenal">Quincenal</option>
+                                        <option value="Semanal">Semanal</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="diasTrabajados" class="form-label">Días Trabajados</label>
+                                    <input type="number" class="form-control" id="diasTrabajados" value="30" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="salarioBase" class="form-label">Salario Base</label>
+                                    <input type="number" class="form-control" id="salarioBase" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="horasExtras" class="form-label">Horas Extras</label>
+                                    <input type="number" class="form-control" id="horasExtras" value="0">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="valorHorasExtras" class="form-label">Valor Horas Extras</label>
+                                    <input type="number" class="form-control" id="valorHorasExtras" value="0">
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="salary" class="form-label">Salario</label>
-                            <input type="number" class="form-control" id="salary" required readonly>
+                        
+                        <!-- Bonificaciones -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="bonificaciones" class="form-label">Bonificaciones</label>
+                                    <input type="number" class="form-control" id="bonificaciones" value="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="comisiones" class="form-label">Comisiones</label>
+                                    <input type="number" class="form-control" id="comisiones" value="0">
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="paymentDate" class="form-label">Fecha de Pago</label>
-                            <input type="date" class="form-control" id="paymentDate" required>
+
+                        <!-- Deducciones -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="prestamos" class="form-label">Préstamos</label>
+                                    <input type="number" class="form-control" id="prestamos" value="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="otrosDescuentos" class="form-label">Otros Descuentos</label>
+                                    <input type="number" class="form-control" id="otrosDescuentos" value="0">
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Estado</label>
-                            <select class="form-select" id="status" required>
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="Pagado">Pagado</option>
-                            </select>
+
+                        <!-- Totales (readonly) -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="totalIngresos" class="form-label">Total Ingresos</label>
+                                    <input type="number" class="form-control" id="totalIngresos" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="totalDeducciones" class="form-label">Total Deducciones</label>
+                                    <input type="number" class="form-control" id="totalDeducciones" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="netoPagar" class="form-label">Neto a Pagar</label>
+                                    <input type="number" class="form-control" id="netoPagar" readonly>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>

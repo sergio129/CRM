@@ -44,6 +44,6 @@ exports.createOrUpdateBankInfo = async (req, res) => {
         }
     } catch (error) {
         console.error("Error al crear o actualizar la información bancaria:", error);
-        res.status(500).json({ message: "Error al crear o actualizar la información bancaria", error });
+        res.status(500).json({ message: "Error al crear o actualizar la información bancaria", error: error.message });
     }
 };

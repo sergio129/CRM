@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../utils/database');
+const sequelize = require('../config/database');
 
 const Employee = sequelize.define('Employee', {
     id: {
@@ -63,6 +63,39 @@ const Employee = sequelize.define('Employee', {
     status: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    tipo_contrato: {
+        type: DataTypes.ENUM('Indefinido', 'Fijo', 'Obra', 'Aprendizaje'),
+        allowNull: false
+    },
+    salario_base: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    riesgo_arl: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1
+    },
+    cuenta_bancaria: {
+        type: DataTypes.STRING
+    },
+    banco: {
+        type: DataTypes.STRING
+    },
+    tipo_cuenta: {
+        type: DataTypes.ENUM('Ahorros', 'Corriente')
+    },
+    eps: {
+        type: DataTypes.STRING
+    },
+    fondo_pension: {
+        type: DataTypes.STRING
+    },
+    fondo_cesantias: {
+        type: DataTypes.STRING
+    },
+    caja_compensacion: {
+        type: DataTypes.STRING
     }
 }, {
     timestamps: false,
