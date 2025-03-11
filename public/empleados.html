@@ -59,13 +59,19 @@
             </div>
         </div>
 
+        <!-- Buscador de Empleados -->
+        <div class="input-group mb-3">
+            <input type="text" id="searchIdNumber" class="form-control" placeholder="Buscar empleado por número de identificación">
+            <button class="btn btn-primary" type="button" onclick="searchEmployeeByIdNumber()">Buscar</button>
+        </div>
+
         <!-- Tabla de Empleados -->
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
                         <th><input type="checkbox" id="selectAllCheckbox"></th>
-                        <th>ID</th>
+                        <th>Número de Documento</th> <!-- Cambiar encabezado a "Número de Documento" -->
                         <th>Nombre Completo</th>
                         <th>Email</th>
                         <th>Teléfono</th>

@@ -36,7 +36,7 @@ function renderEmployees(employees) {
     const html = employees.map(employee => `
         <tr>
             <td><input type="checkbox" class="employee-checkbox" value="${employee.id}"></td>
-            <td>${employee.id}</td>
+            <td>${employee.id_number}</td> <!-- Mostrar número de identificación -->
             <td>${employee.full_name}</td>
             <td>${employee.email}</td>
             <td>${employee.phone}</td>
@@ -524,3 +524,47 @@ async function getIdTypeId(typeName) {
         return null;
     }
 }
+
+async function searchEmployeeByIdNumber() {
+    const idNumber = document.getElementById("searchIdNumber").value;
+    if (!idNumber) {
+        alert("Por favor, ingrese un número de identificación");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/employees/search?id_number=${idNumber}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Error al buscar empleado");
+        }
+
+        const employees = await response.json();
+        renderEmployees(employees);
+        document.getElementById("pagination").innerHTML = ''; // Ocultar paginación durante la búsqueda
+    } catch (error) {
+        console.error("Error al buscar empleado:", error);
+        alert("Error al buscar empleado");
+    }
+}
+
+// Add event listener for Enter key in search input
+document.getElementById("searchIdNumber").addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        searchEmployeeByIdNumber();
+    }
+});
+
+// Add event listener to clear search and show all employees
+document.getElementById("searchIdNumber").addEventListener("input", function(event) {
+    if (this.value === "") {
+        loadEmployees(1);
+    }
+});
