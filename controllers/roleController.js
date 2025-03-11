@@ -1,4 +1,5 @@
 const Role = require('../models/Role');
+const { validationResult } = require('express-validator');
 
 // Obtener todos los roles
 exports.getRoles = async (req, res) => {
@@ -24,6 +25,11 @@ exports.getRoleById = async (req, res) => {
 
 // Crear un nuevo rol
 exports.createRole = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { role_name, permission } = req.body;
         const newRole = await Role.create({ role_name, permission });
@@ -36,6 +42,11 @@ exports.createRole = async (req, res) => {
 
 // Actualizar un rol y sus permisos
 exports.updateRole = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { role_name, permissions } = req.body;
         const role = await Role.findByPk(req.params.id);

@@ -1,7 +1,89 @@
 /* Estilos generales */
 body {
-    background-color: #f4f6f9;
-    font-family: 'Arial', sans-serif;
+    background-color: #e9ebee;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #1d2129;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #4267b2;
+    border-bottom: 1px solid #29487d;
+}
+
+.navbar-brand {
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.navbar-nav .nav-link {
+    color: #fff;
+    font-size: 16px;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #dfe3ee;
+}
+
+/* Contenedor principal */
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Títulos */
+h2 {
+    color: #1d2129;
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* Tarjetas */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.card-title {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Gráficas */
+canvas {
+    max-height: 300px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    h2 {
+        font-size: 24px;
+    }
+
+    .card-header {
+        font-size: 16px;
+    }
+
+    .card-title {
+        font-size: 20px;
+    }
 }
 
 /* Barra lateral */
@@ -33,16 +115,6 @@ body {
     color: rgb(0, 0, 0);
 }
 
-/* Tarjetas */
-.card {
-    border-radius: 10px;
-    transition: transform 0.3s;
-}
-
-.card:hover {
-    transform: scale(1.05);
-}
-
 /* Buscador de clientes */
 .search-box {
     background: white;
@@ -58,7 +130,6 @@ body {
     padding: 10px;
     border-radius: 5px;
 }
-
 
 /*Probando estilo en la tarjeta Carga clientes*/
 /* Estilo para la tarjeta */
@@ -85,7 +156,6 @@ body {
     color: white;
 }
 
-
 /*Probando estilo en la tarjeta Gestion nomina*/
 /* Estilo para la tarjeta */
 .card-nomina {
@@ -110,9 +180,6 @@ body {
     background-color: #000000;
     color: white;
 }
-
-
-
 
 /*Probando estilo en la tarjeta Administrativo*/
 /* Estilo para la tarjeta */
@@ -139,7 +206,6 @@ body {
     color: white;
 }
 
-
 /*Probando estilo en la tarjeta Usuarios*/
 /* Estilo para la tarjeta */
 .card-user {
@@ -164,8 +230,6 @@ body {
     background-color: #000000;
     color: white;
 }
-
-
 
 /*Probando estilo en la tarjeta clientes*/
 /* Estilo para la tarjeta */

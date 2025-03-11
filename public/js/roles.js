@@ -15,7 +15,7 @@ function renderRoles(roles) {
             <td>${role.role_name || 'Sin nombre'}</td>
             <td>${role.permissions ? JSON.stringify(role.permissions) : 'Sin permisos'}</td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="editRole(${role.id}, '${role.role_name || ''}', '${role.permission ? JSON.stringify(role.permission) : ''}')">Editar</button>
+                <button class="btn btn-warning btn-sm" onclick="openEditRoleModal(${role.id}, '${role.role_name}', '${JSON.stringify(role.permissions)}')">Editar</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteRole(${role.id})">Eliminar</button>
             </td>
         </tr>`;
@@ -43,25 +43,93 @@ async function saveRole() {
     loadRoles();
 }
 
-function editRole(id, name, permissions) {
-    document.getElementById("roleId").value = id;
-    document.getElementById("roleName").value = name;
+async function searchRole() {
+    const roleName = document.getElementById("searchRole").value.trim();
+    if (!roleName) {
+        alert("Ingrese un nombre de rol.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/roles/search/${roleName}`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+
+        if (!response.ok) {
+            alert("Rol no encontrado.");
+            return;
+        }
+
+        const roles = await response.json();
+        renderRoles(roles);
+    } catch (error) {
+        console.error("Error al buscar rol:", error);
+        alert("Error al buscar rol.");
+    }
+}
+
+function openEditRoleModal(id, name, permissions) {
+    document.getElementById("editRoleId").value = id;
+    document.getElementById("editRoleName").value = name;
 
     const permArray = JSON.parse(permissions);
-    document.getElementById("rolePermissions").querySelectorAll("option").forEach(option => {
+    document.getElementById("editRolePermissions").querySelectorAll("option").forEach(option => {
         option.selected = permArray.includes(option.value);
     });
+
+    new bootstrap.Modal(document.getElementById("editRoleModal")).show();
 }
+
+document.getElementById('editRoleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const roleId = document.getElementById('editRoleId').value;
+    const rolePermissions = Array.from(document.getElementById('editRolePermissions').selectedOptions).map(opt => opt.value);
+
+    try {
+        const response = await fetch(`/api/roles/${roleId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ permissions: rolePermissions })
+        });
+
+        if (response.ok) {
+            alert('Permisos del rol actualizados correctamente');
+            loadRoles();
+            new bootstrap.Modal(document.getElementById("editRoleModal")).hide();
+        } else {
+            const errorData = await response.json();
+            alert(`Error al actualizar los permisos del rol: ${errorData.message}`);
+        }
+    } catch (error) {
+        console.error('Error al actualizar los permisos del rol:', error);
+        alert('Ocurrió un error. Intenta nuevamente.');
+    }
+});
 
 async function deleteRole(id) {
-    await fetch(`/api/roles/${id}`, {
-       
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-    });
-    loadRoles();
+    if (!confirm("¿Estás seguro de eliminar este rol?")) return;
+
+    try {
+        const response = await fetch(`/api/roles/${id}`, {
+            method: 'DELETE',
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        });
+
+        if (response.ok) {
+            alert('Rol eliminado correctamente');
+            loadRoles();
+        } else {
+            alert('Error al eliminar el rol');
+        }
+    } catch (error) {
+        console.error('Error al eliminar el rol:', error);
+        alert('Error al eliminar el rol');
+    }
 }
-
-
 
 // Buscar un usuario por nombre de usuario
 async function searchUser() {
@@ -145,9 +213,6 @@ async function loadRolesForSelect(currentRole) {
     }
 }
 
-
-
-
 // Cambiar el rol de un usuario
 async function changeUserRole() {
     const username = document.getElementById("foundUsername").innerText;
@@ -182,6 +247,5 @@ function toggleSubmenu(event) {
         submenu.classList.add("show");
     }
 }
-
 
 loadRoles();

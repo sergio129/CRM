@@ -1,15 +1,15 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
-// Agrega al inicio del archivo
-const Role = require('../models/Role'); // Asegúrate que la ruta sea correcta
-
-// En controllers/userController.js (parte superior del archivo)
-const { sequelize } = require('../utils/database'); // ✅ Importación necesaria
-
-
-
+const Role = require('../models/Role');
+const { sequelize } = require('../utils/database');
+const { validationResult } = require('express-validator');
 
 exports.createUser = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     const { full_name, email, username, password, role } = req.body;
 
     try {
@@ -50,14 +50,17 @@ exports.getUserById = async (req, res) => {
 
 // Crear un nuevo usuario
 exports.createUser = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { full_name, email, username, password, role, status } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
-          // Validar que los campos requeridos estén presentes
-          if (!full_name || !email || !username || !password || !role || !status) {
+        if (!full_name || !email || !username || !password || !role || !status) {
             return res.status(400).json({ message: "Todos los campos son obligatorios" });
         }
-   // Crear el usuario en la base de datos
         const newUser = await User.create({
             full_name,
             email,
@@ -75,6 +78,11 @@ exports.createUser = async (req, res) => {
 
 // Actualizar usuario
 exports.updateUser = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { full_name, email, username, role, status } = req.body;
 
@@ -121,11 +129,15 @@ exports.searchUser = async (req, res) => {
 };
 
 exports.changeUserRole = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { username } = req.params;
         const { newRole } = req.body;
 
-        // 1. Validar entrada
         if (!username || !newRole) {
             return res.status(400).json({ 
                 message: "Faltan parámetros requeridos",
@@ -135,7 +147,6 @@ exports.changeUserRole = async (req, res) => {
             });
         }
 
-        // 2. Buscar usuario
         const user = await User.findOne({ 
             where: { username },
             include: [{
@@ -152,7 +163,6 @@ exports.changeUserRole = async (req, res) => {
             });
         }
 
-        // 3. Verificar existencia del nuevo rol
         const validRole = await Role.findOne({
             where: { role_name: newRole }
         });
@@ -165,7 +175,6 @@ exports.changeUserRole = async (req, res) => {
             });
         }
 
-        // 4. Actualizar con transacción
         const transaction = await sequelize.transaction();
         
         try {

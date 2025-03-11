@@ -1,0 +1,27 @@
+/* Estilos generales */
+body {
+    background-color: #f4f6f9;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Contenedor principal */
+.container {
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Tarjeta */
+.card {
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Botones */
+.btn-success {
+    width: 100%;
+}
+
+.btn-secondary {
+    width: 100%;
+    margin-top: 10px;
+}

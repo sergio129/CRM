@@ -1,22 +1,15 @@
 const express = require('express');
-const { getUsers, getUserById, createUser, updateUser, deleteUser, searchUser } = require('../controllers/userController');
-const { authenticate } = require('../middleware/authMiddleware');
-const { changeUserRole } = require('../controllers/userController');
+const { getUsers, getUserById, createUser, updateUser, deleteUser, searchUser, changeUserRole } = require('../controllers/userController');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
-const userController = require("../controllers/userController");
-// Obtener todos los usuarios
-router.get('/', authenticate, getUsers);
-router.get("/", userController.getUsers);
-router.get("/:id", userController.getUserById);
-router.post("/", userController.createUser);
-router.put("/:id", userController.updateUser);
-router.delete("/:id", userController.deleteUser);
 
-// Buscar usuario por nombre de usuario
-router.get('/search/:username', authenticate, searchUser);
-// Nueva ruta para actualizar roles
-router.put('/update-role/:username', authenticate, changeUserRole);
+router.get('/', authenticate, authorize(['Administrador']), getUsers);
+router.get('/:id', authenticate, authorize(['Administrador']), getUserById);
+router.post('/', authenticate, authorize(['Administrador']), createUser);
+router.put('/:id', authenticate, authorize(['Administrador']), updateUser);
+router.delete('/:id', authenticate, authorize(['Administrador']), deleteUser);
 
-
+router.get('/search/:username', authenticate, authorize(['Administrador']), searchUser);
+router.put('/update-role/:username', authenticate, authorize(['Administrador']), changeUserRole);
 
 module.exports = router;

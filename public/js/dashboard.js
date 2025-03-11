@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Tu sesión ha expirado. Inicia sesión nuevamente.");
         window.location.href = "login.html"; // 🔹 Redirigir al login
     }
+
+    loadDashboardData();
 });
 
 async function searchClient() {
@@ -85,4 +87,104 @@ function toggleSubmenu(event) {
     } else {
         submenu.classList.add("show");
     }
+}
+
+async function loadDashboardData() {
+    try {
+        const [clientsResponse, employeesResponse, payrollsResponse] = await Promise.all([
+            fetch('/api/clients', { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } }),
+            fetch('/api/employees', { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } }),
+            fetch('/api/payrolls', { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } })
+        ]);
+
+        if (!clientsResponse.ok || !employeesResponse.ok || !payrollsResponse.ok) {
+            throw new Error("Error al obtener datos del dashboard.");
+        }
+
+        const clients = await clientsResponse.json();
+        const employees = await employeesResponse.json();
+        const payrolls = await payrollsResponse.json();
+
+        document.getElementById("totalClients").textContent = clients.length;
+        document.getElementById("totalEmployees").textContent = employees.length;
+        document.getElementById("totalPayrolls").textContent = payrolls.length;
+
+        renderClientsChart(clients);
+        renderClientsPercentageChart(clients);
+    } catch (error) {
+        console.error("Error al cargar datos del dashboard:", error);
+        alert("Error al cargar datos del dashboard.");
+    }
+}
+
+function renderClientsChart(clients) {
+    const ctx = document.getElementById('clientsChart').getContext('2d');
+    const clientsData = clients.reduce((acc, client) => {
+        const status = client.status || 'Desconocido';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+    }, {});
+
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(clientsData),
+            datasets: [{
+                label: 'Clientes',
+                data: Object.values(clientsData),
+                backgroundColor: ['#42b72a', '#f7b731', '#e74c3c', '#3498db']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Distribución de Clientes por Estado'
+                }
+            }
+        }
+    });
+}
+
+function renderClientsPercentageChart(clients) {
+    const ctx = document.getElementById('clientsPercentageChart').getContext('2d');
+    const clientsData = clients.reduce((acc, client) => {
+        const estadoFinanciero = client.estado_financiero || 'Desconocido';
+        acc[estadoFinanciero] = (acc[estadoFinanciero] || 0) + 1;
+        return acc;
+    }, {});
+
+    const totalClients = clients.length;
+    const clientsPercentageData = Object.keys(clientsData).reduce((acc, key) => {
+        acc[key] = ((clientsData[key] / totalClients) * 100).toFixed(2);
+        return acc;
+    }, {});
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(clientsPercentageData),
+            datasets: [{
+                label: 'Porcentaje de Clientes',
+                data: Object.values(clientsPercentageData),
+                backgroundColor: ['#42b72a', '#f7b731', '#e74c3c', '#3498db']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Porcentaje de Clientes por Estado Financiero'
+                }
+            }
+        }
+    });
 }

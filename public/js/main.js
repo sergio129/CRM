@@ -13,11 +13,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
         if (response.ok) {
             const data = await response.json();
-            localStorage.setItem("token", data.token); // 🔹 Guardar el token en localStorage
+            localStorage.setItem("token", data.token); // Guardar el token en localStorage
             alert('Login exitoso');
-            console.log('Token:', data.token);
-           window.location.href = "dashboard.html"; // 🔹 Redirigir al usuario
-        
+            window.location.href = "dashboard.html"; // Redirigir al usuario
         } else {
             alert('Usuario o contraseña incorrectos');
         }

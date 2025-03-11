@@ -5,65 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Usuarios</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/usuarios.css">
-    <link rel="stylesheet" href="css/roles.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">CRM Moderno</a>
-            <button class="btn btn-outline-light" onclick="window.location.href = '/dashboard.html';">Home</button>
+            <a class="navbar-brand" href="#">CRM</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/clientes.html">Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/roles.html">Roles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/nomina.html">Gestión de Nómina</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/usuarios.html">Usuarios</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
-<!-- Contenedor Principal -->
-<div class="container-fluid mt-4">
-    <div class="row">
-        <!-- Barra Lateral -->
-        <div class="col-md-3 sidebar">
-            <h4 class="text-center">Menú</h4>
-            <ul class="list-group">
-                <div id="sidebar-container"></div>
-                <li class="list-group-item"><i class="fas fa-user-friends"></i> <a href="clientes.html">Clientes</a></li>
-                <li class="list-group-item"><i class="fas fa-file-invoice-dollar"></i> <a href="nomina.html">Gestión de Nómina</a></li>
-            </ul>
-        </div>
+
+    <!-- Contenedor Principal -->
     <div class="container mt-4">
         <h2 class="text-center">Gestión de Usuarios</h2>
 
-        <!-- Contenedor de mensajes -->
-        <div id="messageContainer" class="message-container"></div>
-
-          <!-- Botón para crear usuario -->
-    <button id="createUserButton" class="btn btn-success mb-3">Crear Usuario</button>
-
-        <!-- Buscar Usuario -->
-        <div class="mb-3">
-            <input type="text" id="searchUsername" class="form-control" placeholder="Buscar usuario">
-            <button id="searchButton" class="btn btn-primary mt-2">Buscar</button>
-        </div>
+        <!-- Botón para crear usuario -->
+        <button id="createUserButton" class="btn btn-success mb-3">Crear Usuario</button>
 
         <!-- Tabla de Usuarios -->
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
                     <th>ID</th>
-                    <th>Nombre</th>
+                    <th>Nombre Completo</th>
                     <th>Email</th>
                     <th>Usuario</th>
                     <th>Rol</th>
                     <th>Estado</th>
-
-
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="userTableBody"></tbody>
         </table>
     </div>
 
-     <!-- Modal para crear/editar usuario -->
-     <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+    <!-- Modal para crear/editar usuario -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -86,15 +86,14 @@
                             <input type="text" class="form-control" id="username" required>
                         </div>
                         <div class="mb-3">
-                            <label for="password_hash" class="form-label">Contraseña</label>
-                            <input type="password_hash" class="form-control" id="password_hash">
+                            <label for="password" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="password" required>
                         </div>
                         <div class="mb-3">
                             <label for="role" class="form-label">Rol</label>
                             <select class="form-select" id="role" required>
-                                <option value="administrador">Administrador</option>
-                                <option value="user">Usuario</option>
-                                <option value="asesor">Asesor</option>
+                                <option value="Administrador">Administrador</option>
+                                <option value="Usuario">Usuario</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -102,7 +101,6 @@
                             <select class="form-select" id="status" required>
                                 <option value="Activo">Activo</option>
                                 <option value="Inactivo">Inactivo</option>
-                                <option value="Suspendido">Suspendido</option>
                             </select>
                         </div>
                     </form>
@@ -115,19 +113,7 @@
         </div>
     </div>
 
-    <!-- Scripts de Bootstrap y tu archivo JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script src="js/usuarios.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            fetch("menu.html")
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById("sidebar-container").innerHTML = data;
-                })
-                .catch(error => console.error("Error cargando el menú:", error));
-        });
-    </script>
 </body>
 </html>

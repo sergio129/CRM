@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Rol</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/roles.css">
+    <link rel="stylesheet" href="css/crear-rol.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">CRM</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/clientes.html">Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/roles.html">Roles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/nomina.html">Gestión de Nómina</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/usuarios.html">Usuarios</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <div class="container mt-4">
+        <h2 class="text-center">Crear Rol</h2>
+
+        <!-- Formulario para Crear Rol -->
+        <div class="card mt-4 p-4">
+            <h4>Nuevo Rol</h4>
+            <form id="createRoleForm">
+                <div class="mb-3">
+                    <label for="roleName" class="form-label">Nombre del Rol</label>
+                    <input type="text" class="form-control" id="roleName" placeholder="Ejemplo: Administrador" required>
+                </div>
+                <div class="mb-3">
+                    <label for="rolePermissions" class="form-label">Permisos</label>
+                    <select multiple class="form-control" id="rolePermissions">
+                        <option value="Administrativo">Administrativo</option>
+                        <option value="Contable">Contable</option>
+                        <option value="Clientes">Clientes</option>
+                        <option value="Gestión de Nómina">Gestión de Nómina</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success">Crear Rol</button>
+                <button type="button" class="btn btn-secondary mt-2" onclick="window.location.href = 'roles.html';">Volver al Módulo Administrativo</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/crear-rol.js"></script>
+</body>
+</html>
