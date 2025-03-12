@@ -9,9 +9,9 @@ exports.getEmployees = async (req, res) => {
         const { count, rows: employees } = await Employee.findAndCountAll({
             attributes: [
                 'id', 'full_name', 'email', 'phone', 'address', 'role', 
-                ['salario_base', 'salary'], // Mapear salario_base a salary en la respuesta
+                ['salario_base', 'salario_base'], // Alias opcional: mapear salario_base a salario_base (sin 'salary')
                 'status', 'id_type_id', 'id_number', 'department', 
-                'position', 'hire_date', 'contract_type', 'work_schedule'
+                'position', 'hire_date', 'eps','fondo_pension','fondo_cesantias','caja_compensacion','contract_type', 'work_schedule'
             ],
             limit: parseInt(limit),
             offset: parseInt(offset)
@@ -28,7 +28,11 @@ exports.getEmployees = async (req, res) => {
 exports.getEmployeeById = async (req, res) => {
     try {
         const employee = await Employee.findByPk(req.params.id, {
-            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule']
+            attributes: [
+                'id', 'full_name', 'email', 'phone', 'address', 'role',
+                'salario_base', 'status', 'id_type_id', 'id_number', 'department',
+                'position', 'hire_date','riesgo_arl', 'eps','fondo_pension','fondo_cesantias','caja_compensacion','contract_type', 'work_schedule'
+            ]
         });
 
         if (!employee) return res.status(404).json({ message: "Empleado no encontrado" });
@@ -44,7 +48,11 @@ exports.getEmployeeByIdNumber = async (req, res) => {
     try {
         const employee = await Employee.findOne({
             where: { id_number: req.params.id_number },
-            attributes: ['id', 'full_name', 'email', 'phone', 'address', 'role', 'salary', 'status', 'id_type_id', 'id_number', 'department', 'position', 'hire_date', 'contract_type', 'work_schedule']
+            attributes: [
+                'id', 'full_name', 'email', 'phone', 'address', 'role',
+                'salario_base', 'status', 'id_type_id', 'id_number', 'department',
+                'position', 'hire_date','riesgo_arl','eps','fondo_pension','fondo_cesantias','caja_compensacion', 'contract_type', 'work_schedule'
+            ]
         });
 
         if (!employee) return res.status(404).json({ message: "Empleado no encontrado" });
@@ -63,24 +71,55 @@ exports.createEmployee = async (req, res) => {
     }
 
     try {
-        const { full_name, email, phone, address, role, salary, status, id_type_id, id_number, department, position, hire_date, contract_type, work_schedule } = req.body;
+        // Agregar console.log para debuggear
+        console.log("Datos recibidos en createEmployee:", req.body);
+
+        const { 
+            full_name, 
+            email, 
+            phone, 
+            address, 
+            role, 
+            status, 
+            id_type_id, 
+            id_number, 
+            department, 
+            position, 
+            hire_date, 
+            tipo_contrato,
+            salario_base,  // Este es el nuevo campo que usaremos
+            riesgo_arl,
+            eps,
+            fondo_pension,
+            fondo_cesantias,
+            caja_compensacion
+        } = req.body;
+
+        // Asegurar que se impriman los valores recibidos para debug
+        console.log("createEmployee req.body:", req.body);
+
         const newEmployee = await Employee.create({
             full_name,
             email,
             phone,
             address,
             role,
-            salary,
+            salario_base, // El nuevo campo
             status,
             id_type_id,
             id_number,
             department,
             position,
-            hire_date,
-            contract_type,
-            work_schedule
+            hire_date: hire_date || null,
+            tipo_contrato,
+            riesgo_arl,
+            eps: eps || null,
+            fondo_pension: fondo_pension || null,
+            fondo_cesantias: fondo_cesantias || null,
+            caja_compensacion: caja_compensacion || null
         });
 
+        console.log("Empleado creado:", newEmployee.toJSON());
         res.status(201).json({ message: "Empleado creado correctamente", employee: newEmployee });
     } catch (error) {
         console.error("Error al crear el empleado:", error);
@@ -95,9 +134,38 @@ exports.updateEmployee = async (req, res) => {
     }
 
     try {
-        const { full_name, email, phone, address, role, salary, status, id_type_id, id_number, department, position, hire_date, contract_type, work_schedule } = req.body;
-        const employee = await Employee.findByPk(req.params.id);
-        if (!employee) return res.status(404).json({ message: "Empleado no encontrado" });
+        // Agregar console.log para debuggear
+        console.log("Datos recibidos en updateEmployee:", req.body);
+
+        const employeeId = req.params.id;
+        const {
+            full_name, 
+            email, 
+            phone, 
+            address, 
+            role,
+            id_type_id,
+            id_number,
+            department,
+            position,
+            hire_date,
+            tipo_contrato,
+            salario_base,
+            riesgo_arl,
+            eps,
+            fondo_pension,
+            fondo_cesantias,
+            caja_compensacion,
+            status
+        } = req.body;
+
+        console.log("updateEmployee req.body:", req.body);
+
+        const employee = await Employee.findByPk(employeeId);
+        
+        if (!employee) {
+            return res.status(404).json({ message: "Empleado no encontrado" });
+        }
 
         await employee.update({
             full_name,
@@ -105,18 +173,26 @@ exports.updateEmployee = async (req, res) => {
             phone,
             address,
             role,
-            salary,
-            status,
             id_type_id,
             id_number,
             department,
             position,
-            hire_date,
-            contract_type,
-            work_schedule
+            hire_date: hire_date || null,
+            tipo_contrato,
+            salario_base,
+            riesgo_arl,
+            eps: eps || null,
+            fondo_pension: fondo_pension || null,
+            fondo_cesantias: fondo_cesantias || null,
+            caja_compensacion: caja_compensacion || null,
+            status
         });
 
-        res.json({ message: "Empleado actualizado correctamente", employee });
+        console.log("Empleado actualizado:", employee.toJSON());
+        res.json({ 
+            message: "Empleado actualizado correctamente", 
+            employee: employee.toJSON() 
+        });
     } catch (error) {
         console.error("Error al actualizar el empleado:", error);
         res.status(500).json({ message: "Error al actualizar el empleado", error });
@@ -165,8 +241,8 @@ exports.searchEmployeeByIdNumber = async (req, res) => {
             },
             attributes: [
                 'id', 'full_name', 'email', 'phone', 'address', 'role', 
-                'salary', 'status', 'id_type_id', 'id_number', 'department', 
-                'position', 'hire_date', 'contract_type', 'work_schedule'
+                'salario_base', 'status', 'id_type_id', 'id_number', 'department', 
+                'position', 'hire_date','riesgo_arl','eps','fondo_pension','fondo_cesantias','caja_compensacion','contract_type', 'work_schedule'
             ]
         });
 
@@ -191,7 +267,12 @@ exports.getActiveEmployees = async (req, res) => {
     try {
         const employees = await Employee.findAll({
             where: { status: 'Activo' },
-            attributes: ['id', 'full_name', 'id_number', 'salary'],
+            attributes: [
+                'id', 
+                'full_name', 
+                'id_number', 
+                'salario_base' // Asegurarse de incluir salario_base
+            ],
             order: [['full_name', 'ASC']]
         });
 

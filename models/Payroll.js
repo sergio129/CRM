@@ -11,7 +11,7 @@ const Payroll = sequelize.define('Payroll', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    salary: {
+    salario_base: { // Reemplazado "salary" por "salario_base"
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },

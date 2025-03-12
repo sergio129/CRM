@@ -6,6 +6,20 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("createEmployeeButton").addEventListener("click", openEmployeeModal);
     document.getElementById("deleteSelectedButton").addEventListener("click", openDeleteModal);
     document.getElementById("selectAllCheckbox").addEventListener("change", toggleSelectAll);
+
+    // Agregar manejo del sidebar
+    document.getElementById("sidebarCollapse").addEventListener("click", () => {
+        document.getElementById("sidebar").classList.toggle("active");
+        document.getElementById("content").classList.toggle("active");
+    });
+
+    // Mostrar nombre del archivo seleccionado
+    document.getElementById("excelFileInput").addEventListener("change", function() {
+        const fileName = this.files[0]?.name;
+        if (fileName) {
+            showToast(`Archivo seleccionado: ${fileName}`);
+        }
+    });
 });
 
 async function loadEmployees(page = 1) {
@@ -42,7 +56,7 @@ function renderEmployees(employees) {
             <td>${employee.phone}</td>
             <td>${employee.address}</td>
             <td>${employee.role}</td>
-            <td>${employee.salario_base}</td>
+            <td>${employee.salario_base || 0}</td>
             <td>${employee.status}</td>
             <td>
                 <div class="d-flex justify-content-between">
@@ -222,23 +236,35 @@ async function saveEmployee() {
     const url = employeeId ? `/api/employees/${employeeId}` : "/api/employees";
     const method = employeeId ? "PUT" : "POST";
 
-    const hireDate = document.getElementById("hireDate").value;
-    const formattedHireDate = hireDate ? new Date(hireDate).toISOString().split('T')[0] : null;
+    // Agregar console.log para debuggear
+    console.log("Valores de los campos:", {
+        hire_date: document.getElementById("hireDate").value,
+        eps: document.getElementById("eps").value,
+        fondo_pension: document.getElementById("fondo_pension").value,
+        fondo_cesantias: document.getElementById("fondo_cesantias").value,
+        caja_compensacion: document.getElementById("caja_compensacion").value
+    });
 
+    const salarioBase = parseFloat(document.getElementById("salario_base").value) || 0;
+    // Leer explícitamente los demás campos, usando trim() para evitar espacios en blanco
     const employeeData = {
-        full_name: document.getElementById("fullName").value,
-        email: document.getElementById("email").value,
-        phone: document.getElementById("phone").value,
-        address: document.getElementById("address").value,
+        full_name: document.getElementById("fullName").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        address: document.getElementById("address").value.trim(),
         role: document.getElementById("role").value,
-        salario_base: document.getElementById("salary").value, // Cambiar salary por salario_base
         id_type_id: document.getElementById("idType").value,
-        id_number: document.getElementById("idNumber").value,
-        department: document.getElementById("department").value,
-        position: document.getElementById("position").value,
-        hire_date: formattedHireDate,
-        contract_type: document.getElementById("contractType").value,
-        work_schedule: document.getElementById("workSchedule").value,
+        id_number: document.getElementById("idNumber").value.trim(),
+        department: document.getElementById("department").value.trim(),
+        position: document.getElementById("position").value.trim(),
+        hire_date: document.getElementById("hireDate").value, // Fecha de Ingreso con formato YYYY-MM-DD
+        tipo_contrato: document.getElementById("tipo_contrato").value,
+        salario_base: salarioBase,
+        riesgo_arl: document.getElementById("riesgo_arl").value,
+        eps: document.getElementById("eps").value.trim(),
+        fondo_pension: document.getElementById("fondo_pension").value.trim(),
+        fondo_cesantias: document.getElementById("fondo_cesantias").value.trim(),
+        caja_compensacion: document.getElementById("caja_compensacion").value.trim(),
         status: document.getElementById("status").value
     };
 
@@ -252,18 +278,25 @@ async function saveEmployee() {
             body: JSON.stringify(employeeData),
         });
 
+        // Agregar console.log para ver la respuesta del servidor
+        const responseData = await response.json();
+        console.log("Respuesta del servidor:", responseData);
+
         if (!response.ok) {
-            throw new Error("Error al guardar el empleado");
+            throw new Error("Error al guardar el empleado: " + responseData.message);
         }
 
-        const data = await response.json();
         showToast(`Empleado ${employeeId ? "actualizado" : "creado"} correctamente`);
-        loadEmployees();
+        
+        // Cerrar el modal
         const modal = bootstrap.Modal.getInstance(document.getElementById("employeeModal"));
         modal.hide();
+        
+        // Recargar la lista de empleados
+        loadEmployees();
     } catch (error) {
         console.error("Error al guardar el empleado:", error);
-        showToast("Error al guardar el empleado");
+        showToast("Error al guardar el empleado: " + error.message);
     }
 }
 
@@ -281,30 +314,61 @@ async function editEmployee(employeeId) {
         }
 
         const employee = await response.json();
+        
+        // Función auxiliar para establecer valores de forma segura
+        const setFieldValue = (fieldId, value) => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                if (field.type === 'date' && value) {
+                    // Formatear fecha correctamente
+                    const date = new Date(value);
+                    const formattedDate = date.toISOString().split('T')[0];
+                    field.value = formattedDate;
+                } else {
+                    field.value = value || '';
+                }
+            }
+        };
 
-        // Rellenar el formulario con los datos del empleado
+        // Establecer el título del modal
         document.getElementById("employeeModalLabel").textContent = "Editar Empleado";
-        document.getElementById("employeeId").value = employee.id;
-        document.getElementById("fullName").value = employee.full_name;
-        document.getElementById("email").value = employee.email;
-        document.getElementById("phone").value = employee.phone;
-        document.getElementById("address").value = employee.address;
-        document.getElementById("role").value = employee.role;
-        document.getElementById("salary").value = employee.salario_base; // Cambiar salary por salario_base
-        document.getElementById("idType").value = employee.id_type_id;
-        document.getElementById("idNumber").value = employee.id_number;
-        document.getElementById("department").value = employee.department;
-        document.getElementById("position").value = employee.position;
-        document.getElementById("hireDate").value = employee.hire_date ? employee.hire_date.split('T')[0] : '';
-        document.getElementById("contractType").value = employee.contract_type;
-        document.getElementById("workSchedule").value = employee.work_schedule;
-        document.getElementById("status").value = employee.status;
-        document.getElementById("bankInfoButton").style.display = "block";
 
-        // Cargar información bancaria
-        loadBankInfo(employee.id);
+        // Establecer los valores en el formulario
+        setFieldValue("employeeId", employee.id);
+        setFieldValue("fullName", employee.full_name);
+        setFieldValue("email", employee.email);
+        setFieldValue("phone", employee.phone);
+        setFieldValue("address", employee.address);
+        setFieldValue("role", employee.role);
+        setFieldValue("idType", employee.id_type_id);
+        setFieldValue("idNumber", employee.id_number);
+        setFieldValue("department", employee.department);
+        setFieldValue("position", employee.position);
+        setFieldValue("hireDate", employee.hire_date);
+        setFieldValue("tipo_contrato", employee.tipo_contrato || 'Indefinido');
+        setFieldValue("salario_base", employee.salario_base || employee.salary || 0);
+        setFieldValue("riesgo_arl", employee.riesgo_arl || '1');
+        setFieldValue("eps", employee.eps);
+        setFieldValue("fondo_pension", employee.fondo_pension);
+        setFieldValue("fondo_cesantias", employee.fondo_cesantias);
+        setFieldValue("caja_compensacion", employee.caja_compensacion);
+        setFieldValue("status", employee.status || 'Activo');
 
-        new bootstrap.Modal(document.getElementById("employeeModal")).show();
+        // Mostrar el botón de información bancaria
+        const bankInfoButton = document.getElementById("bankInfoButton");
+        if (bankInfoButton) {
+            bankInfoButton.style.display = "block";
+        }
+
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById("employeeModal"));
+        modal.show();
+
+        // Cargar información bancaria si existe
+        if (employee.id) {
+            await loadBankInfo(employee.id);
+        }
+
     } catch (error) {
         console.error("Error al editar el empleado:", error);
         showToast("Error al editar el empleado: " + error.message);
@@ -428,16 +492,13 @@ async function uploadExcel() {
             for (const row of jsonData) {
                 console.log("Procesando fila:", row);
                 try {
-                    // Formatear la fecha correctamente
                     const hireDate = row["Fecha de Ingreso"];
                     let formattedHireDate = null;
                     
                     if (hireDate) {
-                        // Si es un número de serie de Excel
                         if (typeof hireDate === 'number') {
                             formattedHireDate = new Date((hireDate - 25569) * 86400 * 1000).toISOString().split('T')[0];
                         } else {
-                            // Si es una cadena de texto, intentar convertirla
                             const date = new Date(hireDate);
                             formattedHireDate = date.toISOString().split('T')[0];
                         }
@@ -446,39 +507,45 @@ async function uploadExcel() {
                     const employeeData = {
                         full_name: row["Nombre Completo"],
                         id_type_id: await getIdTypeId(row["Tipo de Identificación"]),
-                        id_number: row["Número de Identificación"],
+                        id_number: row["Número de Identificación"].toString(),
                         email: row["Email"],
-                        phone: row["Teléfono"],
+                        phone: row["Teléfono"]?.toString(),
                         address: row["Dirección"],
                         role: row["Rol"],
-                        salary: row["Salario"],
                         department: row["Departamento"],
-                        position: row["Puesto"],
+                        position: row["Cargo"],
                         hire_date: formattedHireDate,
-                        contract_type: row["Tipo de Contrato"],
-                        work_schedule: row["Horario de Trabajo"],
-                        status: row["Estado"]
+                        tipo_contrato: row["Tipo de Contrato"],
+                        salario_base: parseFloat(row["Salario Base"]) || 0,
+                        riesgo_arl: parseInt(row["Nivel de Riesgo ARL"]) || 1,
+                        eps: row["EPS"],
+                        fondo_pension: row["Fondo de Pensión"],
+                        fondo_cesantias: row["Fondo de Cesantías"],
+                        caja_compensacion: row["Caja de Compensación"],
+                        status: row["Estado"] || 'Activo'
                     };
 
                     console.log("Datos del empleado a guardar:", employeeData);
 
-                    // Primero crear o actualizar el empleado
                     const employeeResponse = await createOrUpdateEmployee(employeeData);
                     
                     if (employeeResponse && employeeResponse.employee) {
-                        // Si el empleado se creó/actualizó correctamente, proceder con la información bancaria
                         const bankData = {
                             employee_id: employeeResponse.employee.id,
-                            bank_account_number: row["Número de cuenta bancaria"],
-                            bank_account_type: row["Tipo de cuenta"],
+                            bank_account_number: row["Número de Cuenta"]?.toString(),
+                            bank_account_type: row["Tipo de Cuenta"],
                             bank_name: row["Banco"]
                         };
                         
-                        await createOrUpdateBankInfo(bankData);
+                        if (bankData.bank_account_number && bankData.bank_name) {
+                            await createOrUpdateBankInfo(bankData);
+                        }
+                        
                         console.log(`Procesado exitosamente: ${employeeData.full_name}`);
                     }
                 } catch (error) {
                     console.error(`Error procesando fila: ${error.message}`);
+                    showToast(`Error procesando empleado: ${error.message}`);
                 }
             }
             

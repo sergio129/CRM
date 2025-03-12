@@ -1,3 +1,6 @@
+/* Importar estilos base */
+@import 'base.css';
+
 body {
     background-color: #f4f6f9;
     font-family: 'Arial', sans-serif;
@@ -34,8 +37,6 @@ body {
     margin: auto;
 }
 
-
-
 /* Barra lateral */
 .sidebar {
     background: #519eeb;
@@ -63,4 +64,13 @@ body {
 .sidebar a {
     text-decoration: none;
     color: rgb(0, 0, 0);
+}
+
+/* Estilos específicos para usuarios */
+.user-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
 }

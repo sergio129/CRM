@@ -36,10 +36,6 @@ const Employee = sequelize.define('Employee', {
         type: DataTypes.STRING,
         allowNull: true
     },
-    salary: {
-        type: DataTypes.FLOAT,
-        allowNull: false
-    },
     department: {
         type: DataTypes.STRING,
         allowNull: true
@@ -66,12 +62,13 @@ const Employee = sequelize.define('Employee', {
     },
     tipo_contrato: {
         type: DataTypes.ENUM('Indefinido', 'Fijo', 'Obra', 'Aprendizaje'),
-        allowNull: true, // Cambiado a true para permitir NULL
+        allowNull: true,
         defaultValue: 'Indefinido'
     },
     salario_base: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
+        allowNull: false,
+        defaultValue: 0
     },
     riesgo_arl: {
         type: DataTypes.INTEGER,

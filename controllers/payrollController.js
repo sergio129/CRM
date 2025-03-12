@@ -13,7 +13,7 @@ exports.getPayrolls = async (req, res) => {
                 attributes: ['full_name', 'id_number'],
                 required: true
             }],
-            attributes: ['id', 'employee_id', 'salary', 'payment_date', 'status']
+            attributes: ['id', 'employee_id', 'salario_base', 'payment_date', 'status'] // 'salary' reemplazado
         });
         res.json(payrolls);
     } catch (error) {
@@ -70,7 +70,7 @@ exports.createPayroll = async (req, res) => {
             periodo,
             tipo_pago,
             dias_trabajados,
-            salario_base,
+            salario_base, // ya es salario_base
             horas_extras,
             valor_horas_extras,
             bonificaciones,
@@ -86,7 +86,7 @@ exports.createPayroll = async (req, res) => {
         // Crear primero el registro en la tabla principal de nómina
         const payroll = await Payroll.create({
             employee_id,
-            salary: salario_base,
+            salario_base, // Asignar salario_base
             payment_date: new Date(),
             status: status // Usar el estado recibido del frontend
         });
@@ -132,14 +132,14 @@ exports.updatePayroll = async (req, res) => {
     }
 
     try {
-        const { employee_id, salary, payment_date, status } = req.body;
+        const { employee_id, salario_base, payment_date, status } = req.body;
         const payroll = await Payroll.findByPk(req.params.id);
         if (!payroll) return res.status(404).json({ message: "Nómina no encontrada" });
 
         // Actualizar la nómina
         await payroll.update({
             employee_id,
-            salary,
+            salario_base, // Actualizado
             payment_date,
             status: status || 'Pendiente'  // Asegurarse de actualizar el estado
         });
@@ -213,10 +213,10 @@ exports.generatePayrollPDF = async (req, res) => {
         };
 
         // Calcular aportes
-        const aportes = calcularAportes(payroll.salary, payrollDetail?.tipo_pago || 'Mensual');
+        const aportes = calcularAportes(payroll.salario_base, payrollDetail?.tipo_pago || 'Mensual');
 
         // Calcular totales
-        const totalIngresos = parseFloat(payroll.salary) +
+        const totalIngresos = parseFloat(payroll.salario_base) +
             parseFloat(payrollDetail?.valor_hora_extra_diurna || 0) +
             parseFloat(payrollDetail?.bonificaciones || 0) +
             parseFloat(payrollDetail?.comisiones || 0);
@@ -251,7 +251,7 @@ exports.generatePayrollPDF = async (req, res) => {
             // Ingresos
             doc.fontSize(14).text('Ingresos', { underline: true });
             doc.fontSize(12)
-               .text(`Salario Base: $${formatNumber(payroll.salary)}`)
+               .text(`Salario Base: $${formatNumber(payroll.salario_base)}`)
                .text(`Horas Extras: $${formatNumber(payrollDetail.valor_hora_extra_diurna)}`)
                .text(`Bonificaciones: $${formatNumber(payrollDetail.bonificaciones)}`)
                .text(`Comisiones: $${formatNumber(payrollDetail.comisiones)}`)

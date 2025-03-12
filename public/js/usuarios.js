@@ -1,7 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadUsers();
 
-    document.getElementById("createUserButton").addEventListener("click", openUserModal);
+    // Cambiar este event listener
+    document.getElementById("sidebarCreateUserButton").addEventListener("click", () => {
+        openUserModal();
+    });
+
+    // Actualizar los event listeners para ambos botones
+    document.getElementById("mainCreateUserButton")?.addEventListener("click", openUserModal);
+
+    // Agregar manejo del sidebar
+    document.getElementById("sidebarCollapse").addEventListener("click", () => {
+        document.getElementById("sidebar").classList.toggle("active");
+        document.getElementById("content").classList.toggle("active");
+    });
 });
 
 async function loadUsers() {

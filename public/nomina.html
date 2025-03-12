@@ -5,72 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Nómina</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/nomina.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Añadir enlace a Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">GESCOOP</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard.html">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/clientes.html">Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/roles.html">Roles</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/nomina.html">Gestión de Nómina</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/usuarios.html">Usuarios</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/empleados.html">Empleados</a>
-                    </li>
-                </ul>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <h3>GESCOOP</h3>
             </div>
-        </div>
-    </nav>
 
-    <!-- Contenedor Principal -->
-    <div class="container mt-4">
-        <h2 class="text-center">Gestión de Nómina</h2>
+            <ul class="list-unstyled components">
+                <li>
+                    <div class="sidebar-action">
+                        <button id="createPayrollButton" class="btn btn-primary w-100">
+                            <i class="fas fa-plus"></i> Nueva Nómina
+                        </button>
+                    </div>
+                </li>
+                <li>
+                    <div class="sidebar-action">
+                        <div class="search-box">
+                            <input type="text" id="searchPayroll" class="form-control mb-2" placeholder="Buscar nómina...">
+                            <button class="btn btn-info w-100" onclick="searchPayroll()">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="sidebar-action">
+                        <button class="btn btn-success w-100" onclick="exportPayrollReport()">
+                            <i class="fas fa-file-excel"></i> Exportar Reporte
+                        </button>
+                    </div>
+                </li>
+            </ul>
 
-        <!-- Botón para crear nómina -->
-        <div class="d-flex justify-content-between mb-3">
-            <button id="createPayrollButton" class="btn btn-success">Crear Nómina</button>
-        </div>
-        <!-- Botón para redirigir a la página de empleados -->
-        <button id="goToEmployeesButton" class="btn btn-primary mb-3" onclick="window.location.href='/empleados.html'">Ir a Empleados</button>
-        <!-- Botón para redirigir a la página de dashboard -->
-        <button id="goToDashboardButton" class="btn btn-secondary mb-3" onclick="window.location.href='/dashboard.html'">Ir a Dashboard</button>
+            <div class="sidebar-footer">
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/empleados.html'">
+                    <i class="fas fa-users"></i> Ir a Empleados
+                </button>
+                <button class="btn btn-secondary w-100" onclick="window.location.href='/dashboard.html'">
+                    <i class="fas fa-chart-line"></i> Ir a Dashboard
+                </button>
+            </div>
+        </nav>
 
-        <!-- Tabla de Nómina -->
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Número de Documento</th>
-                        <th>Empleado</th>
-                        <th>Salario</th>
-                        <th>Fecha de Pago</th>
-                        <th>Estado</th>
-                        <th>Pago</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="payrollTableBody"></tbody>
-            </table>
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="ml-3">Gestión de Nómina</h2>
+                </div>
+            </nav>
+
+            <div class="content-body">
+                <!-- Tabla de Nómina -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Número de Documento</th>
+                                <th>Empleado</th>
+                                <th>Salario</th>
+                                <th>Fecha de Pago</th>
+                                <th>Estado</th>
+                                <th>Pago</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payrollTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 

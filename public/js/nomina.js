@@ -13,6 +13,19 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Agregar event listener para el cambio en salario base
     document.getElementById("salarioBase").addEventListener("input", calculateTotals);
+
+    // Agregar manejo del sidebar
+    document.getElementById("sidebarCollapse").addEventListener("click", () => {
+        document.getElementById("sidebar").classList.toggle("active");
+        document.getElementById("content").classList.toggle("active");
+    });
+
+    // Agregar búsqueda en tiempo real
+    document.getElementById("searchPayroll").addEventListener("input", function(e) {
+        if (this.value === "") {
+            loadPayrolls(); // Cargar todas las nóminas si el campo está vacío
+        }
+    });
 });
 
 async function loadPayrolls() {
@@ -52,7 +65,7 @@ function renderPayrolls(payrolls) {
         <tr>
             <td>${payroll.Employee.id_number}</td>
             <td>${payroll.Employee.full_name}</td>
-            <td>${payroll.salary}</td>
+            <td>${payroll.salario_base}</td>
             <td>${payroll.payment_date}</td>
             <td>${payroll.status}</td>
             <td>${payroll.status === 'Pagado' ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-exclamation-circle text-warning"></i>'}</td>
@@ -101,7 +114,7 @@ async function loadEmployeesForPayroll() {
                 const option = document.createElement('option');
                 option.value = employee.id;
                 option.textContent = `${employee.full_name} - ${employee.id_number}`;
-                option.dataset.salary = employee.salary;
+                option.dataset.salary = employee.salario_base || 0;
                 employeeSelect.appendChild(option);
             });
         } else {
@@ -116,8 +129,16 @@ async function loadEmployeesForPayroll() {
 function updateSalary() {
     const employeeSelect = document.getElementById("employeeId");
     const selectedOption = employeeSelect.options[employeeSelect.selectedIndex];
-    const salary = selectedOption.dataset.salary;
-    document.getElementById("salary").value = salary;
+    
+    // Obtener el salario del dataset del option seleccionado
+    const salarioBase = selectedOption.dataset.salary || 0;
+    console.log("Salario base del empleado:", salarioBase); // Para debugging
+    
+    // Actualizar el campo de salario base
+    document.getElementById("salarioBase").value = salarioBase;
+    
+    // Recalcular totales cuando cambia el salario
+    calculateTotals();
 }
 
 function openCreatePayrollModal() {
@@ -262,7 +283,7 @@ async function editPayroll(payrollId) {
         document.getElementById("periodo").value = payroll.PayrollDetail?.periodo || '';
         document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
         document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
-        document.getElementById("salarioBase").value = payroll.salary || 0;
+        document.getElementById("salarioBase").value = payroll.salario_base || 0;
 
         // Cargar datos de extras y bonificaciones
         document.getElementById("horasExtras").value = payroll.PayrollDetail?.horas_extras_diurnas || 0;
@@ -428,3 +449,62 @@ document.addEventListener('DOMContentLoaded', function() {
         currentCheckbox = null;
     });
 });
+
+// Agregar función de exportación
+async function exportPayrollReport() {
+    try {
+        const response = await fetch('/api/payrolls/export', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al exportar reporte');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte-nomina-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast('Reporte exportado correctamente');
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al exportar el reporte: ' + error.message);
+    }
+}
+
+// Agregar función de búsqueda
+async function searchPayroll() {
+    const searchTerm = document.getElementById("searchPayroll").value.trim();
+    if (!searchTerm) {
+        loadPayrolls();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/payrolls/search?term=${encodeURIComponent(searchTerm)}`, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Error en la búsqueda");
+        }
+
+        const payrolls = await response.json();
+        renderPayrolls(payrolls);
+    } catch (error) {
+        console.error("Error:", error);
+        showToast("Error en la búsqueda: " + error.message);
+    }
+}

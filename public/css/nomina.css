@@ -308,3 +308,18 @@ input[type="number"] {
     flex: 1;
     min-height: 85px;
 }
+
+/* Estilos específicos de nómina */
+/* Heredar estilos base */
+@import 'base.css';
+
+/* Sobreescribir o agregar estilos específicos */
+.payroll-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* ...resto de los estilos específicos de nómina... */
