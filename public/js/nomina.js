@@ -60,33 +60,6 @@ async function loadPayrolls() {
     }
 }
 
-function renderPayrolls(payrolls) {
-    const html = payrolls.map(payroll => `
-        <tr>
-            <td>${payroll.id}</td>
-            <td>${payroll.employee?.full_name || 'No asignado'}</td>
-            <td>${formatMoney(payroll.salario_base)}</td>
-            <td>${new Date(payroll.payment_date).toLocaleDateString()}</td>
-            <td><span class="badge bg-${getStatusBadge(payroll.status)}">${payroll.status}</span></td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-info btn-sm action-btn" onclick="viewPayrollDetails(${payroll.id})" title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-warning btn-sm action-btn" onclick="editPayroll(${payroll.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm action-btn" onclick="deletePayroll(${payroll.id})" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-
-    document.getElementById('payrollTableBody').innerHTML = html;
-}
-
 // Reemplazar loadEmployees por esta versión actualizada
 async function loadEmployeesForPayroll() {
     try {
@@ -178,54 +151,98 @@ function validateAndSavePayroll() {
 
 async function savePayroll() {
     try {
-        const estadoPago = document.getElementById("estadoPago").checked;
+        // Obtener valores de los elementos, usando || para valores por defecto
+        const employeeData = document.getElementById('employeeId')?.value;
+        const periodo = document.getElementById('periodo')?.value;
+        const salarioBase = parseFloat(document.getElementById('salarioBase')?.value) || 0;
+        const totalIngresos = parseFloat(document.getElementById('totalIngresos')?.value) || 0;
+        const totalDeducciones = parseFloat(document.getElementById('totalDeducciones')?.value) || 0;
+        const netoPagar = parseFloat(document.getElementById('netoPagar')?.value) || 0;
+        const status = document.getElementById('status')?.value || 'Pendiente';
+
+        // Verificar si los campos requeridos tienen valor
+        if (!employeeData || !periodo) {
+            throw new Error('Los campos Empleado y Período son obligatorios');
+        }
+
         const payrollData = {
-            employee_id: document.getElementById("employeeId").value,
-            periodo: document.getElementById("periodo").value,
-            tipo_pago: document.getElementById("tipoPago").value,
-            dias_trabajados: document.getElementById("diasTrabajados").value,
-            salario_base: document.getElementById("salarioBase").value, // Asegurarse de usar salario_base
-            horas_extras: document.getElementById("horasExtras").value,
-            valor_horas_extras: document.getElementById("valorHorasExtras").value,
-            bonificaciones: document.getElementById("bonificaciones").value,
-            comisiones: document.getElementById("comisiones").value,
-            prestamos: document.getElementById("prestamos").value,
-            otros_descuentos: document.getElementById("otrosDescuentos").value,
-            total_ingresos: document.getElementById("totalIngresos").value,
-            total_deducciones: document.getElementById("totalDeducciones").value,
-            neto_pagar: document.getElementById("netoPagar").value,
-            status: estadoPago ? 'Pagado' : 'Pendiente'  // Asegurarnos de enviar el estado correcto
+            employee_id: employeeData,
+            periodo: periodo,
+            salario_base: salarioBase,
+            total_ingresos: totalIngresos,
+            total_deducciones: totalDeducciones,
+            neto_pagar: netoPagar,
+            payment_date: new Date(),
+            status: status
         };
 
-        const response = await fetch('/api/payrolls', {
-            method: 'POST',
+        // Verificar si estamos editando o creando
+        const payrollId = document.getElementById('payrollId')?.value;
+        let method = 'POST';
+        let url = '/api/payrolls';
+
+        if (payrollId) {
+            method = 'PUT';
+            url = `/api/payrolls/${payrollId}`;
+        }
+
+        const response = await fetch(url, {
+            method: method,
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json"
             },
             body: JSON.stringify(payrollData)
         });
 
         if (!response.ok) {
-            throw new Error('Error al guardar la nómina');
+            const error = await response.json();
+            throw new Error(error.message || 'Error al guardar nómina');
         }
 
-        const result = await response.json();
-        
-        // Cerrar el modal
+        showMessage('Nómina guardada exitosamente', 'success');
+        await loadPayrolls();
+
         const modal = bootstrap.Modal.getInstance(document.getElementById('payrollModal'));
-        modal.hide();
-        
-        // Mostrar mensaje de éxito
-        showToast("Nómina creada correctamente");
-        
-        // Recargar la lista de nóminas
-        loadPayrolls();
+        if (modal) {
+            modal.hide();
+        }
     } catch (error) {
-        console.error('Error:', error);
-        showToast('Error al guardar la nómina: ' + error.message);
+        console.error("Error:", error);
+        showMessage(error.message || "Error al guardar nómina", "error");
     }
 }
+
+// Agregar función para actualizar campos calculados en tiempo real
+function updateCalculatedFields() {
+    const salarioBase = parseFloat(document.getElementById('salarioBase').value) || 0;
+    const horasExtras = parseFloat(document.getElementById('horasExtras').value) || 0;
+    const bonificaciones = parseFloat(document.getElementById('bonificaciones').value) || 0;
+    const comisiones = parseFloat(document.getElementById('comisiones').value) || 0;
+    const prestamos = parseFloat(document.getElementById('prestamos').value) || 0;
+    const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
+
+    const totalIngresos = salarioBase + horasExtras + bonificaciones + comisiones;
+    const totalDeducciones = prestamos + otrosDescuentos;
+    const netoPagar = totalIngresos - totalDeducciones;
+
+    document.getElementById('totalIngresos').value = totalIngresos.toFixed(2);
+    document.getElementById('totalDeducciones').value = totalDeducciones.toFixed(2);
+    document.getElementById('netoPagar').value = netoPagar.toFixed(2);
+}
+
+// Agregar event listeners para actualización en tiempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const inputIds = ['salarioBase', 'horasExtras', 'bonificaciones', 'comisiones', 
+                      'prestamos', 'otrosDescuentos'];
+    
+    inputIds.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateCalculatedFields);
+        }
+    });
+});
 
 async function generatePayrollPDF(payrollId) {
     try {
@@ -560,3 +577,155 @@ function openPayrollModal(payroll = null, readOnly = false) {
     
     // ...existing code...
 }
+
+function formatMoney(amount) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP'
+    }).format(amount);
+}
+
+function getStatusBadge(status) {
+    const statusMap = {
+        'Pendiente': 'badge-warning',
+        'Pagado': 'badge-success',
+        'Anulado': 'badge-danger'
+    };
+    return `<span class="badge ${statusMap[status] || 'badge-secondary'}">${status}</span>`;
+}
+
+function showMessage(message, type = "error") {
+    const alertPlaceholder = document.createElement('div');
+    alertPlaceholder.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    alertPlaceholder.style.zIndex = '9999';
+    
+    alertPlaceholder.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(alertPlaceholder);
+    
+    // Remover la alerta después de 3 segundos
+    setTimeout(() => {
+        alertPlaceholder.remove();
+    }, 3000);
+}
+
+async function renderPayrolls(payrolls) {
+    try {
+        const html = payrolls.map(payroll => `
+            <tr>
+                <td>${payroll.id || ''}</td>
+                <td>${payroll.Employee ? payroll.Employee.id_number : ''}</td>
+                <td>${payroll.Employee ? payroll.Employee.full_name : ''}</td>
+                <td>${payroll.periodo || ''}</td>
+                <td>${formatMoney(payroll.salario_base || 0)}</td>
+                <td>${formatMoney(payroll.total_ingresos || 0)}</td>
+                <td>${formatMoney(payroll.total_deducciones || 0)}</td>
+                <td>${formatMoney(payroll.neto_pagar || 0)}</td>
+                <td>
+                    <span class="badge bg-${payroll.status === 'Pagado' ? 'success' : 
+                                        payroll.status === 'Pendiente' ? 'warning' : 'danger'}">
+                        ${payroll.status || 'Pendiente'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-info btn-sm action-btn" onclick="viewPayrollDetails(${payroll.id})" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm action-btn" onclick="editPayroll(${payroll.id})" 
+                            ${payroll.status === 'Pagado' ? 'disabled' : ''} title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm action-btn" onclick="deletePayroll(${payroll.id})" 
+                            ${payroll.status === 'Pagado' ? 'disabled' : ''} title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('payrollTableBody').innerHTML = html;
+    } catch (error) {
+        console.error("Error al renderizar nóminas:", error);
+        showMessage("Error al mostrar las nóminas", "error");
+    }
+}
+
+// ...existing code...
+
+async function saveEmployee() {
+    try {
+        const form = document.getElementById('employeeForm');
+        if (!form) {
+            throw new Error('No se encontró el formulario');
+        }
+
+        // Objeto para almacenar los valores del formulario
+        const formData = {};
+        const fields = [
+            'employeeId',
+            'periodo',
+            'salarioBase',
+            'totalIngresos',
+            'totalDeducciones',
+            'netoPagar',
+            'status'
+        ];
+
+        // Verificar cada campo antes de obtener su valor
+        fields.forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (!element) {
+                console.warn(`Campo no encontrado: ${fieldId}`);
+                return;
+            }
+            formData[fieldId] = element.value;
+        });
+
+        // Validar campos requeridos
+        if (!formData.employeeId || !formData.periodo) {
+            throw new Error('Por favor complete todos los campos requeridos');
+        }
+
+        const payrollData = {
+            employee_id: formData.employeeId,
+            periodo: formData.periodo,
+            salario_base: parseFloat(formData.salarioBase) || 0,
+            total_ingresos: parseFloat(formData.totalIngresos) || 0,
+            total_deducciones: parseFloat(formData.totalDeducciones) || 0,
+            neto_pagar: parseFloat(formData.netoPagar) || 0,
+            status: formData.status || 'Pendiente'
+        };
+
+        const response = await fetch('/api/payrolls', {
+            method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payrollData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Error al guardar nómina');
+        }
+
+        showMessage('Nómina guardada exitosamente', 'success');
+        await loadPayrolls();
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('payrollModal'));
+        if (modal) {
+            modal.hide();
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        showMessage(error.message || "Error al guardar nómina", "error");
+    }
+}
+
+// ...existing code...

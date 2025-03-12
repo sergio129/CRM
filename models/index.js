@@ -10,18 +10,33 @@ const PayrollLoan = require('./PayrollLoan');
 // Establecer relaciones
 Payroll.belongsTo(Employee, { 
     foreignKey: 'employee_id',
-    as: 'Employee'
+    as: 'EmployeePayroll' // Cambiar el alias para evitar duplicados
 });
 
 Employee.hasMany(Payroll, { 
-    foreignKey: 'employee_id'
+    foreignKey: 'employee_id',
+    as: 'Payrolls' // Alias único para la relación inversa
 });
 
-Employee.hasMany(PayrollDetail, { foreignKey: 'employee_id' });
-PayrollDetail.belongsTo(Employee, { foreignKey: 'employee_id' });
+Employee.hasMany(PayrollDetail, { 
+    foreignKey: 'employee_id',
+    as: 'PayrollDetails' // Alias único
+});
 
-Employee.hasMany(PayrollLoan, { foreignKey: 'employee_id' });
-PayrollLoan.belongsTo(Employee, { foreignKey: 'employee_id' });
+PayrollDetail.belongsTo(Employee, { 
+    foreignKey: 'employee_id',
+    as: 'EmployeeDetail' // Alias único
+});
+
+Employee.hasMany(PayrollLoan, { 
+    foreignKey: 'employee_id',
+    as: 'PayrollLoans' // Alias único
+});
+
+PayrollLoan.belongsTo(Employee, { 
+    foreignKey: 'employee_id',
+    as: 'EmployeeLoan' // Alias único
+});
 
 module.exports = {
     sequelize,

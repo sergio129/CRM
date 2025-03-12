@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const Employee = require('./Employee');
 
 const Payroll = sequelize.define('Payroll', {
     id: {
@@ -11,9 +12,28 @@ const Payroll = sequelize.define('Payroll', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    salario_base: { // Reemplazado "salary" por "salario_base"
+    periodo: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    salario_base: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
+    },
+    total_ingresos: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    },
+    total_deducciones: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    },
+    neto_pagar: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
     },
     payment_date: {
         type: DataTypes.DATE,
@@ -26,6 +46,12 @@ const Payroll = sequelize.define('Payroll', {
 }, {
     timestamps: false,
     tableName: 'payrolls'
+});
+
+// Definir la relación con Employee
+Payroll.belongsTo(Employee, {
+    foreignKey: 'employee_id',
+    as: 'Employee'
 });
 
 module.exports = Payroll;
