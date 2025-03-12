@@ -1,3 +1,6 @@
+/* Importar estilos base */
+@import 'base.css';
+
 body {
     background-color: #f4f6f9;
     font-family: 'Arial', sans-serif;
@@ -69,9 +72,6 @@ body {
     color: rgb(0, 0, 0);
 }
 
-
-
-
 /* Estilos para el submenú */
 .submenu {
     border-left: 3px solid #000000;
@@ -111,7 +111,6 @@ body {
     color: #000000 !important;
     cursor: pointer;
 }
-
 
 /* Estilo base para el botón */
 .btn-AsignarRol {
@@ -157,4 +156,13 @@ body {
 /* Ajuste para que el texto del botón no tenga subrayado */
 .submenu-item a {
     text-decoration: none;
+}
+
+/* Estilos específicos para roles */
+.role-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
 }

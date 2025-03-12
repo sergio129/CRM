@@ -150,9 +150,6 @@ h2 {
     }
 }
 
-/* Estilos Material-like para ripple y focus */
-@charset "UTF-8";
-
 .mat-ripple {
     overflow: hidden;
     position: relative;
@@ -333,4 +330,55 @@ h2 {
         margin-left: 250px;
         width: calc(100% - 250px);
     }
+}
+
+/* Estilos para los botones de acción */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.action-btn i {
+    font-size: 14px;
+}
+
+.btn-warning.action-btn {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-danger.action-btn {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
+.btn-warning.action-btn:hover {
+    background-color: #ffca2c;
+    border-color: #ffc720;
+}
+
+.btn-danger.action-btn:hover {
+    background-color: #bb2d3b;
+    border-color: #b02a37;
 }

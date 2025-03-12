@@ -70,9 +70,17 @@ function renderPayrolls(payrolls) {
             <td>${payroll.status}</td>
             <td>${payroll.status === 'Pagado' ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-exclamation-circle text-warning"></i>'}</td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="editPayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>Editar</button>
-                <button class="btn btn-danger btn-sm" onclick="deletePayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>Eliminar</button>
-                <button class="btn btn-info btn-sm" onclick="generatePayrollPDF('${payroll.id}')">PDF</button>
+                <div class="action-buttons">
+                    <button class="btn btn-warning btn-sm action-btn" onclick="editPayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm action-btn" onclick="deletePayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-info btn-sm action-btn" onclick="generatePayrollPDF('${payroll.id}')">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join("");

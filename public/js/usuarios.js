@@ -48,8 +48,14 @@ function renderUsers(users) {
             <td>${user.role}</td>
             <td>${user.status}</td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="editUser('${user.id}')">Editar</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.id}')">Eliminar</button>
+                <div class="action-buttons">
+                    <button class="btn btn-warning btn-sm action-btn" onclick="editUser('${user.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteUser('${user.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join("");

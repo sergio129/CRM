@@ -1,3 +1,16 @@
+document.addEventListener("DOMContentLoaded", () => {
+    loadRoles();
+
+    document.getElementById("createRoleButton").addEventListener("click", () => {
+        openRoleModal();
+    });
+
+    document.getElementById("sidebarCollapse").addEventListener("click", () => {
+        document.getElementById("sidebar").classList.toggle("active");
+        document.getElementById("content").classList.toggle("active");
+    });
+});
+
 async function loadRoles() {
     const response = await fetch('/api/roles', {
         headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
@@ -8,18 +21,25 @@ async function loadRoles() {
 }
 
 function renderRoles(roles) {
-    let html = "";
-    roles.forEach(role => {
-        html += `<tr>
-            <td>${role.id || 'N/A'}</td>
-            <td>${role.role_name || 'Sin nombre'}</td>
-            <td>${role.permissions ? JSON.stringify(role.permissions) : 'Sin permisos'}</td>
+    const html = roles.map(role => `
+        <tr>
+            <td>${role.id}</td>
+            <td>${role.role_name}</td>
+            <td>${role.description || ''}</td>
+            <td>${role.status}</td>
             <td>
-                <button class="btn btn-warning btn-sm" onclick="openEditRoleModal(${role.id}, '${role.role_name}', '${JSON.stringify(role.permissions)}')">Editar</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteRole(${role.id})">Eliminar</button>
+                <div class="action-buttons">
+                    <button class="btn btn-warning btn-sm action-btn" onclick="editRole('${role.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteRole('${role.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
-        </tr>`;
-    });
+        </tr>
+    `).join("");
+
     document.getElementById("roleTableBody").innerHTML = html;
 }
 

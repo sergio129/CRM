@@ -1,3 +1,6 @@
+/* Importar estilos base */
+@import 'base.css';
+
 /* Estilos generales */
 body {
     background-color: #e9ebee;
@@ -268,4 +271,32 @@ canvas {
 .btn-outline-clientes:hover {
     background-color: #000000;
     color: white;
+}
+
+/* Estilos específicos para el dashboard */
+.stats-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.stats-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.stats-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--secondary-color);
+}
+
+.chart-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
 }

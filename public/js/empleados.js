@@ -59,9 +59,13 @@ function renderEmployees(employees) {
             <td>${employee.salario_base || 0}</td>
             <td>${employee.status}</td>
             <td>
-                <div class="d-flex justify-content-between">
-                    <button class="btn btn-warning btn-sm me-2" onclick="editEmployee('${employee.id_number}')">Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${employee.id_number}')">Eliminar</button>
+                <div class="action-buttons">
+                    <button class="btn btn-warning btn-sm action-btn" onclick="editEmployee('${employee.id_number}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteEmployee('${employee.id_number}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </td>
         </tr>
