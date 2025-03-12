@@ -37,29 +37,51 @@ exports.getClientById = async (req, res) => {
 };
 
 exports.createClient = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
     try {
-        const { full_name, email, phone, address, identification, deuda_total, ultimo_pago, estado_financiero, status } = req.body;
-        const newClient = await Client.create({
-            full_name,
-            email,
-            phone,
-            address,
-            identification,
-            deuda_total,
-            ultimo_pago,
-            estado_financiero,
-            status
-        });
+        const clientData = {
+            // Mapear campos que vienen del frontend a los campos de la base de datos
+            phone: req.body.phone,
+            address: req.body.address,
+            identification: req.body.identification,
+            ultimo_pago: req.body.ultimo_pago,
+            full_name: req.body.full_name,
+            tipo_documento: req.body.tipo_documento,
+            fecha_nacimiento: req.body.fecha_nacimiento || null,
+            genero: req.body.genero,
+            estado_civil: req.body.estado_civil,
+            nacionalidad: req.body.nacionalidad,
+            telefono_movil: req.body.phone, // Usar el mismo valor que phone
+            telefono_fijo: req.body.telefono_fijo,
+            email: req.body.email,
+            ciudad: req.body.address, // Usar el mismo valor que address
+            codigo_postal: req.body.codigo_postal,
+            pais: req.body.pais,
+            numero_cuenta: req.body.numero_cuenta,
+            tipo_cuenta: req.body.tipo_cuenta,
+            moneda: req.body.moneda,
+            limite_credito: req.body.limite_credito || 0,
+            ocupacion: req.body.ocupacion,
+            empresa: req.body.empresa,
+            sector_economico: req.body.sector_economico,
+            ingresos_mensuales: req.body.ingresos_mensuales || 0,
+            tipo_contrato: req.body.tipo_contrato,
+            antiguedad_trabajo: req.body.antiguedad_trabajo,
+            scoring_crediticio: req.body.scoring_crediticio,
+            deudas_actuales: req.body.deudas_actuales || 0,
+            creditos_vigentes: req.body.creditos_vigentes || 0,
+            deuda_total: req.body.deuda_total || 0,
+            estado_financiero: req.body.estado_financiero || 'Al día',
+            status: req.body.status || 'Activo'
+        };
 
-        res.status(201).json({ message: "Cliente creado correctamente", client: newClient });
+        const client = await Client.create(clientData);
+        res.status(201).json(client);
     } catch (error) {
-        console.error("Error al crear el cliente:", error);
-        res.status(500).json({ message: "Error al crear el cliente", error });
+        console.error('Error al crear cliente:', error);
+        res.status(500).json({
+            message: 'Error al crear cliente',
+            error: error.message
+        });
     }
 };
 
@@ -78,15 +100,39 @@ exports.updateClient = async (req, res) => {
         }
 
         await client.update({
-            full_name,
-            email,
-            phone,
-            address,
-            identification,
-            deuda_total,
-            ultimo_pago,
-            estado_financiero,
-            status
+             // Mapear campos que vienen del frontend a los campos de la base de datos
+             phone: req.body.phone,
+             address: req.body.address,
+             identification: req.body.identification,
+             ultimo_pago: req.body.ultimo_pago,
+             full_name: req.body.full_name,
+             tipo_documento: req.body.tipo_documento,
+             fecha_nacimiento: req.body.fecha_nacimiento || null,
+             genero: req.body.genero,
+             estado_civil: req.body.estado_civil,
+             nacionalidad: req.body.nacionalidad,
+             telefono_movil: req.body.phone, // Usar el mismo valor que phone
+             telefono_fijo: req.body.telefono_fijo,
+             email: req.body.email,
+             ciudad: req.body.address, // Usar el mismo valor que address
+             codigo_postal: req.body.codigo_postal,
+             pais: req.body.pais,
+             numero_cuenta: req.body.numero_cuenta,
+             tipo_cuenta: req.body.tipo_cuenta,
+             moneda: req.body.moneda,
+             limite_credito: req.body.limite_credito || 0,
+             ocupacion: req.body.ocupacion,
+             empresa: req.body.empresa,
+             sector_economico: req.body.sector_economico,
+             ingresos_mensuales: req.body.ingresos_mensuales || 0,
+             tipo_contrato: req.body.tipo_contrato,
+             antiguedad_trabajo: req.body.antiguedad_trabajo,
+             scoring_crediticio: req.body.scoring_crediticio,
+             deudas_actuales: req.body.deudas_actuales || 0,
+             creditos_vigentes: req.body.creditos_vigentes || 0,
+             deuda_total: req.body.deuda_total || 0,
+             estado_financiero: req.body.estado_financiero || 'Al día',
+             status: req.body.status || 'Activo'
         });
 
         res.json({ message: "Cliente actualizado correctamente", client });

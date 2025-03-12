@@ -1,151 +1,130 @@
-/* Estilos generales */
-body {
-    background-color: #e9ebee;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #1d2129;
-    margin: 0;
-    padding: 0;
-}
+/* Importar estilos base */
+@import 'base.css';
 
-/* Navbar */
-.navbar {
-    background-color: #4267b2;
-    border-bottom: 1px solid #29487d;
-}
-
-.navbar-brand {
-    color: #fff;
-    font-size: 24px;
-    font-weight: bold;
-}
-
-.navbar-nav .nav-link {
-    color: #fff;
-    font-size: 16px;
-}
-
-.navbar-nav .nav-link:hover {
-    color: #dfe3ee;
-}
-
-/* Contenedor principal */
-.container {
-    max-width: 1200px;
-    margin: auto;
-    padding: 20px;
-    background-color: #fff;
+/* Estilos específicos para clientes */
+.client-section {
+    background: white;
     border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Títulos */
-h2 {
-    color: #1d2129;
-    font-size: 28px;
-    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
     margin-bottom: 20px;
 }
 
-/* Botones */
-.btn-primary {
+/* Contenedor de búsqueda */
+.search-container {
+    max-width: 300px;
+    margin-left: auto;
+}
+
+.search-input {
+    border-radius: 20px 0 0 20px;
+    border: 1px solid #ced4da;
+    padding: 0.375rem 1rem;
+    font-size: 0.9rem;
+}
+
+.search-input:focus {
+    box-shadow: none;
+    border-color: #4267b2;
+}
+
+.search-btn {
+    border-radius: 0 20px 20px 0;
     background-color: #4267b2;
-    border: none;
-    transition: background-color 0.3s ease;
+    color: white;
+    border: 1px solid #4267b2;
+    padding: 0.375rem 1rem;
 }
 
-.btn-primary:hover {
+.search-btn:hover {
     background-color: #365899;
+    border-color: #365899;
+    color: white;
 }
 
-.btn-success {
-    background-color: #42b72a;
-    border: none;
-    transition: background-color 0.3s ease;
-}
-
-.btn-success:hover {
-    background-color: #36a420;
-}
-
-.btn-secondary {
-    background-color: #f5f6f7;
-    color: #4b4f56;
-    border: 1px solid #ccd0d5;
-    transition: background-color 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background-color: #e4e6eb;
-}
-
-/* Botones de acciones */
-.btn-warning {
-    background-color: #f7b731;
-    border: none;
-    transition: background-color 0.3s ease;
-    margin-right: 5px;
-}
-
-.btn-warning:hover {
-    background-color: #e1a527;
-}
-
-.btn-danger {
-    background-color: #e74c3c;
-    border: none;
-    transition: background-color 0.3s ease;
-}
-
-.btn-danger:hover {
-    background-color: #c0392b;
-}
-
-/* Tabla */
-.table {
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.table th {
-    background-color: #f5f6f7;
-    color: #4b4f56;
-}
-
-.table-hover tbody tr:hover {
-    background-color: #f1f1f1;
-}
-
-/* Modal */
+/* Estilos para el modal */
 .modal-content {
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
 }
 
 .modal-header {
     background-color: #4267b2;
     color: white;
-    border-bottom: none;
+    border-radius: 15px 15px 0 0;
+    padding: 1rem 1.5rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
 }
 
 .modal-footer {
-    border-top: none;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0 0 15px 15px;
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-    .container {
-        padding: 10px;
-    }
+/* Estilos para secciones del formulario */
+.section-title {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
 
-    h2 {
-        font-size: 24px;
-    }
+.form-section {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
 
-    .btn {
-        font-size: 14px;
-    }
+/* Estilos para campos de formulario */
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: #e9ecef;
+    opacity: 1;
+}
 
-    .table th, .table td {
-        font-size: 14px;
+/* Estilos para badges de estado */
+.badge {
+    font-size: 0.85rem;
+    padding: 0.5em 0.8em;
+}
+
+/* Estilos para campos monetarios */
+.currency-input {
+    text-align: right;
+    font-family: monospace;
+}
+
+/* Responsive modal */
+@media (min-width: 992px) {
+    .modal-lg {
+        max-width: 900px;
     }
+}
+
+/* Tabs para organización de información */
+.nav-tabs .nav-link {
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: transparent;
+    border-bottom: 2px solid #3498db;
+}
+
+.nav-tabs .nav-link.active {
+    color: #3498db;
+    background: none;
+    border: none;
+    border-bottom: 2px solid #3498db;
 }

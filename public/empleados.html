@@ -44,30 +44,23 @@
                         </button>
                     </div>
                 </li>
-                <li>
-                    <div class="sidebar-action">
-                        <div class="input-group">
-                            <input type="text" id="searchIdNumber" class="form-control" placeholder="Buscar por documento">
-                            <button class="btn btn-primary" type="button" onclick="searchEmployeeByIdNumber()">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                </li>
             </ul>
 
             <div class="sidebar-footer">
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/nomina.html'">
-                    <i class="fas fa-file-invoice-dollar"></i> Ir a Nómina
+                    <i class="fas fa-file-invoice-dollar"></i> Nómina
+                </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/clientes.html'">
+                    <i class="fas fa-handshake"></i> Clientes
+                </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
+                    <i class="fas fa-chart-line"></i> Dashboard
                 </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/usuarios.html'">
-                    <i class="fas fa-users"></i> Usuarios
+                    <i class="fas fa-user"></i> Usuarios
                 </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/roles.html'">
+                <button class="btn btn-info w-100" onclick="window.location.href='/roles.html'">
                     <i class="fas fa-user-tag"></i> Roles
-                </button>
-                <button class="btn btn-info w-100" onclick="window.location.href='/dashboard.html'">
-                    <i class="fas fa-chart-line"></i> Ir a Dashboard
                 </button>
             </div>
         </nav>
@@ -84,13 +77,22 @@
             </nav>
 
             <div class="content-body">
-                <!-- Tabla de Empleados -->
-                <div class="table-responsive">
+                <div class="container mt-4">
+                    <!-- Agregar barra de búsqueda -->
+                    <div class="search-container mb-3">
+                        <div class="input-group">
+                            <input type="text" id="tableSearch" class="form-control search-input" placeholder="Buscar empleado...">
+                            <button class="btn btn-outline-secondary search-btn" type="button" onclick="filterTable()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Empleados -->
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th><input type="checkbox" id="selectAllCheckbox"></th>
-                                <th>Número de Documento</th> <!-- Cambiar encabezado a "Número de Documento" -->
+                                <th>Número de Documento</th>
                                 <th>Nombre Completo</th>
                                 <th>Email</th>
                                 <th>Teléfono</th>
@@ -101,7 +103,22 @@
                                 <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="employeeTableBody"></tbody>
+                        <tbody id="employeeTableBody">
+                            <!-- Los empleados se cargarán dinámicamente aquí -->
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-info btn-sm action-btn" onclick="viewEmployeeDetails('${employee.id}')" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-warning btn-sm action-btn" onclick="editEmployee('${employee.id}')" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteEmployee('${employee.id}')" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tbody>
                     </table>
                 </div>
 
@@ -172,7 +189,7 @@
                                     <input type="text" class="form-control" id="department" required>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div la class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="position" class="form-label">Cargo *</label>
                                     <input type="text" class="form-control" id="position" required>

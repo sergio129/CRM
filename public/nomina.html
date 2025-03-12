@@ -48,13 +48,16 @@
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/empleados.html'">
                     <i class="fas fa-users"></i> Empleados
                 </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/clientes.html'">
+                    <i class="fas fa-handshake"></i> Clientes
+                </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
                     <i class="fas fa-chart-line"></i> Dashboard
                 </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/usuarios.html'">
                     <i class="fas fa-user"></i> Usuarios
                 </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/roles.html'">
+                <button class="btn btn-info w-100" onclick="window.location.href='/roles.html'">
                     <i class="fas fa-user-tag"></i> Roles
                 </button>
             </div>
@@ -86,7 +89,16 @@
                                 <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="payrollTableBody"></tbody>
+                        <tbody id="payrollTableBody">
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-info btn-sm action-btn" onclick="viewPayrollDetails('${payroll.id}')" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <!-- ...existing action buttons... -->
+                                </div>
+                            </td>
+                        </tbody>
                     </table>
                 </div>
             </div>

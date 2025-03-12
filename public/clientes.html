@@ -5,62 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Clientes</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/clientes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">CRM</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard.html">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/clientes.html">Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/roles.html">Roles</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/nomina.html">Gestión de Nómina</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/usuarios.html">Usuarios</a>
-                    </li>
-                </ul>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <h3>GESCOOP</h3>
             </div>
-        </div>
-    </nav>
 
-    <!-- Contenedor Principal -->
-    <div class="container mt-4">
-        <h2 class="text-center">Gestión de Clientes</h2>
+            <ul class="list-unstyled components">
+                <li>
+                    <div class="sidebar-action">
+                        <button id="createClientButton" class="btn btn-primary w-100">
+                            <i class="fas fa-plus"></i> Nuevo Cliente
+                        </button>
+                    </div>
+                </li>
+            </ul>
 
-        <!-- Botón para crear cliente -->
-        <button id="createClientButton" class="btn btn-success mb-3">Crear Cliente</button>
+            <div class="sidebar-footer">
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/nomina.html'">
+                    <i class="fas fa-file-invoice-dollar"></i> Nómina
+                </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/empleados.html'">
+                    <i class="fas fa-users"></i> Empleados
+                </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/usuarios.html'">
+                    <i class="fas fa-user"></i> Usuarios
+                </button>
+                <button class="btn btn-info w-100" onclick="window.location.href='/roles.html'">
+                    <i class="fas fa-user-tag"></i> Roles
+                </button>
+            </div>
+        </nav>
 
-        <!-- Tabla de Clientes -->
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Identificación</th>
-                        <th>Nombre Completo</th>
-                        <th>Email</th>
-                        <th>Teléfono</th>
-                        <th>Dirección</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="clientTableBody"></tbody>
-            </table>
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="ml-3">Gestión de Clientes</h2>
+                </div>
+            </nav>
+
+            <div class="content-body">
+                <div class="container mt-4">
+                    <!-- Barra de búsqueda -->
+                    <div class="search-container mb-3">
+                        <div class="input-group">
+                            <input type="text" id="tableSearch" class="form-control search-input" placeholder="Buscar cliente...">
+                            <button class="btn btn-outline-secondary search-btn" type="button" onclick="filterTable()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Clientes -->
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Documento</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Empresa</th>
+                                <th>Deuda Total</th>
+                                <th>Estado Financiero</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -69,59 +96,262 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="clientModalLabel">Crear/Editar Cliente</h5>
+                    <h5 class="modal-title" id="clientModalLabel">Cliente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="clientForm">
                         <input type="hidden" id="clientId">
-                        <div class="mb-3">
-                            <label for="fullName" class="form-label">Nombre Completo</label>
-                            <input type="text" class="form-control" id="fullName" required>
+                        
+                        <!-- Datos Personales -->
+                        <h6 class="section-title">Datos Personales</h6>
+                        <div class="form-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fullName" class="form-label required required">Nombre Completo </label>
+                                        <input type="text" class="form-control" id="fullName" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="tipoDocumento" class="form-label required">Tipo de Documento </label>
+                                        <select class="form-select" id="tipoDocumento" required>
+                                            <option value="DNI">DNI</option>
+                                            <option value="Pasaporte">Pasaporte</option>
+                                            <option value="Cédula">Cédula</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="idNumber" class="form-label required ">Número de Documento </label>
+                                        <input type="text" class="form-control" id="idNumber" required>
+                                        <small class="text-muted">Este campo es obligatorio (identification)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fechaNacimiento" class="form-label required">Fecha de Nacimiento</label>
+                                        <input type="date" class="form-control" id="fechaNacimiento">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="genero" class="form-label">Género</label>
+                                        <select class="form-select" id="genero">
+                                            <option value="Masculino">Masculino</option>
+                                            <option value="Femenino">Femenino</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="estadoCivil" class="form-label">Estado Civil</label>
+                                        <select class="form-select" id="estadoCivil">
+                                            <option value="Soltero">Soltero</option>
+                                            <option value="Casado">Casado</option>
+                                            <option value="Divorciado">Divorciado</option>
+                                            <option value="Viudo">Viudo</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="nacionalidad" class="form-label">Nacionalidad</label>
+                                        <input type="text" class="form-control" id="nacionalidad">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" required>
+
+                        <!-- Datos de Contacto -->
+                        <h6 class="section-title mt-4">Datos de Contacto</h6>
+                        <div class="form-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="telefonoMovil" class="form-label required">Teléfono Móvil </label>
+                                        <input type="tel" class="form-control" id="telefonoMovil" required>
+                                        <small class="text-muted">Este campo es obligatorio (phone)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="telefonoFijo" class="form-label">Teléfono Fijo</label>
+                                        <input type="tel" class="form-control" id="telefonoFijo">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email </label>
+                                        <input type="email" class="form-control" id="email" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="ciudad" class="form-label required">Ciudad/Dirección </label>
+                                        <input type="text" class="form-control" id="ciudad" required>
+                                        <small class="text-muted">Este campo es obligatorio (address)</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="codigoPostal" class="form-label">Código Postal</label>
+                                        <input type="text" class="form-control" id="codigoPostal">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="pais" class="form-label">País</label>
+                                        <input type="text" class="form-control" id="pais">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" id="phone" required>
+
+                        <!-- Datos Financieros -->
+                        <h6 class="section-title mt-4">Datos Financieros</h6>
+                        <div class="form-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="numeroCuenta" class="form-label required">Número de Cuenta</label>
+                                        <input type="text" class="form-control" id="numeroCuenta" required >
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="tipoCuenta" class="form-label required">Tipo de Cuenta </label>
+                                        <select class="form-select" id="tipoCuenta" required>
+                                            <option value="Corriente">Corriente</option>
+                                            <option value="Ahorros">Ahorros</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="moneda" class="form-label">Moneda</label>
+                                        <input type="text" class="form-control" id="moneda" value="COP">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="limiteCredito" class="form-label">Límite de Crédito</label>
+                                        <input type="number" class="form-control" id="limiteCredito" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="saldoDisponible" class="form-label">Saldo Disponible</label>
+                                        <input type="number" class="form-control" id="saldoDisponible" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="ultimo_pago" class="form-label required">Fecha Último Pago *</label>
+                                        <input type="date" class="form-control" id="ultimo_pago" required>
+                                        <small class="text-muted">Este campo es obligatorio</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="address" class="form-label">Dirección</label>
-                            <input type="text" class="form-control" id="address" required>
+
+                        <!-- Datos Laborales -->
+                        <h6 class="section-title mt-4">Datos Laborales</h6>
+                        <div class="form-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="ocupacion" class="form-label">Ocupación</label>
+                                        <input type="text" class="form-control" id="ocupacion">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="empresa" class="form-label">Empresa</label>
+                                        <input type="text" class="form-control" id="empresa">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="sectorEconomico" class="form-label">Sector Económico</label>
+                                        <input type="text" class="form-control" id="sectorEconomico">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="ingresosMensuales" class="form-label">Ingresos Mensuales</label>
+                                        <input type="number" class="form-control" id="ingresosMensuales" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="identification" class="form-label">Identificación</label>
-                            <input type="text" class="form-control" id="identification" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="deudaTotal" class="form-label">Deuda Total</label>
-                            <input type="text" class="form-control" id="deudaTotal" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="ultimoPago" class="form-label">Último Pago</label>
-                            <input type="date" class="form-control" id="ultimoPago" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="estadoFinanciero" class="form-label">Estado Financiero</label>
-                            <select class="form-select" id="estadoFinanciero" required>
-                                <option value="Al día">Al día</option>
-                                <option value="En mora">En mora</option>
-                                <option value="Bloqueado">Bloqueado</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Estado</label>
-                            <select class="form-select" id="status" required>
-                                <option value="Activo">Activo</option>
-                                <option value="Inactivo">Inactivo</option>
-                            </select>
+
+                        <!-- Datos Adicionales -->
+                        <h6 class="section-title mt-4">Datos Adicionales</h6>
+                        <div class="form-section">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="observaciones" class="form-label">Observaciones</label>
+                                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="deudaTotal" class="form-label">Deuda Total</label>
+                                        <input type="number" class="form-control" id="deudaTotal" step="0.01" value="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="estadoFinanciero" class="form-label">Estado Financiero</label>
+                                        <select class="form-select" id="estadoFinanciero">
+                                            <option value="Al día">Al día</option>
+                                            <option value="En mora">En mora</option>
+                                            <option value="Bloqueado">Bloqueado</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="status" class="form-label">Estado</label>
+                                        <select class="form-select" id="status" required>
+                                            <option value="Activo">Activo</option>
+                                            <option value="Inactivo">Inactivo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" onclick="saveClient()">Guardar</button>
                 </div>
             </div>
@@ -130,5 +360,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/clientes.js"></script>
+
+    <style>
+        .required:after {
+            content: " *";
+            color: red;
+        }
+        
+        .form-label.required {
+            font-weight: bold;
+        }
+        
+        .text-muted {
+            font-size: 0.8em;
+        }
+    </style>
 </body>
 </html>

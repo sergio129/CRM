@@ -63,29 +63,28 @@ async function loadPayrolls() {
 function renderPayrolls(payrolls) {
     const html = payrolls.map(payroll => `
         <tr>
-            <td>${payroll.Employee.id_number}</td>
-            <td>${payroll.Employee.full_name}</td>
-            <td>${payroll.salario_base}</td>
-            <td>${payroll.payment_date}</td>
-            <td>${payroll.status}</td>
-            <td>${payroll.status === 'Pagado' ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-exclamation-circle text-warning"></i>'}</td>
+            <td>${payroll.id}</td>
+            <td>${payroll.employee?.full_name || 'No asignado'}</td>
+            <td>${formatMoney(payroll.salario_base)}</td>
+            <td>${new Date(payroll.payment_date).toLocaleDateString()}</td>
+            <td><span class="badge bg-${getStatusBadge(payroll.status)}">${payroll.status}</span></td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-warning btn-sm action-btn" onclick="editPayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>
+                    <button class="btn btn-info btn-sm action-btn" onclick="viewPayrollDetails(${payroll.id})" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-warning btn-sm action-btn" onclick="editPayroll(${payroll.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-danger btn-sm action-btn" onclick="deletePayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>
+                    <button class="btn btn-danger btn-sm action-btn" onclick="deletePayroll(${payroll.id})" title="Eliminar">
                         <i class="fas fa-trash"></i>
-                    </button>
-                    <button class="btn btn-info btn-sm action-btn" onclick="generatePayrollPDF('${payroll.id}')">
-                        <i class="fas fa-file-pdf"></i>
                     </button>
                 </div>
             </td>
         </tr>
-    `).join("");
+    `).join('');
 
-    document.getElementById("payrollTableBody").innerHTML = html;
+    document.getElementById('payrollTableBody').innerHTML = html;
 }
 
 // Reemplazar loadEmployees por esta versión actualizada
@@ -515,4 +514,49 @@ async function searchPayroll() {
         console.error("Error:", error);
         showToast("Error en la búsqueda: " + error.message);
     }
+}
+
+async function viewPayrollDetails(id) {
+    try {
+        const response = await fetch(`/api/payrolls/${id}`, {
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al obtener detalles de la nómina');
+        }
+
+        const payroll = await response.json();
+        openPayrollModal(payroll, true); // true indica modo lectura
+    } catch (error) {
+        console.error("Error:", error);
+        showMessage(error.message, "error");
+    }
+}
+
+// Modificar la función openPayrollModal para aceptar el parámetro readOnly
+function openPayrollModal(payroll = null, readOnly = false) {
+    // ...existing code...
+    
+    // Habilitar/deshabilitar campos según modo
+    const inputs = form.getElementsByTagName('input');
+    const selects = form.getElementsByTagName('select');
+    
+    [...inputs, ...selects].forEach(element => {
+        element.readOnly = readOnly;
+        if (element.tagName === 'SELECT') {
+            element.disabled = readOnly;
+        }
+    });
+
+    // Mostrar/ocultar botón de guardar según modo
+    const saveButton = document.querySelector('.modal-footer .btn-primary');
+    if (saveButton) {
+        saveButton.style.display = readOnly ? 'none' : 'block';
+    }
+    
+    // ...existing code...
 }
