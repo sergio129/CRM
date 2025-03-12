@@ -142,17 +142,40 @@
                         </div>
 
                         <!-- Deducciones -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="prestamos" class="form-label">Préstamos</label>
-                                    <input type="number" class="form-control" id="prestamos" value="0">
+                        <h6 class="section-title">Deducciones</h6>
+                        <div class="form-section deductions-section">
+                            <div class="row deductions-row">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="deduccionSalud" class="form-label">
+                                            <i class="fas fa-heart me-1"></i>Salud
+                                        </label>
+                                        <input type="number" class="form-control deduction-field" id="deduccionSalud" readonly>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="otrosDescuentos" class="form-label">Otros Descuentos</label>
-                                    <input type="number" class="form-control" id="otrosDescuentos" value="0">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="deduccionPension" class="form-label">
+                                            <i class="fas fa-shield-alt me-1"></i>Pensión
+                                        </label>
+                                        <input type="number" class="form-control deduction-field" id="deduccionPension" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="prestamos" class="form-label">
+                                            <i class="fas fa-hand-holding-usd me-1"></i>Préstamos
+                                        </label>
+                                        <input type="number" class="form-control deduction-field" id="prestamos" value="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label for="otrosDescuentos" class="form-label">
+                                            <i class="fas fa-minus-circle me-1"></i>Otros
+                                        </label>
+                                        <input type="number" class="form-control deduction-field" id="otrosDescuentos" value="0">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -178,6 +201,15 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" id="estadoPago">
+                                    <label class="form-check-label" for="estadoPago">Marcar como Pagado</label>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -196,6 +228,30 @@
                     <!-- El mensaje se insertará aquí -->
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modificar el modal de confirmación -->
+    <div class="modal fade" id="confirmPaymentModal" tabindex="-1" aria-labelledby="confirmPaymentModalLabel" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="confirmPaymentModalLabel">Confirmar Pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ¿Está seguro que desea marcar esta nómina como pagada?
+                        <br><br>
+                        <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmPaymentBtn">Confirmar Pago</button>
+                </div>
             </div>
         </div>
     </div>

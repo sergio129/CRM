@@ -7,6 +7,12 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Agregar el event listener para cuando se selecciona un empleado
     document.getElementById("employeeId").addEventListener("change", updateSalary);
+    
+    // Agregar event listener para el cambio en tipo de pago
+    document.getElementById("tipoPago").addEventListener("change", calculateTotals);
+    
+    // Agregar event listener para el cambio en salario base
+    document.getElementById("salarioBase").addEventListener("input", calculateTotals);
 });
 
 async function loadPayrolls() {
@@ -53,6 +59,7 @@ function renderPayrolls(payrolls) {
             <td>
                 <button class="btn btn-warning btn-sm" onclick="editPayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>Editar</button>
                 <button class="btn btn-danger btn-sm" onclick="deletePayroll('${payroll.id}')" ${payroll.status === 'Pagado' ? 'disabled' : ''}>Eliminar</button>
+                <button class="btn btn-info btn-sm" onclick="generatePayrollPDF('${payroll.id}')">PDF</button>
             </td>
         </tr>
     `).join("");
@@ -143,6 +150,7 @@ function validateAndSavePayroll() {
 
 async function savePayroll() {
     try {
+        const estadoPago = document.getElementById("estadoPago").checked;
         const payrollData = {
             employee_id: document.getElementById("employeeId").value,
             periodo: document.getElementById("periodo").value,
@@ -157,7 +165,8 @@ async function savePayroll() {
             otros_descuentos: document.getElementById("otrosDescuentos").value,
             total_ingresos: document.getElementById("totalIngresos").value,
             total_deducciones: document.getElementById("totalDeducciones").value,
-            neto_pagar: document.getElementById("netoPagar").value
+            neto_pagar: document.getElementById("netoPagar").value,
+            status: estadoPago ? 'Pagado' : 'Pendiente'  // Asegurarnos de enviar el estado correcto
         };
 
         const response = await fetch('/api/payrolls', {
@@ -181,9 +190,6 @@ async function savePayroll() {
         
         // Mostrar mensaje de éxito
         showToast("Nómina creada correctamente");
-        
-        // Generar y descargar PDF
-        await generatePayrollPDF(result.payroll.id);
         
         // Recargar la lista de nóminas
         loadPayrolls();
@@ -271,6 +277,11 @@ async function editPayroll(payrollId) {
         // Calcular y mostrar totales
         calculateTotals();
         
+        // Actualizar el estado del checkbox según el estado de la nómina
+        const estadoPagoCheckbox = document.getElementById("estadoPago");
+        estadoPagoCheckbox.checked = payroll.status === 'Pagado';
+        estadoPagoCheckbox.disabled = payroll.status === 'Pagado';
+
         // Mostrar el modal
         const modal = new bootstrap.Modal(document.getElementById("payrollModal"));
         modal.show();
@@ -326,20 +337,45 @@ function showToast(message) {
 }
 
 function calculateTotals() {
+    // Obtener valores base
     const salarioBase = parseFloat(document.getElementById('salarioBase').value) || 0;
     const valorHorasExtras = parseFloat(document.getElementById('valorHorasExtras').value) || 0;
     const bonificaciones = parseFloat(document.getElementById('bonificaciones').value) || 0;
     const comisiones = parseFloat(document.getElementById('comisiones').value) || 0;
+    const tipoPago = document.getElementById('tipoPago').value;
 
-    // Calcular deducciones
-    const aporteSalud = salarioBase * 0.04;
-    const aportePension = salarioBase * 0.04;
+    // Calcular ingresos
+    const totalIngresos = salarioBase + valorHorasExtras + bonificaciones + comisiones;
+
+    // Calcular deducciones de ley según tipo de pago
+    let porcentaje;
+    switch (tipoPago) {
+        case 'Mensual':
+            porcentaje = 0.08; // 8% para pagos mensuales
+            break;
+        case 'Quincenal':
+            porcentaje = 0.04; // 4% para pagos quincenales
+            break;
+        case 'Semanal':
+            porcentaje = 0.02; // 2% para pagos semanales
+            break;
+        default:
+            porcentaje = 0.08; // Por defecto usar 8%
+    }
+
+    const deduccionSalud = salarioBase * porcentaje;
+    const deduccionPension = salarioBase * porcentaje;
+    
+    // Mostrar deducciones en los campos
+    document.getElementById('deduccionSalud').value = deduccionSalud.toFixed(2);
+    document.getElementById('deduccionPension').value = deduccionPension.toFixed(2);
+
+    // Otras deducciones
     const prestamos = parseFloat(document.getElementById('prestamos').value) || 0;
     const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
 
-    // Calcular totales
-    const totalIngresos = salarioBase + valorHorasExtras + bonificaciones + comisiones;
-    const totalDeducciones = aporteSalud + aportePension + prestamos + otrosDescuentos;
+    // Calcular total deducciones y neto a pagar
+    const totalDeducciones = deduccionSalud + deduccionPension + prestamos + otrosDescuentos;
     const netoPagar = totalIngresos - totalDeducciones;
 
     // Actualizar campos
@@ -351,4 +387,44 @@ function calculateTotals() {
 // Agregar event listeners para recalcular cuando cambian los valores
 ['salarioBase', 'valorHorasExtras', 'bonificaciones', 'comisiones', 'prestamos', 'otrosDescuentos'].forEach(id => {
     document.getElementById(id).addEventListener('input', calculateTotals);
+});
+
+// Reemplazar el event listener del checkbox y agregar manejo del modal
+let confirmationModal = null;
+let currentCheckbox = null;
+
+document.getElementById("estadoPago").addEventListener("change", function(e) {
+    if (this.checked) {
+        currentCheckbox = this;
+        // Prevenir el cambio inmediato del checkbox
+        e.preventDefault();
+        this.checked = false;
+        
+        // Inicializar y mostrar el modal
+        confirmationModal = new bootstrap.Modal(document.getElementById('confirmPaymentModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        confirmationModal.show();
+    }
+});
+
+// Agregar event listeners para el modal de confirmación
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmBtn = document.getElementById('confirmPaymentBtn');
+    const confirmModal = document.getElementById('confirmPaymentModal');
+
+    confirmBtn.addEventListener('click', function() {
+        if (currentCheckbox) {
+            currentCheckbox.checked = true;
+        }
+        confirmationModal.hide();
+    });
+
+    confirmModal.addEventListener('hidden.bs.modal', function() {
+        if (currentCheckbox) {
+            currentCheckbox.checked = currentCheckbox.checked;
+        }
+        currentCheckbox = null;
+    });
 });

@@ -79,7 +79,8 @@ exports.createPayroll = async (req, res) => {
             otros_descuentos,
             total_ingresos,
             total_deducciones,
-            neto_pagar
+            neto_pagar,
+            status
         } = req.body;
 
         // Crear primero el registro en la tabla principal de nómina
@@ -87,13 +88,13 @@ exports.createPayroll = async (req, res) => {
             employee_id,
             salary: salario_base,
             payment_date: new Date(),
-            status: 'Pendiente'
+            status: status // Usar el estado recibido del frontend
         });
 
-        // Crear el detalle de la nómina con el payroll_id
+        // Crear el detalle de la nómina
         const payrollDetail = await PayrollDetail.create({
             employee_id,
-            payroll_id: payroll.id, // Agregar esta línea
+            payroll_id: payroll.id,
             periodo,
             fecha_pago: new Date(),
             dias_trabajados,
@@ -106,7 +107,8 @@ exports.createPayroll = async (req, res) => {
             otros_descuentos,
             total_ingresos,
             total_deducciones,
-            neto_pagar
+            neto_pagar,
+            estado: status // Usar el mismo estado en el detalle
         });
 
         res.status(201).json({
@@ -134,12 +136,24 @@ exports.updatePayroll = async (req, res) => {
         const payroll = await Payroll.findByPk(req.params.id);
         if (!payroll) return res.status(404).json({ message: "Nómina no encontrada" });
 
+        // Actualizar la nómina
         await payroll.update({
             employee_id,
             salary,
             payment_date,
-            status
+            status: status || 'Pendiente'  // Asegurarse de actualizar el estado
         });
+
+        // Actualizar también el estado en el detalle de la nómina
+        const payrollDetail = await PayrollDetail.findOne({
+            where: { payroll_id: payroll.id }
+        });
+
+        if (payrollDetail) {
+            await payrollDetail.update({
+                estado: status || 'Pendiente'
+            });
+        }
 
         res.json({ message: "Nómina actualizada correctamente", payroll });
     } catch (error) {
