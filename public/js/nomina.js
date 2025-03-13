@@ -377,56 +377,90 @@ function showToast(message) {
 }
 
 function calculateTotals() {
-    // Obtener valores base
-    const salarioBase = parseFloat(document.getElementById('salarioBase').value) || 0;
-    const valorHorasExtras = parseFloat(document.getElementById('valorHorasExtras').value) || 0;
-    const bonificaciones = parseFloat(document.getElementById('bonificaciones').value) || 0;
-    const comisiones = parseFloat(document.getElementById('comisiones').value) || 0;
-    const tipoPago = document.getElementById('tipoPago').value;
+    try {
+        // 1. Obtener todos los valores base
+        const salarioBase = parseFloat(document.getElementById('salarioBase').value) || 0;
+        const horasExtras = parseFloat(document.getElementById('horasExtras').value) || 0;
+        const valorHorasExtras = parseFloat(document.getElementById('valorHorasExtras').value) || 0;
+        const bonificaciones = parseFloat(document.getElementById('bonificaciones').value) || 0;
+        const comisiones = parseFloat(document.getElementById('comisiones').value) || 0;
+        const prestamos = parseFloat(document.getElementById('prestamos').value) || 0;
+        const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
+        const tipoPago = document.getElementById('tipoPago').value;
 
-    // Calcular ingresos
-    const totalIngresos = salarioBase + valorHorasExtras + bonificaciones + comisiones;
+        // 2. Calcular total de ingresos
+        const totalIngresos = salarioBase + valorHorasExtras + bonificaciones + comisiones;
 
-    // Calcular deducciones de ley según tipo de pago
-    let porcentaje;
-    switch (tipoPago) {
-        case 'Mensual':
-            porcentaje = 0.08; // 8% para pagos mensuales
-            break;
-        case 'Quincenal':
-            porcentaje = 0.04; // 4% para pagos quincenales
-            break;
-        case 'Semanal':
-            porcentaje = 0.02; // 2% para pagos semanales
-            break;
-        default:
-            porcentaje = 0.08; // Por defecto usar 8%
+        // 3. Calcular porcentaje según tipo de pago
+        let porcentaje;
+        switch (tipoPago) {
+            case 'Mensual':
+                porcentaje = 0.08;
+                break;
+            case 'Quincenal':
+                porcentaje = 0.04;
+                break;
+            case 'Semanal':
+                porcentaje = 0.02;
+                break;
+            default:
+                porcentaje = 0.08;
+        }
+
+        // 4. Calcular deducciones de ley (salud y pensión)
+        const deduccionSalud = salarioBase * porcentaje;
+        const deduccionPension = salarioBase * porcentaje;
+
+        // 5. Mostrar deducciones de ley en sus campos respectivos
+        document.getElementById('deduccionSalud').value = deduccionSalud.toFixed(2);
+        document.getElementById('deduccionPension').value = deduccionPension.toFixed(2);
+
+        // 6. Calcular total de todas las deducciones
+        const totalDeducciones = deduccionSalud + deduccionPension + prestamos + otrosDescuentos;
+
+        // 7. Calcular neto a pagar
+        const netoPagar = totalIngresos - totalDeducciones;
+
+        // 8. Actualizar campos finales
+        document.getElementById('totalIngresos').value = totalIngresos.toFixed(2);
+        document.getElementById('totalDeducciones').value = totalDeducciones.toFixed(2);
+        document.getElementById('netoPagar').value = netoPagar.toFixed(2);
+
+        // 9. Para debugging
+        console.log('Cálculo de deducciones:', {
+            deduccionSalud,
+            deduccionPension,
+            prestamos,
+            otrosDescuentos,
+            totalDeducciones
+        });
+
+    } catch (error) {
+        console.error('Error en calculateTotals:', error);
+        showToast('Error al calcular totales: ' + error.message);
     }
-
-    const deduccionSalud = salarioBase * porcentaje;
-    const deduccionPension = salarioBase * porcentaje;
-    
-    // Mostrar deducciones en los campos
-    document.getElementById('deduccionSalud').value = deduccionSalud.toFixed(2);
-    document.getElementById('deduccionPension').value = deduccionPension.toFixed(2);
-
-    // Otras deducciones
-    const prestamos = parseFloat(document.getElementById('prestamos').value) || 0;
-    const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
-
-    // Calcular total deducciones y neto a pagar
-    const totalDeducciones = deduccionSalud + deduccionPension + prestamos + otrosDescuentos;
-    const netoPagar = totalIngresos - totalDeducciones;
-
-    // Actualizar campos
-    document.getElementById('totalIngresos').value = totalIngresos.toFixed(2);
-    document.getElementById('totalDeducciones').value = totalDeducciones.toFixed(2);
-    document.getElementById('netoPagar').value = netoPagar.toFixed(2);
 }
 
-// Agregar event listeners para recalcular cuando cambian los valores
-['salarioBase', 'valorHorasExtras', 'bonificaciones', 'comisiones', 'prestamos', 'otrosDescuentos'].forEach(id => {
-    document.getElementById(id).addEventListener('input', calculateTotals);
+// Asegurar que todos los campos relevantes tengan event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const camposAMonitorear = [
+        'salarioBase',
+        'horasExtras',
+        'valorHorasExtras',
+        'bonificaciones',
+        'comisiones',
+        'prestamos',
+        'otrosDescuentos',
+        'tipoPago'
+    ];
+    
+    camposAMonitorear.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) {
+            elemento.addEventListener('input', calculateTotals);
+            elemento.addEventListener('change', calculateTotals);
+        }
+    });
 });
 
 // Reemplazar el event listener del checkbox y agregar manejo del modal
