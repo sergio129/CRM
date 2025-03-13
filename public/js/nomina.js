@@ -241,6 +241,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function generatePayrollPDF(payrollId) {
     try {
+        // Mostrar indicador de carga
+        const loadingToast = showToast('Generando PDF, por favor espere...');
+        
         const response = await fetch(`/api/payrolls/${payrollId}/pdf`, {
             method: 'GET',
             headers: {
@@ -252,18 +255,31 @@ async function generatePayrollPDF(payrollId) {
             throw new Error('Error al generar el PDF');
         }
 
+        // Verificar que el tipo de contenido sea PDF
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/pdf')) {
+            throw new Error('La respuesta no es un PDF válido');
+        }
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
+        
+        // Crear un enlace invisible y simular clic
         const a = document.createElement('a');
+        a.style.display = 'none';
         a.href = url;
         a.download = `nomina-${payrollId}.pdf`;
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        
+        // Limpieza
         window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('PDF generado correctamente', 'success');
     } catch (error) {
         console.error('Error al generar PDF:', error);
-        showToast('Error al generar PDF: ' + error.message);
+        showToast('Error al generar PDF: ' + error.message, 'error');
     }
 }
 
@@ -356,21 +372,30 @@ async function deletePayroll(payrollId) {
 }
 
 // Agregar función showToast si no existe
-function showToast(message) {
+function showToast(message, type = 'info') {
     try {
         const toastElement = document.getElementById('successToast');
         if (!toastElement) {
             console.error('Elemento toast no encontrado');
             return;
         }
+        
+        // Actualizar clases según el tipo de mensaje
+        toastElement.className = `toast align-items-center text-white bg-${type} border-0`;
+        
         const toastBody = toastElement.querySelector('.toast-body');
         if (!toastBody) {
             console.error('Elemento toast-body no encontrado');
             return;
         }
+        
         toastBody.textContent = message;
-        const toast = new bootstrap.Toast(toastElement);
+        const toast = new bootstrap.Toast(toastElement, {
+            delay: 3000
+        });
         toast.show();
+        
+        return toast;
     } catch (error) {
         console.error('Error al mostrar el toast:', error);
     }
@@ -691,7 +716,7 @@ function showMessage(message, type = "error") {
 async function renderPayrolls(payrolls) {
     try {
         const html = payrolls.map(payroll => `
-            <tr>
+            <tr data-payroll-id="${payroll.id}">
                 <td>${payroll.id || ''}</td>
                 <td>${payroll.Employee ? payroll.Employee.id_number : ''}</td>
                 <td>${payroll.Employee ? payroll.Employee.full_name : ''}</td>
@@ -718,6 +743,9 @@ async function renderPayrolls(payrolls) {
                         <button class="btn btn-danger btn-sm action-btn" onclick="deletePayroll(${payroll.id})" 
                             ${payroll.status === 'Pagado' ? 'disabled' : ''} title="Eliminar">
                             <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-sm action-btn" onclick="generatePayrollPDF(${payroll.id})" title="Generar PDF">
+                            <i class="fas fa-file-pdf"></i>
                         </button>
                     </div>
                 </td>
