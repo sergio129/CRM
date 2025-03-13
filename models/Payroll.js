@@ -14,7 +14,15 @@ const Payroll = sequelize.define('Payroll', {
     },
     periodo: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
+        validate: {
+            notNull: {
+                msg: 'El período es obligatorio'
+            },
+            notEmpty: {
+                msg: 'El período no puede estar vacío'
+            }
+        }
     },
     salario_base: {
         type: DataTypes.DECIMAL(10, 2),

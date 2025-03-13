@@ -151,40 +151,35 @@ function validateAndSavePayroll() {
 
 async function savePayroll() {
     try {
-        // Obtener valores de los elementos, usando || para valores por defecto
-        const employeeData = document.getElementById('employeeId')?.value;
-        const periodo = document.getElementById('periodo')?.value;
-        const salarioBase = parseFloat(document.getElementById('salarioBase')?.value) || 0;
-        const totalIngresos = parseFloat(document.getElementById('totalIngresos')?.value) || 0;
-        const totalDeducciones = parseFloat(document.getElementById('totalDeducciones')?.value) || 0;
-        const netoPagar = parseFloat(document.getElementById('netoPagar')?.value) || 0;
-        const status = document.getElementById('status')?.value || 'Pendiente';
+        const payrollData = {
+            employee_id: document.getElementById('employeeId').value,
+            periodo: document.getElementById('periodo').value, // Asegurarnos que este campo se incluya
+            payment_date: new Date().toISOString(),
+            salario_base: parseFloat(document.getElementById('salarioBase').value) || 0,
+            total_ingresos: parseFloat(document.getElementById('totalIngresos').value) || 0,
+            total_deducciones: parseFloat(document.getElementById('totalDeducciones').value) || 0,
+            neto_pagar: parseFloat(document.getElementById('netoPagar').value) || 0,
+            status: document.getElementById('estadoPago').checked ? 'Pagado' : 'Pendiente',
+            PayrollDetail: {
+                periodo: document.getElementById('periodo').value, // También incluirlo en PayrollDetail
+                tipo_pago: document.getElementById('tipoPago').value,
+                dias_trabajados: parseInt(document.getElementById('diasTrabajados').value) || 30,
+                bonificaciones: parseFloat(document.getElementById('bonificaciones').value) || 0,
+                comisiones: parseFloat(document.getElementById('comisiones').value) || 0,
+                prestamos: parseFloat(document.getElementById('prestamos').value) || 0,
+                otros_descuentos: parseFloat(document.getElementById('otrosDescuentos').value) || 0
+            }
+        };
 
-        // Verificar si los campos requeridos tienen valor
-        if (!employeeData || !periodo) {
+        // Validar campos requeridos
+        if (!payrollData.employee_id || !payrollData.periodo) {
             throw new Error('Los campos Empleado y Período son obligatorios');
         }
 
-        const payrollData = {
-            employee_id: employeeData,
-            periodo: periodo,
-            salario_base: salarioBase,
-            total_ingresos: totalIngresos,
-            total_deducciones: totalDeducciones,
-            neto_pagar: netoPagar,
-            payment_date: new Date(),
-            status: status
-        };
-
-        // Verificar si estamos editando o creando
+        // Verificar si es edición o nueva nómina
         const payrollId = document.getElementById('payrollId')?.value;
-        let method = 'POST';
-        let url = '/api/payrolls';
-
-        if (payrollId) {
-            method = 'PUT';
-            url = `/api/payrolls/${payrollId}`;
-        }
+        const method = payrollId ? 'PUT' : 'POST';
+        const url = payrollId ? `/api/payrolls/${payrollId}` : '/api/payrolls';
 
         const response = await fetch(url, {
             method: method,
@@ -547,7 +542,54 @@ async function viewPayrollDetails(id) {
         }
 
         const payroll = await response.json();
-        openPayrollModal(payroll, true); // true indica modo lectura
+        
+        // Limpiar el formulario antes de mostrar los detalles
+        const form = document.getElementById("payrollForm");
+        form.reset();
+
+        // Establecer el título del modal
+        document.getElementById("payrollModalLabel").textContent = "Detalles de Nómina";
+
+        // Llenar los campos con los datos
+        document.getElementById("payrollId").value = payroll.id;
+        document.getElementById("employeeId").value = payroll.employee_id;
+        document.getElementById("periodo").value = payroll.periodo || '';
+        document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
+        document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
+        document.getElementById("salarioBase").value = payroll.salario_base || 0;
+        document.getElementById("horasExtras").value = payroll.PayrollDetail?.horas_extras_diurnas || 0;
+        document.getElementById("valorHorasExtras").value = payroll.PayrollDetail?.valor_hora_extra_diurna || 0;
+        document.getElementById("bonificaciones").value = payroll.PayrollDetail?.bonificaciones || 0;
+        document.getElementById("comisiones").value = payroll.PayrollDetail?.comisiones || 0;
+        document.getElementById("prestamos").value = payroll.PayrollDetail?.prestamos || 0;
+        document.getElementById("otrosDescuentos").value = payroll.PayrollDetail?.otros_descuentos || 0;
+        document.getElementById("totalIngresos").value = payroll.total_ingresos || 0;
+        document.getElementById("totalDeducciones").value = payroll.total_deducciones || 0;
+        document.getElementById("netoPagar").value = payroll.neto_pagar || 0;
+
+        // Estado de pago
+        const estadoPagoCheckbox = document.getElementById("estadoPago");
+        estadoPagoCheckbox.checked = payroll.status === 'Pagado';
+        estadoPagoCheckbox.disabled = true;
+
+        // Deshabilitar todos los campos del formulario
+        const allInputs = form.getElementsByTagName('input');
+        const allSelects = form.getElementsByTagName('select');
+        
+        [...allInputs, ...allSelects].forEach(element => {
+            element.disabled = true;
+        });
+
+        // Ocultar botón de guardar
+        const saveButton = document.querySelector('.modal-footer .btn-primary');
+        if (saveButton) {
+            saveButton.style.display = 'none';
+        }
+
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById("payrollModal"));
+        modal.show();
+
     } catch (error) {
         console.error("Error:", error);
         showMessage(error.message, "error");
@@ -727,5 +769,71 @@ async function saveEmployee() {
         showMessage(error.message || "Error al guardar nómina", "error");
     }
 }
+
+// Agregar esta nueva función para manejar el estado de pago
+async function handlePaymentStatus(payrollId) {
+    const estadoPagoCheckbox = document.getElementById("estadoPago");
+    
+    if (estadoPagoCheckbox.checked) {
+        try {
+            const confirmResult = await Swal.fire({
+                title: '¿Confirmar pago?',
+                text: "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, confirmar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (confirmResult.isConfirmed) {
+                const response = await fetch(`/api/payrolls/${payrollId}`, {
+                    method: 'PUT',
+                    headers: {
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ status: 'Pagado' })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al actualizar el estado de la nómina');
+                }
+
+                // Deshabilitar el checkbox y mantenerlo marcado
+                estadoPagoCheckbox.checked = true;
+                estadoPagoCheckbox.disabled = true;
+
+                // Deshabilitar botones de edición y eliminación
+                const editButton = document.querySelector(`tr[data-payroll-id="${payrollId}"] .btn-warning`);
+                const deleteButton = document.querySelector(`tr[data-payroll-id="${payrollId}"] .btn-danger`);
+                if (editButton) editButton.disabled = true;
+                if (deleteButton) deleteButton.disabled = true;
+
+                showToast('Nómina marcada como pagada correctamente');
+                await loadPayrolls(); // Recargar la lista de nóminas
+            } else {
+                // Si el usuario cancela, desmarcar el checkbox
+                estadoPagoCheckbox.checked = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error al actualizar el estado: ' + error.message);
+            estadoPagoCheckbox.checked = false;
+        }
+    }
+}
+
+// Modificar el event listener existente del checkbox para usar la nueva función
+document.getElementById("estadoPago").addEventListener("change", function(e) {
+    const payrollId = document.getElementById('payrollId').value;
+    if (payrollId) {
+        handlePaymentStatus(payrollId);
+    } else {
+        this.checked = false;
+        showToast('Error: No se encontró el ID de la nómina');
+    }
+});
 
 // ...existing code...
