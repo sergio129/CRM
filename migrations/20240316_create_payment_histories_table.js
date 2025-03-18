@@ -16,7 +16,7 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE' // Eliminar automáticamente los registros relacionados
       },
       payment_date: {
         type: Sequelize.DATE,

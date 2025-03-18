@@ -1,12 +1,30 @@
 const Client = require('../models/Client');
 const { validationResult } = require('express-validator');
+const Loan = require('../models/Loan');
 
 exports.getClients = async (req, res) => {
     try {
         const clients = await Client.findAll({
-            attributes: ['identification', 'full_name', 'email', 'phone', 'address', 'status', 'deuda_total', 'ultimo_pago', 'estado_financiero']
+            attributes: ['id', 'identification', 'full_name', 'email', 'phone', 'address', 'status', 'deuda_total', 'ultimo_pago', 'estado_financiero'],
+            include: [
+                {
+                    model: Loan,
+                    as: 'Loans',
+                    attributes: ['total_due'],
+                    where: { loan_status: 'Activo' },
+                    required: false // Permitir clientes sin préstamos activos
+                }
+            ]
         });
-        res.json(clients);
+
+        // Recalcular la deuda total para cada cliente
+        const updatedClients = clients.map(client => {
+            const totalDebt = client.Loans.reduce((sum, loan) => sum + parseFloat(loan.total_due || 0), 0);
+            client.deuda_total = totalDebt; // Actualizar la deuda total
+            return client;
+        });
+
+        res.json(updatedClients);
     } catch (error) {
         console.error("Error al obtener clientes:", error);
         res.status(500).json({ message: "Error al obtener clientes", error });

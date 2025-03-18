@@ -78,6 +78,10 @@ const Loan = sequelize.define('Loan', {
   installment_amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
+  },
+  risk_score: {
+    type: DataTypes.DECIMAL(5, 2), // Puntaje de riesgo entre 0 y 1
+    allowNull: true
   }
 }, {
   timestamps: true,

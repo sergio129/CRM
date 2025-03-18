@@ -22,15 +22,9 @@ exports.addPayment = async (req, res) => {
         const { loan_id, payment_date, amount_paid, payment_method, payment_type, notes } = req.body;
 
         // Verificar si el préstamo existe
-        const loan = await Loan.findByPk(loan_id, { include: [{ model: Client, as: 'Client' }] });
+        const loan = await Loan.findByPk(loan_id);
         if (!loan) {
             return res.status(404).json({ message: "Préstamo no encontrado." });
-        }
-
-        // Validar que el monto pagado no exceda el total adeudado
-        const totalDue = parseFloat(loan.total_due);
-        if (amount_paid > totalDue) {
-            return res.status(400).json({ message: "El monto pagado no puede exceder el total adeudado." });
         }
 
         // Registrar el pago
@@ -43,26 +37,36 @@ exports.addPayment = async (req, res) => {
             notes
         });
 
-        // Actualizar el préstamo según el tipo de pago
-        loan.total_due = Math.max(0, totalDue - amount_paid);
-        if (payment_type === 'Cuota') {
-            loan.remaining_installments = Math.max(0, loan.remaining_installments - 1);
-        } else if (payment_type === 'Capital') {
-            loan.amount_requested = Math.max(0, loan.amount_requested - amount_paid);
+        // Actualizar el saldo pendiente y las cuotas restantes
+        let remainingBalance = parseFloat(loan.total_due);
+        let remainingInstallments = loan.remaining_installments;
+
+        // Abonar el pago al saldo pendiente
+        remainingBalance -= amount_paid;
+
+        // Si el saldo pendiente es menor o igual a 0, actualizar cuotas pendientes a 0
+        if (remainingBalance <= 0) {
+            remainingBalance = 0;
+            remainingInstallments = 0;
+        } else {
+            // Recalcular cuotas pendientes si el saldo no es 0
+            const monthlyRate = loan.interest_rate / 100 / 12;
+            const installmentAmount = loan.installment_amount || 
+                (loan.amount_requested * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -loan.payment_term));
+
+            remainingInstallments = Math.ceil(remainingBalance / installmentAmount);
         }
 
-        // Cambiar el estado del préstamo a "Pagado" solo si el total adeudado es 0
-        if (loan.total_due === 0) {
+        // Actualizar el préstamo
+        loan.total_due = remainingBalance;
+        loan.remaining_installments = remainingInstallments;
+
+        // Cambiar el estado del préstamo a "Pagado" si el saldo es 0
+        if (remainingBalance === 0) {
             loan.loan_status = 'Pagado';
         }
 
-        // Guardar los cambios en el préstamo
         await loan.save();
-
-        // Actualizar la deuda total del cliente
-        const client = loan.Client;
-        client.deuda_total = Math.max(0, parseFloat(client.deuda_total || 0) - parseFloat(amount_paid));
-        await client.save();
 
         res.status(201).json({ message: "Pago registrado correctamente.", payment, loan });
     } catch (error) {

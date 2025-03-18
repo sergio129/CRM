@@ -30,6 +30,11 @@ function showToast(message, type = "success") {
     }, 5000);
 }
 
+// Función para formatear valores en pesos colombianos
+function formatCurrency(value) {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(value);
+}
+
 async function loadLoans() {
     try {
         const response = await fetch('/api/loans', {
@@ -42,6 +47,18 @@ async function loadLoans() {
         }
 
         const loans = await response.json();
+
+        // Verificar si la respuesta contiene datos
+        if (!Array.isArray(loans) || loans.length === 0) {
+            showToast("No se encontraron préstamos.", "warning");
+            document.getElementById("loanTableBody").innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center">No se encontraron préstamos.</td>
+                </tr>
+            `;
+            return;
+        }
+
         renderLoans(loans);
         showToast("Préstamos cargados correctamente.", "success");
     } catch (error) {
@@ -52,29 +69,20 @@ async function loadLoans() {
 
 function renderLoans(loans) {
     const html = loans.map(loan => {
-        // Ajustar valores negativos
-        const totalDue = Math.max(0, parseFloat(loan.total_due));
-        const remainingInstallments = Math.max(0, loan.remaining_installments);
-
-        // Ajustar el estado del préstamo
-        let loanStatus = loan.loan_status;
-        if (loanStatus === 'Cancelado' && totalDue > 0) {
-            loanStatus = 'Activo';
-        } else if (loanStatus === 'Cancelado' && totalDue === 0) {
-            loanStatus = 'Pagado';
-        }
+        const riskScore = loan.risk_score !== null ? `${(loan.risk_score * 100).toFixed(2)}%` : 'N/A';
+        const coSigner = loan.CoSigner ? loan.CoSigner.full_name : 'N/A';
 
         return `
             <tr>
                 <td>${loan.loan_number}</td>
-                <td>${loan.Client.full_name} (${loan.Client.id_number || ''})</td>
-                <td>${loan.amount_requested}</td>
+                <td>${loan.Client.full_name} (${loan.Client.id_number || 'N/A'})</td>
+                <td>${formatCurrency(loan.amount_requested)}</td>
                 <td>${loan.interest_rate}% (${loan.interest_type})</td>
                 <td>${loan.payment_term} meses</td>
-                <td>${loanStatus}</td>
-                <td>${loan.risk_score ? `${(loan.risk_score * 100).toFixed(2)}%` : 'N/A'}</td>
-                <td>${totalDue.toFixed(2)}</td> <!-- Saldo pendiente -->
-                <td>${remainingInstallments}</td> <!-- Cuotas pendientes -->
+                <td>${loan.loan_status}</td>
+                <td>${riskScore}</td>
+                <td>${formatCurrency(loan.total_due)}</td>
+                <td>${loan.remaining_installments}</td>
                 <td>
                     <div class="d-flex justify-content-around">
                         <button class="btn btn-info btn-sm" onclick="calculateInstallmentsForLoan(${loan.id})" title="Calcular Cuotas">
@@ -271,10 +279,10 @@ function renderPaymentSchedule(schedule) {
     tableBody.innerHTML = schedule.map(row => `
         <tr>
             <td>${row.month}</td>
-            <td>${row.installment}</td>
-            <td>${row.principal}</td>
-            <td>${row.interest}</td>
-            <td>${row.remainingBalance}</td>
+            <td>${formatCurrency(row.installment)}</td>
+            <td>${formatCurrency(row.principal)}</td>
+            <td>${formatCurrency(row.interest)}</td>
+            <td>${formatCurrency(row.remainingBalance)}</td>
         </tr>
     `).join("");
 }
@@ -349,7 +357,7 @@ function renderPaymentHistory(payments) {
     const html = payments.map(payment => `
         <tr>
             <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
-            <td>${payment.amount_paid.toFixed(2)}</td>
+            <td>${formatCurrency(payment.amount_paid)}</td>
             <td>${payment.payment_method}</td>
             <td>${payment.payment_type || "N/A"}</td>
             <td>${payment.notes || "Sin notas"}</td>
@@ -429,7 +437,7 @@ function renderLoanStatsChart() {
 
 let selectedLoanId = null;
 
-function openPaymentModal() {
+async function openPaymentModal() {
     // Restablecer el formulario de pago
     document.getElementById("paymentForm").reset();
     document.getElementById("selectLoan").innerHTML = '<option value="">Seleccione un préstamo</option>';
@@ -438,6 +446,12 @@ function openPaymentModal() {
     // Mostrar el modal
     const paymentModal = new bootstrap.Modal(document.getElementById("paymentModal"));
     paymentModal.show();
+
+    // Cargar préstamos del cliente seleccionado
+    const clientId = document.getElementById("searchClientPayment").dataset.clientId;
+    if (clientId) {
+        await loadClientLoans(clientId);
+    }
 }
 
 async function searchClientForPayment() {
@@ -480,19 +494,63 @@ async function loadClientLoans(clientId) {
         const loans = await response.json();
         const loanSelect = document.getElementById("selectLoan");
 
-        if (loans.length === 0) {
-            loanSelect.innerHTML = '<option value="">No hay préstamos disponibles</option>';
+        // Filtrar préstamos activos con saldo pendiente mayor a 0
+        const activeLoans = loans.filter(loan => loan.loan_status === "Activo" && parseFloat(loan.total_due) > 0);
+
+        if (activeLoans.length === 0) {
+            loanSelect.innerHTML = '<option value="">Cliente sin créditos activos</option>';
             loanSelect.disabled = true;
+            document.getElementById("minimumPayment").textContent = "Pago mínimo: No disponible";
             return;
         }
 
-        loanSelect.innerHTML = loans.map(loan => `
-            <option value="${loan.id}">${loan.loan_number} - ${loan.amount_requested} (${loan.loan_status})</option>
+        loanSelect.innerHTML = activeLoans.map(loan => `
+            <option value="${loan.id}" 
+                    data-amount-requested="${loan.amount_requested}" 
+                    data-interest-rate="${loan.interest_rate}" 
+                    data-remaining-installments="${loan.remaining_installments}">
+                ${loan.loan_number} - ${parseFloat(loan.amount_requested).toFixed(2)} (${loan.loan_status})
+            </option>
         `).join("");
         loanSelect.disabled = false;
+
+        // Si hay un solo crédito activo, seleccionarlo automáticamente y mostrar el pago mínimo
+        if (activeLoans.length === 1) {
+            loanSelect.value = activeLoans[0].id;
+            updateMinimumPayment(activeLoans[0]);
+        } else {
+            document.getElementById("minimumPayment").textContent = "Pago mínimo: Seleccione un crédito";
+        }
+
+        // Mostrar el pago mínimo al seleccionar un préstamo
+        loanSelect.addEventListener("change", () => {
+            const selectedOption = loanSelect.options[loanSelect.selectedIndex];
+            if (selectedOption.value) {
+                const selectedLoan = activeLoans.find(loan => loan.id == selectedOption.value);
+                updateMinimumPayment(selectedLoan);
+            } else {
+                document.getElementById("minimumPayment").textContent = "Pago mínimo: 0.00";
+            }
+        });
     } catch (error) {
         console.error("Error al cargar los préstamos del cliente:", error);
         showToast("Error al cargar los préstamos del cliente.", "danger");
+    }
+}
+
+function updateMinimumPayment(loan) {
+    const amountRequested = parseFloat(loan.amount_requested || 0);
+    const interestRate = parseFloat(loan.interest_rate || 0) / 100;
+    const remainingInstallments = parseInt(loan.remaining_installments || 0);
+
+    if (amountRequested > 0 && interestRate > 0 && remainingInstallments > 0) {
+        // Calcular el pago mínimo
+        const monthlyRate = interestRate / 12;
+        const minimumPayment = (amountRequested * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -remainingInstallments));
+
+        document.getElementById("minimumPayment").textContent = `Pago mínimo: ${minimumPayment.toFixed(2)}`;
+    } else {
+        document.getElementById("minimumPayment").textContent = "Pago mínimo: No disponible";
     }
 }
 
@@ -594,6 +652,11 @@ async function loadClientLoansForHistory(clientId) {
         if (loans.length === 0) {
             loanSelect.innerHTML = '<option value="">No hay préstamos disponibles</option>';
             loanSelect.disabled = true;
+            document.getElementById("paymentHistoryTableBody").innerHTML = `
+                <tr>
+                    <td colspan="5">No hay pagos registrados para este cliente.</td>
+                </tr>
+            `;
             return;
         }
 
@@ -602,11 +665,29 @@ async function loadClientLoansForHistory(clientId) {
         `).join("");
         loanSelect.disabled = false;
 
+        // Si hay un solo préstamo, seleccionarlo automáticamente y cargar su historial
+        if (loans.length === 1) {
+            loanSelect.value = loans[0].id;
+            loadPaymentHistoryForLoan(loans[0].id);
+        } else {
+            document.getElementById("paymentHistoryTableBody").innerHTML = `
+                <tr>
+                    <td colspan="5">Seleccione un préstamo para ver el historial de pagos.</td>
+                </tr>
+            `;
+        }
+
         // Agregar evento para cargar el historial de pagos al seleccionar un préstamo
         loanSelect.addEventListener("change", () => {
             const selectedLoanId = loanSelect.value;
             if (selectedLoanId) {
                 loadPaymentHistoryForLoan(selectedLoanId);
+            } else {
+                document.getElementById("paymentHistoryTableBody").innerHTML = `
+                    <tr>
+                        <td colspan="5">Seleccione un préstamo para ver el historial de pagos.</td>
+                    </tr>
+                `;
             }
         });
     } catch (error) {
@@ -641,7 +722,10 @@ async function loadPaymentHistoryForLoan(loanId) {
         renderPaymentHistoryForLoan(payments);
     } catch (error) {
         console.error("Error al cargar el historial de pagos:", error);
-        showToast("Error al cargar el historial de pagos.", "danger");
+        // No mostrar mensaje de error si el historial se carga correctamente
+        if (!document.getElementById("paymentHistoryTableBody").innerHTML.trim()) {
+            showToast("Error al cargar el historial de pagos.", "danger");
+        }
     }
 }
 
@@ -649,7 +733,7 @@ function renderPaymentHistoryForLoan(payments) {
     const html = payments.map(payment => `
         <tr>
             <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
-            <td>${parseFloat(payment.amount_paid).toFixed(2)}</td>
+            <td>${formatCurrency(payment.amount_paid)}</td>
             <td>${payment.payment_method}</td>
             <td>${payment.payment_type === 'Cuota' ? 'Cuota' : 'Capital'}</td>
             <td>${payment.notes || "Sin notas"}</td>
@@ -662,7 +746,7 @@ function renderPaymentHistoryForLoan(payments) {
     const loan = payments.length > 0 ? payments[0].Loan : null;
     if (loan) {
         document.getElementById("paymentHistoryLoanDetails").innerHTML = `
-            <p><strong>Saldo Pendiente:</strong> ${loan.total_due.toFixed(2)}</p>
+            <p><strong>Saldo Pendiente:</strong> ${formatCurrency(loan.total_due)}</p>
             <p><strong>Cuotas Pendientes:</strong> ${loan.remaining_installments}</p>
         `;
     }
