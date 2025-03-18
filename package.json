@@ -4,7 +4,7 @@
   "description": "Backend para el sistema CRM",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "npx sequelize-cli db:migrate && node app.js",
     "dev": "nodemon app.js"
   },
   "dependencies": {
