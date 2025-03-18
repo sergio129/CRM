@@ -1,0 +1,69 @@
+.table-hover tbody tr:hover {
+    background-color: #f1f1f1;
+    cursor: pointer;
+}
+
+.badge {
+    font-size: 0.9rem;
+    padding: 0.5em 0.75em;
+}
+
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+
+.toast {
+    font-size: 1rem;
+}
+
+.modal-header {
+    background-color: #007bff;
+    color: white;
+}
+
+.modal-footer .btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Reducir el tamaño de la gráfica */
+#loanStatsChart {
+    max-width: 100%;
+    height: 250px; /* Altura reducida */
+    margin: 0 auto;
+}
+
+/* Estilo para la tabla de plan de pagos */
+.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid #dee2e6;
+}
+
+.table-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.table-responsive-md {
+    overflow-x: auto;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+}

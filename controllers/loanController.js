@@ -4,20 +4,22 @@ const CreditHistory = require('../models/CreditHistory');
 const PredictiveAnalysisService = require('../services/predictiveAnalysisService');
 const ExternalApiService = require('../services/externalApiService');
 const { v4: uuidv4 } = require('uuid'); // Importar para generar un identificador único
+const NotificationService = require('../services/notificationService');
 
 exports.getLoans = async (req, res) => {
-  try {
-    const loans = await Loan.findAll({
-      include: [
-        { model: Client, as: 'Client', attributes: ['full_name', 'id_number'] },
-        { model: Client, as: 'CoSigner', attributes: ['full_name', 'id_number'] }
-      ]
-    });
-    res.json(loans);
-  } catch (error) {
-    console.error("Error al obtener préstamos:", error);
-    res.status(500).json({ message: "Error al obtener préstamos", error });
-  }
+    try {
+        const loans = await Loan.findAll({
+            include: [
+                { model: Client, as: 'Client', attributes: ['full_name', 'id_number'] },
+                { model: Client, as: 'CoSigner', attributes: ['full_name', 'id_number'] }
+            ]
+        });
+
+        res.json(loans);
+    } catch (error) {
+        console.error("Error al obtener préstamos:", error);
+        res.status(500).json({ message: "Error al obtener préstamos", error });
+    }
 };
 
 exports.createLoan = async (req, res) => {
@@ -69,8 +71,21 @@ exports.createLoan = async (req, res) => {
       payment_frequency,
       guarantee_type,
       co_signer_id,
-      additional_income
+      additional_income,
+      total_due: amount_requested, // Inicializar el total adeudado con el monto solicitado
+      remaining_installments: payment_term // Inicializar las cuotas restantes con el plazo
     });
+
+    // Actualizar la deuda total del cliente
+    client.deuda_total = parseFloat(client.deuda_total || 0) + parseFloat(amount_requested);
+    await client.save();
+
+    // Enviar notificación al cliente
+    await NotificationService.sendEmail(
+      client.email,
+      'Préstamo aprobado',
+      `Su préstamo con número ${loanNumber} ha sido aprobado.`
+    );
 
     res.status(201).json({ message: "Préstamo guardado correctamente", loan: newLoan });
   } catch (error) {
