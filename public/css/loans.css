@@ -67,3 +67,15 @@
 .table-striped tbody tr:nth-of-type(odd) {
     background-color: #f9f9f9;
 }
+
+/* Estilo para alinear los botones de acciones */
+.table-actions {
+    display: flex;
+    justify-content: space-around;
+    gap: 0.5rem; /* Espaciado entre botones */
+}
+
+.table-actions .btn {
+    min-width: 40px; /* Asegurar un tamaño uniforme */
+    padding: 0.5rem;
+}

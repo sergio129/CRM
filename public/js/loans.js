@@ -73,10 +73,20 @@ function renderLoans(loans) {
                 <td>${loan.payment_term} meses</td>
                 <td>${loanStatus}</td>
                 <td>${loan.risk_score ? `${(loan.risk_score * 100).toFixed(2)}%` : 'N/A'}</td>
+                <td>${totalDue.toFixed(2)}</td> <!-- Saldo pendiente -->
+                <td>${remainingInstallments}</td> <!-- Cuotas pendientes -->
                 <td>
-                    <button class="btn btn-info btn-sm" onclick="calculateInstallmentsForLoan(${loan.id})">Calcular Cuotas</button>
-                    <button class="btn btn-warning btn-sm" onclick="editLoan(${loan.id})">Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteLoan(${loan.id})">Eliminar</button>
+                    <div class="d-flex justify-content-around">
+                        <button class="btn btn-info btn-sm" onclick="calculateInstallmentsForLoan(${loan.id})" title="Calcular Cuotas">
+                            <i class="fas fa-calculator"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="editLoan(${loan.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteLoan(${loan.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -309,7 +319,6 @@ async function calculateInstallmentsForLoan(loanId) {
         }
 
         renderPaymentSchedule(paymentSchedule);
-        loadPaymentHistory(loanId); // Cargar el historial de pagos
         showToast(`Cuotas calculadas para el préstamo ${loan.loan_number}.`, "success");
     } catch (error) {
         console.error("Error al calcular cuotas:", error);
@@ -648,4 +657,13 @@ function renderPaymentHistoryForLoan(payments) {
     `).join("");
 
     document.getElementById("paymentHistoryTableBody").innerHTML = html;
+
+    // Mostrar saldo pendiente y cuotas pendientes en el modal
+    const loan = payments.length > 0 ? payments[0].Loan : null;
+    if (loan) {
+        document.getElementById("paymentHistoryLoanDetails").innerHTML = `
+            <p><strong>Saldo Pendiente:</strong> ${loan.total_due.toFixed(2)}</p>
+            <p><strong>Cuotas Pendientes:</strong> ${loan.remaining_installments}</p>
+        `;
+    }
 }

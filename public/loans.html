@@ -63,6 +63,9 @@
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/roles.html'">
                     <i class="fas fa-user-tag"></i> Roles
                 </button>
+                <button class="btn btn-danger w-100" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
             </div>
         </nav>
 
@@ -95,6 +98,8 @@
                                 <th>Plazo</th>
                                 <th>Estado</th>
                                 <th>Riesgo</th>
+                                <th>Saldo Pendiente</th> <!-- Nueva columna -->
+                                <th>Cuotas Pendientes</th> <!-- Nueva columna -->
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -232,6 +237,11 @@
                                 <select id="selectLoanHistory" class="form-select" disabled>
                                     <option value="">Seleccione un préstamo</option>
                                 </select>
+                            </div>
+
+                            <!-- Detalles del préstamo -->
+                            <div id="paymentHistoryLoanDetails" class="mb-3">
+                                <!-- Saldo pendiente y cuotas pendientes se cargarán dinámicamente aquí -->
                             </div>
 
                             <!-- Tabla de historial de pagos -->
@@ -380,5 +390,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/loans.js"></script>
+    <script>
+        function logout() {
+            localStorage.clear(); // Limpia el almacenamiento local
+            window.location.href = '/login.html'; // Redirige al login
+        }
+    </script>
 </body>
 </html>
