@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs'); // Cambiar de 'bcrypt' a 'bcryptjs'
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Role = require('../models/Role');

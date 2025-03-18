@@ -15,9 +15,8 @@ const errorHandler = require('./middleware/errorHandler');
 const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
 
-// Cargar el archivo .env correcto según el entorno
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
-dotenv.config({ path: envFile });
+// Cargar el archivo .env.production
+dotenv.config({ path: '.env.production' });
 
 const app = express();
 
@@ -33,7 +32,7 @@ sequelize.authenticate()
 // Configuración de CORS
 app.use(
   cors({
-    origin: "http://localhost:5000", // Reemplaza con el puerto de tu frontend
+    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Reemplaza con el puerto de tu frontend
     allowedHeaders: ["Content-Type", "Authorization"],
     exposedHeaders: ["Authorization"],
   })
@@ -45,6 +44,16 @@ app.use(express.static('public'));
 
 // IMPORTANTE: Importar los modelos y sus relaciones antes de las rutas
 require('./models/index');
+
+// Sincronizar la base de datos
+sequelize
+  .sync({ alter: true }) // Cambia a { force: true } si deseas eliminar y recrear las tablas
+  .then(() => {
+    console.log('Base de datos sincronizada correctamente.');
+  })
+  .catch((err) => {
+    console.error('Error al sincronizar la base de datos:', err);
+  });
 
 // Rutas
 app.use('/api/auth', authRoutes);
@@ -60,12 +69,6 @@ app.use('/api/payment-history', paymentHistoryRoutes); // Añade las rutas del h
 
 // Middleware de errores
 app.use(errorHandler);
-
-// Conectar Base de Datos
-sequelize
-  .sync()
-  .then(() => console.log('Database connected successfully'))
-  .catch((err) => console.error('Database connection error:', err));
 
 // Iniciar servidor
 const PORT = process.env.PORT || 5000;
