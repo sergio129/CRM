@@ -15,7 +15,9 @@ const errorHandler = require('./middleware/errorHandler');
 const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
 
-dotenv.config();
+// Cargar el archivo .env correcto según el entorno
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv.config({ path: envFile });
 
 const app = express();
 
