@@ -5,34 +5,46 @@ document.addEventListener("DOMContentLoaded", () => {
         openRoleModal();
     });
 
-    document.getElementById("sidebarCollapse").addEventListener("click", () => {
-        document.getElementById("sidebar").classList.toggle("active");
-        document.getElementById("content").classList.toggle("active");
-    });
+    document.getElementById("searchRole").addEventListener("input", filterRoles);
 });
 
 async function loadRoles() {
-    const response = await fetch('/api/roles', {
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-    });
+    try {
+        const response = await fetch('/api/roles', {
+            method: "GET",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
+            }
+        });
 
-    const roles = await response.json();
-    renderRoles(roles);
+        if (!response.ok) {
+            throw new Error("Error al cargar roles.");
+        }
+
+        const roles = await response.json();
+        renderRoles(roles);
+    } catch (error) {
+        console.error("Error al cargar roles:", error);
+        alert("Error al cargar roles.");
+    }
 }
 
 function renderRoles(roles) {
     const html = roles.map(role => `
         <tr>
-            <td>${role.id}</td>
-            <td>${role.role_name}</td>
-            <td>${role.description || ''}</td>
-            <td>${role.status}</td>
+            <td>${role.id || 'N/A'}</td>
+            <td>${role.role_name || 'Sin nombre'}</td>
+            <td>${formatPermissions(role.permissions) || 'Sin permisos'}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-warning btn-sm action-btn" onclick="editRole('${role.id}')">
+                    <button class="btn btn-info btn-sm" onclick="viewRole(${role.id})" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="editRole(${role.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteRole('${role.id}')">
+                    <button class="btn btn-danger btn-sm" onclick="deleteRole(${role.id})" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -43,229 +55,152 @@ function renderRoles(roles) {
     document.getElementById("roleTableBody").innerHTML = html;
 }
 
-async function saveRole() {
-    const id = document.getElementById("roleId").value;
-    const name = document.getElementById("roleName").value;
-    const permissions = Array.from(document.getElementById("rolePermissions").selectedOptions).map(opt => opt.value);
-
-    const method = id ? "PUT" : "POST";
-    const url = id ? `/api/roles/${id}` : "/api/roles";
-
-    await fetch(url, {
-        method,
-        headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ role_name: name, permission: permissions })
-    });
-
-    loadRoles();
-}
-
-async function searchRole() {
-    const roleName = document.getElementById("searchRole").value.trim();
-    if (!roleName) {
-        alert("Ingrese un nombre de rol.");
-        return;
+function formatPermissions(permissions) {
+    if (!permissions || typeof permissions !== 'object') {
+        return 'Sin permisos';
     }
 
+    return Object.entries(permissions)
+        .map(([module, actions]) => `${module}: ${Array.isArray(actions) ? actions.join(', ') : actions}`)
+        .join('<br>');
+}
+
+function openRoleModal(role = null) {
+    document.getElementById("roleForm").reset();
+    document.getElementById("roleId").value = role ? role.id : "";
+    document.getElementById("roleName").value = role ? role.name : "";
+    document.getElementById("roleDescription").value = role ? role.description : "";
+    document.getElementById("roleStatus").value = role ? role.status : "Activo";
+
+    loadPermissions(role ? role.permissions : []);
+
+    new bootstrap.Modal(document.getElementById("roleModal")).show();
+}
+
+async function loadPermissions(selectedPermissions = []) {
     try {
-        const response = await fetch(`/api/roles/search/${roleName}`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        const response = await fetch('/api/permissions', {
+            method: "GET",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
+            }
         });
 
         if (!response.ok) {
-            alert("Rol no encontrado.");
-            return;
+            throw new Error("Error al cargar permisos.");
         }
 
-        const roles = await response.json();
-        renderRoles(roles);
+        const permissions = await response.json();
+        const container = document.getElementById("rolePermissions");
+        container.innerHTML = permissions.map(permission => `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="permission-${permission.id}" value="${permission.id}" ${selectedPermissions.includes(permission.id) ? "checked" : ""}>
+                <label class="form-check-label" for="permission-${permission.id}">${permission.name}</label>
+            </div>
+        `).join("");
     } catch (error) {
-        console.error("Error al buscar rol:", error);
-        alert("Error al buscar rol.");
+        console.error("Error al cargar permisos:", error);
+        alert("Error al cargar permisos.");
     }
 }
 
-function openEditRoleModal(id, name, permissions) {
-    document.getElementById("editRoleId").value = id;
-    document.getElementById("editRoleName").value = name;
+async function saveRole() {
+    const roleId = document.getElementById("roleId").value;
+    const url = roleId ? `/api/roles/${roleId}` : "/api/roles";
+    const method = roleId ? "PUT" : "POST";
 
-    const permArray = JSON.parse(permissions);
-    document.getElementById("editRolePermissions").querySelectorAll("option").forEach(option => {
-        option.selected = permArray.includes(option.value);
-    });
+    const permissions = Array.from(document.querySelectorAll("#rolePermissions .form-check-input:checked")).map(input => input.value);
 
-    new bootstrap.Modal(document.getElementById("editRoleModal")).show();
-}
-
-document.getElementById('editRoleForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const roleId = document.getElementById('editRoleId').value;
-    const rolePermissions = Array.from(document.getElementById('editRolePermissions').selectedOptions).map(opt => opt.value);
+    const roleData = {
+        name: document.getElementById("roleName").value,
+        description: document.getElementById("roleDescription").value,
+        status: document.getElementById("roleStatus").value,
+        permissions
+    };
 
     try {
-        const response = await fetch(`/api/roles/${roleId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
+        const response = await fetch(url, {
+            method,
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
             },
-            body: JSON.stringify({ permissions: rolePermissions })
+            body: JSON.stringify(roleData)
         });
 
-        if (response.ok) {
-            alert('Permisos del rol actualizados correctamente');
-            loadRoles();
-            new bootstrap.Modal(document.getElementById("editRoleModal")).hide();
-        } else {
-            const errorData = await response.json();
-            alert(`Error al actualizar los permisos del rol: ${errorData.message}`);
+        if (!response.ok) {
+            throw new Error("Error al guardar el rol.");
         }
-    } catch (error) {
-        console.error('Error al actualizar los permisos del rol:', error);
-        alert('Ocurrió un error. Intenta nuevamente.');
-    }
-});
 
-async function deleteRole(id) {
+        alert(`Rol ${roleId ? "actualizado" : "creado"} correctamente.`);
+        loadRoles();
+        bootstrap.Modal.getInstance(document.getElementById("roleModal")).hide();
+    } catch (error) {
+        console.error("Error al guardar el rol:", error);
+        alert("Error al guardar el rol.");
+    }
+}
+
+async function deleteRole(roleId) {
     if (!confirm("¿Estás seguro de eliminar este rol?")) return;
 
     try {
-        const response = await fetch(`/api/roles/${id}`, {
-            method: 'DELETE',
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-
-        if (response.ok) {
-            alert('Rol eliminado correctamente');
-            loadRoles();
-        } else {
-            alert('Error al eliminar el rol');
-        }
-    } catch (error) {
-        console.error('Error al eliminar el rol:', error);
-        alert('Error al eliminar el rol');
-    }
-}
-
-// Buscar un usuario por nombre de usuario
-async function searchUser() {
-    const username = document.getElementById("searchUser").value.trim();
-    if (!username) {
-        alert("Ingrese un nombre de usuario.");
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/users/search/${username}`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-
-        if (!response.ok) {
-           // alert("Usuario no encontrado.");
-            document.getElementById("userDetails").style.display = "none";
-            return;
-        }
-
-        const users = await response.json();
-        console.log("Usuarios encontrados:", users); // 🔍 Verificar datos en consola
-
-        // Verificar si hay al menos un usuario en la respuesta
-        if (!users.length || !users[0].username) {
-           // alert("Usuario no encontrado.");
-            document.getElementById("userDetails").style.display = "none";
-            return;
-        }
-
-        const user = users[0]; // Obtener el primer usuario del array
-
-        // Mostrar los datos del usuario
-        document.getElementById("userDetails").style.display = "block";
-        document.getElementById("foundUsername").innerText = user.username;
-        document.getElementById("foundEmail").innerText = user.email;
-        document.getElementById("foundRole").innerText = user.role;
-
-        // Cargar los roles disponibles en el select
-        loadRolesForSelect(user.role);
-
-    } catch (error) {
-     //   console.error("Error al buscar usuario:", error);
-       // alert("Error al buscar usuario.");
-    }
-}
-
-async function loadRolesForSelect(currentRole) {
-    try {
-        const response = await fetch("/api/roles", {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-        });
-
-        if (!response.ok) {
-            console.error("Error al obtener roles.");
-            return;
-        }
-
-        const roles = await response.json();
-        const newRoleSelect = document.getElementById("newRole");
-
-        // Limpiar el select antes de agregar opciones
-        newRoleSelect.innerHTML = "";
-
-        roles.forEach(role => {
-            let option = document.createElement("option");
-            option.value = role.role_name;
-            option.text = role.role_name;
-
-            // Seleccionar automáticamente el rol actual del usuario
-            if (role.role_name === currentRole) {
-                option.selected = true;
+        const response = await fetch(`/api/roles/${roleId}`, {
+            method: "DELETE",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
             }
-
-            newRoleSelect.appendChild(option);
         });
 
+        if (!response.ok) {
+            throw new Error("Error al eliminar el rol.");
+        }
+
+        alert("Rol eliminado correctamente.");
+        loadRoles();
     } catch (error) {
-        console.error("Error al cargar roles:", error);
+        console.error("Error al eliminar el rol:", error);
+        alert("Error al eliminar el rol.");
     }
 }
 
-// Cambiar el rol de un usuario
-async function changeUserRole() {
-    const username = document.getElementById("foundUsername").innerText;
-    const newRole = document.getElementById("newRole").value;
+function filterRoles() {
+    const searchText = document.getElementById("searchRole").value.toLowerCase();
+    const rows = document.querySelectorAll("#roleTableBody tr");
 
-    const response = await fetch(`/api/users/update-role/${encodeURIComponent(username)}`, {
-        method: "PUT",
-        headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ newRole })
+    rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        const matches = Array.from(cells).some(cell => cell.textContent.toLowerCase().includes(searchText));
+        row.style.display = matches ? "" : "none";
     });
-    const result = await response.json();
-    if (response.ok) {
-        alert("Rol actualizado correctamente.");
-        document.getElementById("userDetails").style.display = "none";
-    } else {
-        alert("Error al actualizar el rol.");
-    }
 }
 
-function toggleSubmenu(event) {
-    event.preventDefault(); // Evita que el enlace recargue la página
+async function exportRoles() {
+    try {
+        const response = await fetch('/api/roles/export', {
+            method: "GET",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
+            }
+        });
 
-    let parent = event.currentTarget.parentElement;
-    let submenu = parent.querySelector(".submenu");
+        if (!response.ok) {
+            throw new Error("Error al exportar roles.");
+        }
 
-    if (submenu.classList.contains("show")) {
-        submenu.classList.remove("show");
-    } else {
-        submenu.classList.add("show");
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "roles.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    } catch (error) {
+        console.error("Error al exportar roles:", error);
+        alert("Error al exportar roles.");
     }
 }
-
-loadRoles();

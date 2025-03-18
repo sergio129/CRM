@@ -35,6 +35,13 @@
                         </div>
                     </div>
                 </li>
+                <li>
+                    <div class="sidebar-action">
+                        <button class="btn btn-success w-100" onclick="exportRoles()">
+                            <i class="fas fa-file-excel"></i> Exportar Roles
+                        </button>
+                    </div>
+                </li>
             </ul>
 
             <div class="sidebar-footer">
@@ -49,6 +56,9 @@
                 </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/clientes.html'">
                     <i class="fas fa-handshake"></i> Clientes
+                </button>
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/loans.html'">
+                    <i class="fas fa-hand-holding-usd"></i> Préstamos
                 </button>
                 <button class="btn btn-info w-100" onclick="window.location.href='/usuarios.html'">
                     <i class="fas fa-user"></i> Usuarios
@@ -112,6 +122,12 @@
                                 <option value="Activo">Activo</option>
                                 <option value="Inactivo">Inactivo</option>
                             </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rolePermissions" class="form-label">Permisos</label>
+                            <div id="rolePermissions" class="form-check-group">
+                                <!-- Los permisos se cargarán dinámicamente -->
+                            </div>
                         </div>
                     </form>
                 </div>

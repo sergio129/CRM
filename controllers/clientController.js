@@ -157,3 +157,24 @@ exports.deleteClient = async (req, res) => {
         res.status(500).json({ message: "Error al eliminar el cliente", error });
     }
 };
+
+exports.getClientByIdNumber = async (req, res) => {
+    try {
+        const { id_number } = req.params;
+
+        // Buscar cliente por número de documento (identification)
+        const client = await Client.findOne({
+            where: { identification: id_number }, // Cambiar a 'identification'
+            attributes: ['id', 'full_name', 'identification', 'phone', 'address', 'email']
+        });
+
+        if (!client) {
+            return res.status(404).json({ message: "Cliente no encontrado" });
+        }
+
+        res.json(client);
+    } catch (error) {
+        console.error("Error al buscar cliente por número de documento:", error);
+        res.status(500).json({ message: "Error al buscar cliente", error });
+    }
+};

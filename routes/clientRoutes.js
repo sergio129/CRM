@@ -1,7 +1,7 @@
 const express = require('express');
 const { Op } = require('sequelize');
 const Client = require('../models/Client');
-const { getClients, getClientById, createClient, updateClient, deleteClient } = require('../controllers/clientController');
+const { getClients, getClientById, createClient, updateClient, deleteClient, getClientByIdNumber } = require('../controllers/clientController');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -59,5 +59,8 @@ router.put('/:id', authenticate, async (req, res) => {
         });
     }
 });
+
+// Ruta para buscar cliente por número de documento
+router.get('/by-id-number/:id_number', getClientByIdNumber);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const payrollRoutes = require('./routes/payrollRoutes'); // Importa las rutas de
 const employeeRoutes = require('./routes/employeeRoutes'); // Importa las rutas de empleados
 const idTypeRoutes = require('./routes/idTypeRoutes'); // Importa las rutas de tipos de identificación
 const bankInfoRoutes = require('./routes/bankInfoRoutes'); // Importa las rutas de información bancaria
+const loanRoutes = require('./routes/loanRoutes'); // Importa las rutas de préstamos
 const errorHandler = require('./middleware/errorHandler');
 const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
@@ -51,6 +52,7 @@ app.use('/api/payrolls', payrollRoutes); // Añade las rutas de nómina
 app.use('/api/employees', employeeRoutes); // Añade las rutas de empleados
 app.use('/api/id_types', idTypeRoutes); // Añade las rutas de tipos de identificación
 app.use('/api/bank_info', bankInfoRoutes); // Añade las rutas de información bancaria
+app.use('/api/loans', loanRoutes); // Añade las rutas de préstamos
 
 // Middleware de errores
 app.use(errorHandler);

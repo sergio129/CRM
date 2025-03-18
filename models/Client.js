@@ -85,6 +85,11 @@ const Client = sequelize.define('Client', {
     status: {
         type: DataTypes.STRING,
         defaultValue: 'Activo'
+    },
+    id_number: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     }
 }, {
     timestamps: false, // Deshabilitar timestamps

@@ -195,91 +195,102 @@ exports.generatePayrollPDF = async (req, res) => {
 
         // Buscar el detalle de la nómina
         const payrollDetail = await PayrollDetail.findOne({
-            where: { employee_id: payroll.employee_id }
+            where: { payroll_id: payroll.id }
         });
 
         // Función auxiliar para formatear números
         const formatNumber = (value) => {
             const num = parseFloat(value) || 0;
-            return num.toFixed(2);
+            return num.toLocaleString('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 2
+            });
         };
-
-        // Función para calcular aportes basado en el tipo de pago
-        const calcularAportes = (salario, tipoPago) => {
-            const porcentaje = tipoPago === 'Quincenal' ? 0.04 : 0.08;
-            const salud = parseFloat(salario) * porcentaje;
-            const pension = parseFloat(salario) * porcentaje;
-            return { salud, pension };
-        };
-
-        // Calcular aportes
-        const aportes = calcularAportes(payroll.salario_base, payrollDetail?.tipo_pago || 'Mensual');
-
-        // Calcular totales
-        const totalIngresos = parseFloat(payroll.salario_base) +
-            parseFloat(payrollDetail?.valor_hora_extra_diurna || 0) +
-            parseFloat(payrollDetail?.bonificaciones || 0) +
-            parseFloat(payrollDetail?.comisiones || 0);
-
-        const totalDeducciones = aportes.salud +
-            aportes.pension +
-            parseFloat(payrollDetail?.prestamos || 0) +
-            parseFloat(payrollDetail?.otros_descuentos || 0);
-
-        const netoPagar = totalIngresos - totalDeducciones;
 
         // Crear PDF
-        const doc = new PDFDocument();
+        const doc = new PDFDocument({ margin: 40 });
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=nomina-${payroll.id}.pdf`);
+        res.setHeader('Content-Disposition', `attachment; filename=Nomina_CRM_${payroll.id}.pdf`);
         doc.pipe(res);
 
-        // Diseño del PDF
-        doc.fontSize(20).text('Comprobante de Nómina', { align: 'center' });
-        doc.moveDown();
+        // Encabezado
+        doc
+            .fontSize(20)
+            .fillColor('#2c3e50')
+            .text('Nómina CRM', { align: 'center' })
+            .moveDown(0.5)
+            .fontSize(12)
+            .fillColor('#7f8c8d')
+            .text(`Fecha de Generación: ${new Date().toLocaleDateString()}`, { align: 'center' })
+            .moveDown(1);
 
         // Información del empleado
-        doc.fontSize(12)
-           .text(`Empleado: ${payroll.Employee.full_name}`)
-           .text(`Documento: ${payroll.Employee.id_number}`)
-           .text(`Fecha de Pago: ${new Date(payroll.payment_date).toLocaleDateString()}`);
+        doc
+            .fontSize(14)
+            .fillColor('#34495e')
+            .text('Información del Empleado', { underline: true })
+            .moveDown(0.5)
+            .fontSize(12)
+            .text(`Nombre: ${payroll.Employee.full_name}`)
+            .text(`Documento: ${payroll.Employee.id_number}`)
+            .text(`Fecha de Pago: ${new Date(payroll.payment_date).toLocaleDateString()}`)
+            .text(`Período: ${payrollDetail?.periodo || 'No especificado'}`)
+            .moveDown(1);
 
-        if (payrollDetail) {
-            doc.text(`Período: ${payrollDetail.periodo || 'N/A'}`);
-            doc.moveDown();
+        // Ingresos
+        doc
+            .fontSize(14)
+            .fillColor('#34495e')
+            .text('Ingresos', { underline: true })
+            .moveDown(0.5)
+            .fontSize(12)
+            .fillColor('#2c3e50')
+            .text(`Salario Base: ${formatNumber(payroll.salario_base)}`)
+            .text(`Horas Extras: ${formatNumber(payrollDetail?.valor_hora_extra_diurna || 0)}`)
+            .text(`Bonificaciones: ${formatNumber(payrollDetail?.bonificaciones || 0)}`)
+            .text(`Comisiones: ${formatNumber(payrollDetail?.comisiones || 0)}`)
+            .text(`Total Ingresos: ${formatNumber(payrollDetail?.total_ingresos || 0)}`)
+            .moveDown(1);
 
-            // Ingresos
-            doc.fontSize(14).text('Ingresos', { underline: true });
-            doc.fontSize(12)
-               .text(`Salario Base: $${formatNumber(payroll.salario_base)}`)
-               .text(`Horas Extras: $${formatNumber(payrollDetail.valor_hora_extra_diurna)}`)
-               .text(`Bonificaciones: $${formatNumber(payrollDetail.bonificaciones)}`)
-               .text(`Comisiones: $${formatNumber(payrollDetail.comisiones)}`)
-               .text(`Total Ingresos: $${formatNumber(payrollDetail.total_ingresos)}`);
-            doc.moveDown();
+        // Deducciones
+        doc
+            .fontSize(14)
+            .fillColor('#34495e')
+            .text('Deducciones', { underline: true })
+            .moveDown(0.5)
+            .fontSize(12)
+            .fillColor('#e74c3c')
+            .text(`Salud: ${formatNumber(payrollDetail?.deduccion_salud || 0)}`)
+            .text(`Pensión: ${formatNumber(payrollDetail?.deduccion_pension || 0)}`)
+            .text(`Préstamos: ${formatNumber(payrollDetail?.prestamos || 0)}`)
+            .text(`Otros Descuentos: ${formatNumber(payrollDetail?.otros_descuentos || 0)}`)
+            .text(`Total Deducciones: ${formatNumber(payrollDetail?.total_deducciones || 0)}`)
+            .moveDown(1);
 
-            // Deducciones
-            doc.fontSize(14).text('Deducciones', { underline: true });
-            doc.fontSize(12)
-               .text(`Salud: $${formatNumber(aportes.salud)}`)
-               .text(`Pensión: $${formatNumber(aportes.pension)}`)
-               .text(`Préstamos: $${formatNumber(payrollDetail?.prestamos || 0)}`)
-               .text(`Otros Descuentos: $${formatNumber(payrollDetail?.otros_descuentos || 0)}`)
-               .text(`Total Deducciones: $${formatNumber(totalDeducciones)}`);
-            doc.moveDown();
-
-            // Neto a Pagar
-            doc.fontSize(16).text(`Neto a Pagar: $${formatNumber(netoPagar)}`, { underline: true });
-        }
+        // Neto a Pagar
+        doc
+            .fontSize(16)
+            .fillColor('#27ae60')
+            .text(`Neto a Pagar: ${formatNumber(payrollDetail?.neto_pagar || 0)}`, { underline: true })
+            .moveDown(2);
 
         // Firmas
-        doc.moveDown(4);
-        doc.fontSize(12)
-           .text('_______________________', { align: 'left' })
-           .text('Firma Empleador', { align: 'left' })
-           .moveDown()
-           .text('_______________________', { align: 'right' })
-           .text('Firma Empleado', { align: 'right' });
+        doc
+            .fontSize(12)
+            .fillColor('#2c3e50')
+            .text('_______________________', { align: 'left' })
+            .text('Firma Empleador', { align: 'left' })
+            .moveDown()
+            .text('_______________________', { align: 'right' })
+            .text('Firma Empleado', { align: 'right' });
+
+        // Pie de página
+        doc
+            .moveDown(2)
+            .fontSize(10)
+            .fillColor('#7f8c8d')
+            .text('Este documento fue generado automáticamente por el sistema Nómina CRM.', { align: 'center' });
 
         // Finalizar PDF
         doc.end();
