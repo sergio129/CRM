@@ -500,17 +500,17 @@ async function loadClientLoans(clientId) {
         if (activeLoans.length === 0) {
             loanSelect.innerHTML = '<option value="">Cliente sin créditos activos</option>';
             loanSelect.disabled = true;
-            document.getElementById("minimumPayment").textContent = "Pago mínimo: No disponible";
+document.getElementById("minimumPayment").textContent = "Pago mínimo: No disponible";
             return;
         }
 
         loanSelect.innerHTML = activeLoans.map(loan => `
             <option value="${loan.id}" 
-                    data-amount-requested="${loan.amount_requested}" 
-                    data-interest-rate="${loan.interest_rate}" 
-                    data-remaining-installments="${loan.remaining_installments}">
-                ${loan.loan_number} - ${parseFloat(loan.amount_requested).toFixed(2)} (${loan.loan_status})
-            </option>
+                        data-amount-requested="${loan.amount_requested}" 
+                        data-interest-rate="${loan.interest_rate}" 
+                        data-remaining-installments="${loan.remaining_installments}">
+${loan.loan_number} - ${parseFloat(loan.amount_requested).toFixed(2)} (${loan.loan_status})
+</option>
         `).join("");
         loanSelect.disabled = false;
 
@@ -652,7 +652,7 @@ async function loadClientLoansForHistory(clientId) {
         if (loans.length === 0) {
             loanSelect.innerHTML = '<option value="">No hay préstamos disponibles</option>';
             loanSelect.disabled = true;
-            document.getElementById("paymentHistoryTableBody").innerHTML = `
+document.getElementById("paymentHistoryTableBody").innerHTML = `
                 <tr>
                     <td colspan="5">No hay pagos registrados para este cliente.</td>
                 </tr>
@@ -682,7 +682,7 @@ async function loadClientLoansForHistory(clientId) {
             const selectedLoanId = loanSelect.value;
             if (selectedLoanId) {
                 loadPaymentHistoryForLoan(selectedLoanId);
-            } else {
+} else {
                 document.getElementById("paymentHistoryTableBody").innerHTML = `
                     <tr>
                         <td colspan="5">Seleccione un préstamo para ver el historial de pagos.</td>
@@ -722,11 +722,11 @@ async function loadPaymentHistoryForLoan(loanId) {
         renderPaymentHistoryForLoan(payments);
     } catch (error) {
         console.error("Error al cargar el historial de pagos:", error);
-        // No mostrar mensaje de error si el historial se carga correctamente
+// No mostrar mensaje de error si el historial se carga correctamente
         if (!document.getElementById("paymentHistoryTableBody").innerHTML.trim()) {
-            showToast("Error al cargar el historial de pagos.", "danger");
-        }
+        showToast("Error al cargar el historial de pagos.", "danger");
     }
+}
 }
 
 function renderPaymentHistoryForLoan(payments) {

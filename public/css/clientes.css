@@ -69,24 +69,57 @@
 
 /* Estilos para secciones del formulario */
 .section-title {
+    grid-column: span 2; /* Hacer que el título ocupe todo el ancho */
     color: #2c3e50;
     border-bottom: 2px solid #3498db;
     padding-bottom: 8px;
     margin-bottom: 20px;
     font-weight: 600;
+    text-align: center; /* Centrar el texto del título */
 }
 
+/* Estilos para las secciones de los tabs */
 .form-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Asegurar un ancho mínimo de 300px por campo */
+    gap: 20px; /* Espaciado entre los campos */
     background-color: #f8f9fa;
-    padding: 15px;
+    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     margin-bottom: 20px;
+    align-items: start; /* Alinear los campos al inicio verticalmente */
+    justify-items: stretch; /* Asegurar que los campos ocupen todo el ancho disponible */
 }
 
-/* Estilos para campos de formulario */
-.form-control:disabled,
-.form-control[readonly] {
+/* Ajustar los campos dentro de las filas */
+.form-section .form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centrar los campos dentro de cada grupo */
+    width: 100%; /* Asegurar que ocupen todo el ancho disponible */
+}
+
+/* Ajustar los inputs y selects */
+.form-control,
+.form-select {
+    width: 100%; /* Asegurar que ocupen todo el ancho de su contenedor */
+    padding: 12px; /* Incrementar el padding para mejor visibilidad */
+    font-size: 1rem; /* Aumentar el tamaño de la fuente */
+    border-radius: 5px;
+    margin: 0; /* Eliminar márgenes adicionales */
+}
+
+/* Ajustar los labels */
+.form-label {
+    font-weight: bold;
+    font-size: 0.95rem; /* Aumentar ligeramente el tamaño de los labels */
+    margin-bottom: 5px;
+}
+
+/* Estilo para los campos de solo lectura */
+.form-control[readonly],
+.form-select[disabled] {
     background-color: #e9ecef;
     opacity: 1;
 }
@@ -111,20 +144,82 @@
 }
 
 /* Tabs para organización de información */
+.nav-tabs {
+    display: flex;
+    flex-wrap: nowrap; /* Evitar que los tabs se envuelvan */
+    overflow-x: auto; /* Permitir desplazamiento horizontal si hay muchos tabs */
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.nav-tabs .nav-item {
+    flex: 1; /* Hacer que cada tab ocupe el mismo espacio */
+    text-align: center;
+}
+
 .nav-tabs .nav-link {
-    color: #495057;
     border: none;
     border-bottom: 2px solid transparent;
+    color: #495057;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
 }
 
 .nav-tabs .nav-link:hover {
-    border-color: transparent;
-    border-bottom: 2px solid #3498db;
+    border-color: #3498db;
 }
 
 .nav-tabs .nav-link.active {
     color: #3498db;
-    background: none;
-    border: none;
     border-bottom: 2px solid #3498db;
+}
+
+/* Asegurar que el contenido de los tabs esté alineado correctamente */
+.tab-content {
+    margin-top: 1rem;
+}
+
+/* Ajustar el diseño responsivo para pantallas pequeñas */
+@media (max-width: 576px) {
+    .nav-tabs {
+        flex-wrap: wrap; /* Permitir que los tabs se envuelvan en pantallas pequeñas */
+    }
+
+    .nav-tabs .nav-item {
+        flex: none; /* Ajustar el tamaño de los tabs en pantallas pequeñas */
+        width: 100%; /* Hacer que cada tab ocupe toda la fila */
+    }
+}
+
+@media (max-width: 576px) {
+    .form-section {
+        grid-template-columns: 1fr; /* Hacer que los campos ocupen toda la fila en pantallas pequeñas */
+    }
+}
+
+#deudasActuales {
+    background-color: #f8d7da; /* Color de fondo rojo claro */
+    color: #721c24; /* Texto rojo oscuro */
+    font-weight: bold;
+    border: 1px solid #f5c6cb; /* Borde rojo claro */
+}
+
+/* Ajustar los campos específicos del tab de Información Financiera */
+#financial .form-section .row .col-md-4 {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Alinear los campos al inicio */
+    align-items: stretch; /* Asegurar que ocupen todo el ancho disponible */
+}
+
+#financial .form-section .row .col-md-4 .form-control {
+    width: 100%; /* Asegurar que los inputs ocupen todo el ancho */
+    margin: 0; /* Eliminar márgenes adicionales */
+}
+
+/* Asegurar consistencia en todos los campos del tab */
+#financial .form-section .row .col-md-4 .form-label {
+    font-weight: bold;
+    font-size: 0.95rem; /* Aumentar ligeramente el tamaño de los labels */
+    margin-bottom: 5px;
 }

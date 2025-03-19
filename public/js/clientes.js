@@ -112,7 +112,7 @@ async function viewClientDetails(identification) {
         }
 
         const client = await response.json();
-
+        
         // Actualizar los datos en la modal
         openClientModal(client, true); // true para modo lectura
 
@@ -148,7 +148,13 @@ function formatMoney(amount) {
 function openClientModal(client = null, readOnly = false) {
     const modal = new bootstrap.Modal(document.getElementById('clientModal'));
     const form = document.getElementById('clientForm');
-    form.reset();
+
+    if (!form) {
+        console.error("Formulario 'clientForm' no encontrado en el DOM.");
+        return;
+    }
+
+    form.reset(); // Restablecer el formulario
 
     // Configurar título del modal
     document.getElementById('clientModalLabel').textContent = 
@@ -179,8 +185,7 @@ function openClientModal(client = null, readOnly = false) {
             'empresa': client.empresa,
             'sectorEconomico': client.sector_economico,
             'ingresosMensuales': client.ingresos_mensuales,
-            'deudaTotal': client.deuda_total, // Cambiado a deuda_total
-            'estadoFinanciero': client.estado_financiero,
+                        'estadoFinanciero': client.estado_financiero,
             'status': client.status,
             'ultimo_pago': client.ultimo_pago
         };
@@ -197,6 +202,12 @@ function openClientModal(client = null, readOnly = false) {
                 }
             }
         });
+
+        // Configurar el campo "Deudas Actuales"
+        const deudasActualesElement = document.getElementById('deudasActuales');
+        if (deudasActualesElement) {
+            deudasActualesElement.value = client.deudas_actuales || 0;
+        }
     }
 
     // Habilitar/deshabilitar campos según modo
@@ -210,6 +221,12 @@ function openClientModal(client = null, readOnly = false) {
             element.disabled = readOnly;
         }
     });
+
+    // Asegurar que "Deudas Actuales" sea no editable
+    const deudasActualesElement = document.getElementById('deudasActuales');
+    if (deudasActualesElement) {
+        deudasActualesElement.readOnly = true;
+    }
 
     // Mostrar/ocultar botón de guardar según modo
     const saveButton = document.querySelector('.modal-footer .btn-primary');

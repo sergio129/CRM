@@ -114,262 +114,288 @@
 
     <!-- Modal para crear/editar cliente -->
     <div class="modal fade" id="clientModal" tabindex="-1" aria-labelledby="clientModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="clientModalLabel">Cliente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="clientForm">
-                        <input type="hidden" id="clientId">
+                    <!-- Tabs para las secciones -->
+                    <ul class="nav nav-tabs" id="clientModalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab" aria-controls="personal" aria-selected="true">Información Personal</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">Información de Contacto</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial" type="button" role="tab" aria-controls="financial" aria-selected="false">Información Financiera</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="work-tab" data-bs-toggle="tab" data-bs-target="#work" type="button" role="tab" aria-controls="work" aria-selected="false">Información Laboral</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="additional-tab" data-bs-toggle="tab" data-bs-target="#additional" type="button" role="tab" aria-controls="additional" aria-selected="false">Información Adicional</button>
+                        </li>
+                    </ul>
+
+                    <!-- Contenido de las pestañas -->
+                    <div class="tab-content" id="clientModalTabsContent">
+                        <div class="tab-pane fade show active" id="personal" role="tabpanel" aria-labelledby="personal-tab">
+                           
+                          
+                            <div class="form-section">
+                                <form id="clientForm">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fullName" class="form-label required required">Nombre Completo </label>
+                                                <input type="text" class="form-control" id="fullName" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="tipoDocumento" class="form-label required">Tipo de Documento </label>
+                                                <select class="form-select" id="tipoDocumento" required>
+                                                    <option value="DNI">DNI</option>
+                                                    <option value="Pasaporte">Pasaporte</option>
+                                                    <option value="Cédula">Cédula</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="idNumber" class="form-label required ">Número de Documento </label>
+                                                <input type="text" class="form-control" id="idNumber" required>
+                                                <small class="text-muted">Este campo es obligatorio (identification)</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fechaNacimiento" class="form-label required">Fecha de Nacimiento</label>
+                                                <input type="date" class="form-control" id="fechaNacimiento">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="genero" class="form-label">Género</label>
+                                                <select class="form-select" id="genero">
+                                                    <option value="Masculino">Masculino</option>
+                                                    <option value="Femenino">Femenino</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="estadoCivil" class="form-label">Estado Civil</label>
+                                                <select class="form-select" id="estadoCivil">
+                                                    <option value="Soltero">Soltero</option>
+                                                    <option value="Casado">Casado</option>
+                                                    <option value="Divorciado">Divorciado</option>
+                                                    <option value="Viudo">Viudo</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="nacionalidad" class="form-label">Nacionalidad</label>
+                                                <input type="text" class="form-control" id="nacionalidad">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+                            <!-- Información de Contacto -->
+                            
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="telefonoMovil" class="form-label required">Teléfono Móvil </label>
+                                            <input type="tel" class="form-control" id="telefonoMovil" required>
+                                            <small class="text-muted">Este campo es obligatorio (phone)</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="telefonoFijo" class="form-label">Teléfono Fijo</label>
+                                            <input type="tel" class="form-control" id="telefonoFijo">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label">Email </label>
+                                            <input type="email" class="form-control" id="email" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="ciudad" class="form-label required">Ciudad/Dirección </label>
+                                            <input type="text" class="form-control" id="ciudad" required>
+                                            <small class="text-muted">Este campo es obligatorio (address)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="codigoPostal" class="form-label">Código Postal</label>
+                                            <input type="text" class="form-control" id="codigoPostal">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="pais" class="form-label">País</label>
+                                            <input type="text" class="form-control" id="pais">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="financial" role="tabpanel" aria-labelledby="financial-tab">
+                            <!-- Información Financiera -->
+                          
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="numeroCuenta" class="form-label required">Número de Cuenta</label>
+                                            <input type="text" class="form-control" id="numeroCuenta" required >
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="tipoCuenta" class="form-label required">Tipo de Cuenta </label>
+                                            <select class="form-select" id="tipoCuenta" required>
+                                                <option value="Corriente">Corriente</option>
+                                                <option value="Ahorros">Ahorros</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="moneda" class="form-label">Moneda</label>
+                                            <input type="text" class="form-control" id="moneda" value="COP">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="limiteCredito" class="form-label">Límite de Crédito</label>
+                                            <input type="number" class="form-control" id="limiteCredito" step="0.01">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="saldoDisponible" class="form-label">Saldo Disponible</label>
+                                            <input type="number" class="form-control" id="saldoDisponible" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="ultimo_pago" class="form-label required">Fecha Último Pago *</label>
+                                            <input type="date" class="form-control" id="ultimo_pago" required>
+                                            <small class="text-muted">Este campo es obligatorio</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="work" role="tabpanel" aria-labelledby="work-tab">
+                            <!-- Información Laboral -->
                         
-                        <!-- Datos Personales -->
-                        <h6 class="section-title">Datos Personales</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="fullName" class="form-label required required">Nombre Completo </label>
-                                        <input type="text" class="form-control" id="fullName" required>
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="ocupacion" class="form-label">Ocupación</label>
+                                            <input type="text" class="form-control" id="ocupacion">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="empresa" class="form-label">Empresa</label>
+                                            <input type="text" class="form-control" id="empresa">
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="tipoDocumento" class="form-label required">Tipo de Documento </label>
-                                        <select class="form-select" id="tipoDocumento" required>
-                                            <option value="DNI">DNI</option>
-                                            <option value="Pasaporte">Pasaporte</option>
-                                            <option value="Cédula">Cédula</option>
-                                            <option value="Otro">Otro</option>
-                                        </select>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="sectorEconomico" class="form-label">Sector Económico</label>
+                                            <input type="text" class="form-control" id="sectorEconomico">
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="idNumber" class="form-label required ">Número de Documento </label>
-                                        <input type="text" class="form-control" id="idNumber" required>
-                                        <small class="text-muted">Este campo es obligatorio (identification)</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="fechaNacimiento" class="form-label required">Fecha de Nacimiento</label>
-                                        <input type="date" class="form-control" id="fechaNacimiento">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="genero" class="form-label">Género</label>
-                                        <select class="form-select" id="genero">
-                                            <option value="Masculino">Masculino</option>
-                                            <option value="Femenino">Femenino</option>
-                                            <option value="Otro">Otro</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="estadoCivil" class="form-label">Estado Civil</label>
-                                        <select class="form-select" id="estadoCivil">
-                                            <option value="Soltero">Soltero</option>
-                                            <option value="Casado">Casado</option>
-                                            <option value="Divorciado">Divorciado</option>
-                                            <option value="Viudo">Viudo</option>
-                                            <option value="Otro">Otro</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="nacionalidad" class="form-label">Nacionalidad</label>
-                                        <input type="text" class="form-control" id="nacionalidad">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="ingresosMensuales" class="form-label">Ingresos Mensuales</label>
+                                            <input type="number" class="form-control" id="ingresosMensuales" step="0.01">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Datos de Contacto -->
-                        <h6 class="section-title mt-4">Datos de Contacto</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="telefonoMovil" class="form-label required">Teléfono Móvil </label>
-                                        <input type="tel" class="form-control" id="telefonoMovil" required>
-                                        <small class="text-muted">Este campo es obligatorio (phone)</small>
+                        <div class="tab-pane fade" id="additional" role="tabpanel" aria-labelledby="additional-tab">
+                            <!-- Información Adicional -->
+                            
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="observaciones" class="form-label">Observaciones</label>
+                                            <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="telefonoFijo" class="form-label">Teléfono Fijo</label>
-                                        <input type="tel" class="form-control" id="telefonoFijo">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="deudasActuales" class="form-label">Deudas Actuales</label>
+                                            <input type="number" class="form-control" id="deudasActuales" step="0.01" value="0" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="estadoFinanciero" class="form-label">Estado Financiero</label>
+                                            <select class="form-select" id="estadoFinanciero">
+                                                <option value="Al día">Al día</option>
+                                                <option value="En mora">En mora</option>
+                                                <option value="Bloqueado">Bloqueado</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">Email </label>
-                                        <input type="email" class="form-control" id="email" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        <label for="ciudad" class="form-label required">Ciudad/Dirección </label>
-                                        <input type="text" class="form-control" id="ciudad" required>
-                                        <small class="text-muted">Este campo es obligatorio (address)</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="codigoPostal" class="form-label">Código Postal</label>
-                                        <input type="text" class="form-control" id="codigoPostal">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="pais" class="form-label">País</label>
-                                        <input type="text" class="form-control" id="pais">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="status" class="form-label">Estado</label>
+                                            <select class="form-select" id="status" required>
+                                                <option value="Activo">Activo</option>
+                                                <option value="Inactivo">Inactivo</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Datos Financieros -->
-                        <h6 class="section-title mt-4">Datos Financieros</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="numeroCuenta" class="form-label required">Número de Cuenta</label>
-                                        <input type="text" class="form-control" id="numeroCuenta" required >
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="tipoCuenta" class="form-label required">Tipo de Cuenta </label>
-                                        <select class="form-select" id="tipoCuenta" required>
-                                            <option value="Corriente">Corriente</option>
-                                            <option value="Ahorros">Ahorros</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="moneda" class="form-label">Moneda</label>
-                                        <input type="text" class="form-control" id="moneda" value="COP">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="limiteCredito" class="form-label">Límite de Crédito</label>
-                                        <input type="number" class="form-control" id="limiteCredito" step="0.01">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label for="saldoDisponible" class="form-label">Saldo Disponible</label>
-                                        <input type="number" class="form-control" id="saldoDisponible" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="ultimo_pago" class="form-label required">Fecha Último Pago *</label>
-                                        <input type="date" class="form-control" id="ultimo_pago" required>
-                                        <small class="text-muted">Este campo es obligatorio</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Datos Laborales -->
-                        <h6 class="section-title mt-4">Datos Laborales</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="ocupacion" class="form-label">Ocupación</label>
-                                        <input type="text" class="form-control" id="ocupacion">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="empresa" class="form-label">Empresa</label>
-                                        <input type="text" class="form-control" id="empresa">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="sectorEconomico" class="form-label">Sector Económico</label>
-                                        <input type="text" class="form-control" id="sectorEconomico">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="ingresosMensuales" class="form-label">Ingresos Mensuales</label>
-                                        <input type="number" class="form-control" id="ingresosMensuales" step="0.01">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Datos Adicionales -->
-                        <h6 class="section-title mt-4">Datos Adicionales</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        <label for="observaciones" class="form-label">Observaciones</label>
-                                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="deudasActuales" class="form-label">Deudas Actuales</label>
-                                        <input type="number" class="form-control" id="deudasActuales" step="0.01" value="0" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="estadoFinanciero" class="form-label">Estado Financiero</label>
-                                        <select class="form-select" id="estadoFinanciero">
-                                            <option value="Al día">Al día</option>
-                                            <option value="En mora">En mora</option>
-                                            <option value="Bloqueado">Bloqueado</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        <label for="status" class="form-label">Estado</label>
-                                        <select class="form-select" id="status" required>
-                                            <option value="Activo">Activo</option>
-                                            <option value="Inactivo">Inactivo</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

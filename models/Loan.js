@@ -80,7 +80,7 @@ const Loan = sequelize.define('Loan', {
   installment_amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
-  },
+},
   risk_score: {
     type: DataTypes.DECIMAL(5, 2), // Puntaje de riesgo entre 0 y 1
     allowNull: true
@@ -92,8 +92,8 @@ const Loan = sequelize.define('Loan', {
 
 // Configurar las relaciones después de definir ambos modelos
 Loan.associate = (models) => {
-  Loan.belongsTo(models.Client, { foreignKey: 'client_id', as: 'Client' });
-  Loan.belongsTo(models.Client, { foreignKey: 'co_signer_id', as: 'CoSigner' });
+Loan.belongsTo(models.Client, { foreignKey: 'client_id', as: 'Client' });
+Loan.belongsTo(models.Client, { foreignKey: 'co_signer_id', as: 'CoSigner' });
 };
 
 module.exports = Loan;

@@ -3,7 +3,7 @@ const axios = require('axios');
 class PredictiveAnalysisService {
     static async analyzeCreditRisk(clientData) {
         try {
-            const { verified_income, loan_amount } = clientData;
+                        const { verified_income, loan_amount } = clientData;
 
             // Calcular el porcentaje del ingreso comprometido con el préstamo
             const incomeCommitment = loan_amount / verified_income;
