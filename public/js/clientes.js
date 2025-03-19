@@ -112,8 +112,12 @@ async function viewClientDetails(identification) {
         }
 
         const client = await response.json();
-        console.log('Cliente encontrado:', client); // Para debugging
+
+        // Actualizar los datos en la modal
         openClientModal(client, true); // true para modo lectura
+
+        // Asegurarnos de que la "Deuda Total" en la modal coincida con la tabla
+        document.getElementById("deudaTotal").value = client.deuda_total || 0; // Usar deuda_total actualizada
     } catch (error) {
         console.error("Error:", error);
         showMessage(error.message, "error");
@@ -161,7 +165,7 @@ function openClientModal(client = null, readOnly = false) {
             'empresa': client.empresa,
             'sectorEconomico': client.sector_economico,
             'ingresosMensuales': client.ingresos_mensuales,
-            'deudaTotal': client.deuda_total,
+            'deudaTotal': client.deuda_total, // Cambiado a deuda_total
             'estadoFinanciero': client.estado_financiero,
             'status': client.status,
             'ultimo_pago': client.ultimo_pago
@@ -357,4 +361,58 @@ function showMessage(message, type = "error") {
     setTimeout(() => {
         alertPlaceholder.remove();
     }, 3000);
+}
+
+async function openClientDetailsModal(clientId) {
+    try {
+        const response = await fetch(`/api/clients/${clientId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (!response.ok) {
+            throw new Error("Error al obtener los detalles del cliente.");
+        }
+
+        const client = await response.json();
+
+        // Llenar los campos de la modal con los datos del cliente
+        document.getElementById("clientId").value = client.id;
+        document.getElementById("fullName").value = client.full_name || "";
+        document.getElementById("tipoDocumento").value = client.tipo_documento || "";
+        document.getElementById("idNumber").value = client.identification || "";
+        document.getElementById("fechaNacimiento").value = client.fecha_nacimiento || "";
+        document.getElementById("genero").value = client.genero || "";
+        document.getElementById("estadoCivil").value = client.estado_civil || "";
+        document.getElementById("nacionalidad").value = client.nacionalidad || "";
+        document.getElementById("telefonoMovil").value = client.phone || "";
+        document.getElementById("telefonoFijo").value = client.telefono_fijo || "";
+        document.getElementById("email").value = client.email || "";
+        document.getElementById("ciudad").value = client.address || "";
+        document.getElementById("codigoPostal").value = client.codigo_postal || "";
+        document.getElementById("pais").value = client.pais || "";
+        document.getElementById("numeroCuenta").value = client.numero_cuenta || "";
+        document.getElementById("tipoCuenta").value = client.tipo_cuenta || "";
+        document.getElementById("moneda").value = client.moneda || "COP";
+        document.getElementById("limiteCredito").value = client.limite_credito || 0;
+        document.getElementById("saldoDisponible").value = client.saldo_disponible || 0;
+        document.getElementById("ultimo_pago").value = client.ultimo_pago || "";
+        document.getElementById("ocupacion").value = client.ocupacion || "";
+        document.getElementById("empresa").value = client.empresa || "";
+        document.getElementById("sectorEconomico").value = client.sector_economico || "";
+        document.getElementById("ingresosMensuales").value = client.ingresos_mensuales || 0;
+        document.getElementById("observaciones").value = client.observaciones || "";
+        document.getElementById("estadoFinanciero").value = client.estado_financiero || "Al día";
+        document.getElementById("status").value = client.status || "Activo";
+
+        // Mostrar `deudas_actuales` en lugar de `deuda_total`
+        document.getElementById("deudaTotal").value = client.deudas_actuales || 0;
+
+        // Abrir la modal
+        const clientModal = new bootstrap.Modal(document.getElementById("clientModal"));
+        clientModal.show();
+    } catch (error) {
+        console.error("Error al abrir la modal de detalles del cliente:", error);
+        alert("Error al abrir los detalles del cliente.");
+    }
 }

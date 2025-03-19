@@ -1,6 +1,8 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Client = require('./Client'); // Modelo de cliente existente
+
+// Importar el modelo Client de forma diferida para evitar dependencias circulares
+const Client = require('./Client');
 
 const Loan = sequelize.define('Loan', {
   id: {
@@ -88,7 +90,10 @@ const Loan = sequelize.define('Loan', {
   tableName: 'loans'
 });
 
-Loan.belongsTo(Client, { foreignKey: 'client_id', as: 'Client' });
-Loan.belongsTo(Client, { foreignKey: 'co_signer_id', as: 'CoSigner' });
+// Configurar las relaciones después de definir ambos modelos
+Loan.associate = (models) => {
+  Loan.belongsTo(models.Client, { foreignKey: 'client_id', as: 'Client' });
+  Loan.belongsTo(models.Client, { foreignKey: 'co_signer_id', as: 'CoSigner' });
+};
 
 module.exports = Loan;

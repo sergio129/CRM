@@ -9,7 +9,7 @@ exports.getClients = async (req, res) => {
             include: [
                 {
                     model: Loan,
-                    as: 'Loans',
+                    as: 'Loans', // Asegúrate de que el alias coincida con el definido en las asociaciones
                     attributes: ['total_due'],
                     where: { loan_status: 'Activo' },
                     required: false // Permitir clientes sin préstamos activos
@@ -40,7 +40,15 @@ exports.getClientById = async (req, res) => {
     try {
         const client = await Client.findOne({ 
             where: { identification: req.params.id },
-            attributes: ['identification', 'full_name', 'email', 'phone', 'address', 'status', 'deuda_total', 'ultimo_pago', 'estado_financiero']
+            attributes: [
+                'id', 'phone', 'address', 'identification', 'ultimo_pago', 'full_name', 
+                'tipo_documento', 'fecha_nacimiento', 'genero', 'estado_civil', 'nacionalidad', 
+                'telefono_movil', 'telefono_fijo', 'email', 'ciudad', 'codigo_postal', 'pais', 
+                'numero_cuenta', 'tipo_cuenta', 'moneda', 'saldo_disponible', 'limite_credito', 
+                'ocupacion', 'empresa', 'sector_economico', 'ingresos_mensuales', 'tipo_contrato', 
+                'antiguedad_trabajo', 'scoring_crediticio', 'deudas_actuales', 'creditos_vigentes', 
+                'estado_financiero', 'status', 'id_number'
+            ]
         });
 
         if (!client) {

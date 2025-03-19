@@ -6,6 +6,8 @@ const Employee = require('./Employee');
 const Payroll = require('./Payroll');
 const PayrollDetail = require('./PayrollDetail');
 const PayrollLoan = require('./PayrollLoan');
+const Client = require('./Client');
+const Loan = require('./Loan');
 
 // Establecer relaciones
 Payroll.belongsTo(Employee, { 
@@ -38,10 +40,16 @@ PayrollLoan.belongsTo(Employee, {
     as: 'EmployeeLoan' // Alias único
 });
 
+// Registrar asociaciones
+Client.associate({ Loan });
+Loan.associate({ Client });
+
 module.exports = {
     sequelize,
     Employee,
     Payroll,
     PayrollDetail,
-    PayrollLoan
+    PayrollLoan,
+    Client,
+    Loan
 };
