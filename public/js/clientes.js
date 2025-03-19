@@ -116,8 +116,22 @@ async function viewClientDetails(identification) {
         // Actualizar los datos en la modal
         openClientModal(client, true); // true para modo lectura
 
-        // Asegurarnos de que la "Deuda Total" en la modal coincida con la tabla
-        document.getElementById("deudaTotal").value = client.deuda_total || 0; // Usar deuda_total actualizada
+        // Calcular "Deudas Actuales" sumando los saldos pendientes de los préstamos activos
+        const loansResponse = await fetch(`/api/loans?client_id=${client.id}`, {
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (!loansResponse.ok) {
+            throw new Error("Error al obtener los préstamos del cliente.");
+        }
+
+        const loans = await loansResponse.json();
+        const totalPendingDebt = loans
+            .filter(loan => loan.loan_status === "Activo")
+            .reduce((sum, loan) => sum + parseFloat(loan.total_due || 0), 0);
+
+        // Mostrar "Deudas Actuales" en la modal
+        document.getElementById("deudasActuales").value = totalPendingDebt.toFixed(2);
     } catch (error) {
         console.error("Error:", error);
         showMessage(error.message, "error");
