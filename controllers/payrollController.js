@@ -9,19 +9,15 @@ exports.getPayrolls = async (req, res) => {
         const payrolls = await Payroll.findAll({
             include: [{
                 model: Employee,
-                as: 'Employee',
-                attributes: ['full_name', 'id_number'],
-                required: true
-            }],
-            attributes: ['id', 'employee_id', 'salario_base', 'payment_date', 'status'] // 'salary' reemplazado
+                as: 'employees', // Alias definido en la asociación
+                attributes: ['id', 'full_name', 'id_number', 'email']
+            }]
         });
+
         res.json(payrolls);
     } catch (error) {
         console.error("Error al obtener nóminas:", error);
-        res.status(500).json({ 
-            message: "Error al obtener nóminas", 
-            error: error.message 
-        });
+        res.status(500).json({ message: "Error al obtener nóminas", error });
     }
 };
 

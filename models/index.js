@@ -8,6 +8,8 @@ const PayrollDetail = require('./PayrollDetail');
 const PayrollLoan = require('./PayrollLoan');
 const Client = require('./Client');
 const Loan = require('./Loan');
+const Role = require('./Role'); // Importar el modelo Role
+const Permission = require('./Permission'); // Importar el modelo Permission
 
 // Establecer relaciones
 Payroll.belongsTo(Employee, { 
@@ -40,6 +42,23 @@ PayrollLoan.belongsTo(Employee, {
     as: 'EmployeeLoan' // Alias único
 });
 
+// Asociaciones para Role
+Role.hasMany(Employee, { 
+    foreignKey: 'roleId', 
+    as: 'Employees' // Relación entre Role y Employee
+});
+
+Employee.belongsTo(Role, { 
+    foreignKey: 'roleId', 
+    as: 'Role' // Relación inversa entre Employee y Role
+});
+
+
+Role.associate({ Permission });
+Permission.associate({ Role });
+
+
+
 // Registrar asociaciones
 Client.associate({ Loan });
 Loan.associate({ Client });
@@ -51,5 +70,7 @@ module.exports = {
     PayrollDetail,
     PayrollLoan,
     Client,
-    Loan
+    Loan,
+    Role, // Exportar el modelo Role
+    Permission // Exportar el modelo Permission
 };

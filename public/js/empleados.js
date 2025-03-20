@@ -1,74 +1,100 @@
 document.addEventListener("DOMContentLoaded", () => {
-    loadEmployees(1); // Cargar la primera página de empleados
-    loadRoles(); // Cargar roles al cargar la página
-    loadIdTypes(); // Cargar tipos de identificación al cargar la página
+    loadEmployees();
+    loadIdentificationTypes();
 
-    document.getElementById("createEmployeeButton").addEventListener("click", openEmployeeModal);
-    document.getElementById("deleteSelectedButton").addEventListener("click", openDeleteModal);
-    document.getElementById("selectAllCheckbox").addEventListener("change", toggleSelectAll);
+    // Event listener para crear empleado
+    document.getElementById("createEmployeeButton").addEventListener("click", () => {
+        openEmployeeModal();
+    });
 
-    // Agregar manejo del sidebar
+    // Event listener para búsqueda en tiempo real
+    document.getElementById("tableSearch").addEventListener("keyup", filterTable);
+
+    // Event listener para el sidebar
     document.getElementById("sidebarCollapse").addEventListener("click", () => {
         document.getElementById("sidebar").classList.toggle("active");
         document.getElementById("content").classList.toggle("active");
     });
-
-    // Mostrar nombre del archivo seleccionado
-    document.getElementById("excelFileInput").addEventListener("change", function() {
-        const fileName = this.files[0]?.name;
-        if (fileName) {
-            showToast(`Archivo seleccionado: ${fileName}`);
-        }
-    });
-
-    // Agregar event listener para búsqueda en tiempo real
-    document.getElementById("tableSearch").addEventListener("keyup", filterTable);
 });
 
-async function loadEmployees(page = 1) {
+function showToast(message, type = "success") {
+    const toastContainer = document.getElementById("toastContainer");
+
+    if (!toastContainer) {
+        console.error("No se encontró el contenedor de toasts.");
+        return;
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-${type} border-0 show`;
+    toast.role = "alert";
+    toast.ariaLive = "assertive";
+    toast.ariaAtomic = "true";
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+async function loadEmployees() {
     try {
-        const response = await fetch(`/api/employees?page=${page}&limit=30`, {
+        const response = await fetch('/api/employees', {
             method: "GET",
             headers: { 
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token
             }
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Error al obtener empleados: ${response.status} ${response.statusText} - ${errorText}`);
+            throw new Error("Error al cargar empleados.");
         }
 
-        const { employees, totalPages } = await response.json();
-        renderEmployees(employees);
-        renderPagination(totalPages, page);
+        const employees = await response.json();
+        renderEmployees(employees.employees); // Asegurarse de acceder al array de empleados
     } catch (error) {
         console.error("Error al obtener empleados:", error);
-        alert("Error al obtener empleados: " + error.message);
+        showToast("Error al obtener empleados.", "danger");
     }
 }
 
 function renderEmployees(employees) {
+    const tbody = document.getElementById("employeeTableBody");
+
+    if (!tbody) {
+        console.error("No se encontró el elemento 'employeeTableBody'.");
+        return;
+    }
+
+    // Generar el HTML para todos los empleados
     const html = employees.map(employee => `
         <tr>
             <td>${employee.id_number || 'No registrado'}</td>
             <td>${employee.full_name || 'No registrado'}</td>
             <td>${employee.email || 'No registrado'}</td>
             <td>${employee.phone || 'No registrado'}</td>
-            <td>${employee.address || 'No registrada'}</td>
-            <td>${employee.role || 'No asignado'}</td>
-            <td>${formatMoney(employee.salario_base || 0)}</td>
-            <td><span class="badge bg-${employee.status === 'Activo' ? 'success' : 'danger'}">${employee.status || 'No definido'}</span></td>
+            <td>${employee.position || 'No registrado'}</td>
+            <td>${formatCurrency(employee.salario_base || 0)}</td>
+            <td><span class="badge bg-${employee.status === 'Activo' ? 'success' : employee.status === 'Suspendido' ? 'warning' : 'danger'}">${employee.status || 'No definido'}</span></td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn btn-info btn-sm action-btn" onclick="viewEmployeeDetails('${employee.id_number}')" title="Ver detalles">
+                    <button class="btn btn-info btn-sm action-btn" onclick="viewEmployeeDetails(${employee.id})" title="Ver detalles">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn btn-warning btn-sm action-btn" onclick="editEmployee('${employee.id_number}')" title="Editar">
+                    <button class="btn btn-warning btn-sm action-btn" onclick="editEmployee(${employee.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteEmployee('${employee.id_number}')" title="Eliminar">
+                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteEmployee(${employee.id})" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -76,89 +102,94 @@ function renderEmployees(employees) {
         </tr>
     `).join("");
 
-    document.getElementById('employeeTableBody').innerHTML = html;
+    tbody.innerHTML = html;
 }
 
-// Agregar función para formatear moneda
-function formatMoney(amount) {
-    return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP'
-    }).format(amount);
-}
-
-function renderPagination(totalPages, currentPage) {
-    let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="loadEmployees(${i})">${i}</a>
-                 </li>`;
-    }
-    document.getElementById("pagination").innerHTML = html;
-}
-
-function toggleSelectAll() {
-    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    const checkboxes = document.querySelectorAll('.employee-checkbox');
-    checkboxes.forEach(checkbox => checkbox.checked = selectAllCheckbox.checked);
-    
-    // Solo abrir el modal si hay checkboxes seleccionados
-    if (selectAllCheckbox.checked && checkboxes.length > 0) {
-        openDeleteModal();
-    }
-}
-
-function openDeleteModal() {
-    const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked')).map(checkbox => checkbox.value);
-    if (selectedIds.length === 0) {
-        alert("Por favor, seleccione al menos un empleado para eliminar.");
-        // Desmarcar el checkbox principal si no hay selecciones
-        document.getElementById('selectAllCheckbox').checked = false;
-        return;
-    }
-    new bootstrap.Modal(document.getElementById("deleteModal")).show();
-}
-
-// Agregar esta función para mostrar el toast
-function showToast(message) {
-    const toastElement = document.getElementById('successToast');
-    const toast = new bootstrap.Toast(toastElement);
-    toastElement.querySelector('.toast-body').textContent = message;
-    toast.show();
-}
-
-async function deleteSelectedEmployees() {
-    const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked')).map(checkbox => checkbox.value);
-
+async function loadIdentificationTypes() {
     try {
-        const response = await fetch('/api/employees/bulk-delete', {
-            method: "POST",
-            headers: {
+        const response = await fetch('/api/identification-types', {
+            method: "GET",
+            headers: { 
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify({ ids: selectedIds }),
+                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token
+            }
         });
 
         if (!response.ok) {
-            throw new Error("Error al eliminar los empleados seleccionados");
+            throw new Error("Error al cargar tipos de identificación.");
         }
 
-        // Desmarcar todos los checkboxes después de eliminar
-        document.getElementById('selectAllCheckbox').checked = false;
-        document.querySelectorAll('.employee-checkbox').forEach(checkbox => checkbox.checked = false);
-        
-        // Cerrar el modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById("deleteModal"));
-        modal.hide();
-        
-        // Mostrar el toast en lugar del alert
-        showToast("Empleados eliminados correctamente");
-        loadEmployees();
+        const types = await response.json();
+        const select = document.getElementById("tipoDocumento");
+
+        if (!select) {
+            console.error("No se encontró el elemento 'tipoDocumento'.");
+            return;
+        }
+
+        select.innerHTML = types.map(type => `<option value="${type.value}">${type.label}</option>`).join("");
     } catch (error) {
-        console.error("Error al eliminar los empleados seleccionados:", error);
-        alert("Error al eliminar los empleados seleccionados");
+        console.error("Error al obtener tipos de identificación:", error);
+        showToast("Error al obtener tipos de identificación.", "danger");
     }
+}
+
+function openEmployeeModal(employee = null, readOnly = false) {
+    const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+    const form = document.getElementById('employeeForm');
+
+    if (!form) {
+        console.error("Formulario 'employeeForm' no encontrado en el DOM.");
+        return;
+    }
+
+    form.reset();
+
+    document.getElementById('employeeModalLabel').textContent = 
+        readOnly ? 'Detalles del Empleado' : 
+        employee ? 'Editar Empleado' : 'Nuevo Empleado';
+
+    if (employee) {
+        const fields = {
+            'fullName': employee.full_name,
+            'idNumber': employee.identification,
+            'fechaNacimiento': employee.fecha_nacimiento,
+            'genero': employee.genero,
+            'telefonoMovil': employee.phone,
+            'email': employee.email,
+            'cargo': employee.cargo,
+            'salario': employee.salario,
+            'status': employee.status
+        };
+
+        Object.entries(fields).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || '';
+            }
+        });
+    }
+
+    const inputs = form.getElementsByTagName('input');
+    const selects = form.getElementsByTagName('select');
+
+    [...inputs, ...selects].forEach(element => {
+        element.readOnly = readOnly;
+        if (element.tagName === 'SELECT') {
+            element.disabled = readOnly;
+        }
+    });
+
+    const saveButton = document.querySelector('.modal-footer .btn-primary');
+    if (saveButton) {
+        saveButton.style.display = readOnly ? 'none' : 'block';
+    }
+
+    modal.show();
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(value);
 }
 
 async function loadRoles() {
@@ -337,71 +368,66 @@ function validateAndSaveEmployee() {
 }
 
 async function saveEmployee() {
-    const employeeId = document.getElementById("employeeId").value;
-    const url = employeeId ? `/api/employees/${employeeId}` : "/api/employees";
-    const method = employeeId ? "PUT" : "POST";
-
-    // Agregar console.log para debuggear
-    console.log("Valores de los campos:", {
-        hire_date: document.getElementById("hireDate").value,
-        eps: document.getElementById("eps").value,
-        fondo_pension: document.getElementById("fondo_pension").value,
-        fondo_cesantias: document.getElementById("fondo_cesantias").value,
-        caja_compensacion: document.getElementById("caja_compensacion").value
-    });
-
-    const salarioBase = parseFloat(document.getElementById("salario_base").value) || 0;
-    // Leer explícitamente los demás campos, usando trim() para evitar espacios en blanco
-    const employeeData = {
-        full_name: document.getElementById("fullName").value.trim(),
-        email: document.getElementById("email").value.trim(),
-        phone: document.getElementById("phone").value.trim(),
-        address: document.getElementById("address").value.trim(),
-        role: document.getElementById("role").value,
-        id_type_id: document.getElementById("idType").value,
-        id_number: document.getElementById("idNumber").value.trim(),
-        department: document.getElementById("department").value.trim(),
-        position: document.getElementById("position").value.trim(),
-        hire_date: document.getElementById("hireDate").value, // Fecha de Ingreso con formato YYYY-MM-DD
-        tipo_contrato: document.getElementById("tipo_contrato").value,
-        salario_base: salarioBase,
-        riesgo_arl: document.getElementById("riesgo_arl").value,
-        eps: document.getElementById("eps").value.trim(),
-        fondo_pension: document.getElementById("fondo_pension").value.trim(),
-        fondo_cesantias: document.getElementById("fondo_cesantias").value.trim(),
-        caja_compensacion: document.getElementById("caja_compensacion").value.trim(),
-        status: document.getElementById("status").value
-    };
-
     try {
-        const response = await fetch(url, {
-            method,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify(employeeData),
-        });
+        const employeeData = {
+            full_name: document.getElementById("fullName").value,
+            idNumber: document.getElementById("idNumber").value,
+            fechaNacimiento: document.getElementById("fechaNacimiento").value,
+            genero: document.getElementById("genero").value,
+            telefonoMovil: document.getElementById("telefonoMovil").value,
+            email: document.getElementById("email").value,
+            direccion: document.getElementById("direccion").value,
+            cargo: document.getElementById("cargo").value,
+            salario: document.getElementById("salario").value,
+            status: document.getElementById("estado").value
+        };
 
-        // Agregar console.log para ver la respuesta del servidor
-        const responseData = await response.json();
-        console.log("Respuesta del servidor:", responseData);
-
-        if (!response.ok) {
-            throw new Error("Error al guardar el empleado: " + responseData.message);
+        // Validar campos requeridos
+        const requiredFields = ['full_name', 'idNumber', 'telefonoMovil', 'email', 'cargo', 'salario'];
+        for (const field of requiredFields) {
+            if (!employeeData[field]) {
+                throw new Error(`El campo ${field} es obligatorio`);
+            }
         }
 
-        showToast(`Empleado ${employeeId ? "actualizado" : "creado"} correctamente`);
-        
-        // Cerrar el modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById("employeeModal"));
-        modal.hide();
-        
-        // Recargar la lista de empleados
+        let method = 'POST';
+        let url = '/api/employees';
+
+        // Verificar si el empleado ya existe
+        const checkResponse = await fetch(`/api/employees/${employeeData.idNumber}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (checkResponse.ok) {
+            // Si el empleado existe, cambiamos a método PUT
+            const existingEmployee = await checkResponse.json();
+            method = 'PUT';
+            url = `/api/employees/${existingEmployee.id}`;
+        }
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(employeeData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al guardar empleado');
+        }
+
+        showToast('Empleado guardado exitosamente', 'success');
         loadEmployees();
+
+        // Cerrar la modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('employeeModal'));
+        if (modal) {
+            modal.hide();
+        }
     } catch (error) {
-        console.error("Error al guardar el empleado:", error);
-        showToast("Error al guardar el empleado: " + error.message);
+        console.error("Error al guardar empleado:", error);
+        showToast(error.message || "Error al guardar empleado", "danger");
     }
 }
 
@@ -779,34 +805,56 @@ function filterTable() {
     }
 }
 
-async function viewEmployeeDetails(idNumber) {
+async function viewEmployeeDetails(id) {
     try {
-        console.log("Buscando empleado con ID:", idNumber); // Debug
-
-        const response = await fetch(`/api/employees/search?id_number=${idNumber}`, {
+        const response = await fetch(`/api/employees/by-id/${id}`, {
+            method: "GET",
             headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
             }
         });
 
         if (!response.ok) {
-            throw new Error('Error al obtener detalles del empleado');
+            throw new Error("Empleado no encontrado.");
         }
 
-        const data = await response.json();
-        console.log("Datos recibidos:", data); // Debug
+        const employee = await response.json();
 
-        // Si la respuesta viene en un array, tomar el primer elemento
-        const employee = Array.isArray(data) ? data[0] : data;
+        // Llenar los datos en la modal
+        document.getElementById("employeeFullName").textContent = employee.full_name || "No registrado";
+        document.getElementById("employeeEmail").textContent = employee.email || "No registrado";
+        document.getElementById("employeePhone").textContent = employee.phone || "No registrado";
+        document.getElementById("employeePosition").textContent = employee.position || "No registrado";
+        document.getElementById("employeeDepartment").textContent = employee.department || "No registrado";
+        document.getElementById("employeeHireDate").textContent = employee.hire_date || "No registrado";
+        document.getElementById("employeeStatus").textContent = employee.status || "No definido";
 
-        if (!employee) {
-            throw new Error('Empleado no encontrado');
-        }
-
-        openEmployeeModal(employee, true); // true para modo lectura
+        // Mostrar la modal
+        const employeeModal = new bootstrap.Modal(document.getElementById("employeeModal"));
+        employeeModal.show();
     } catch (error) {
-        console.error("Error:", error);
-        showMessage(error.message, "error");
+        console.error("Error al obtener detalles del empleado:", error);
+        showToast("Error al obtener detalles del empleado.", "danger");
+    }
+}
+
+async function searchEmployeeByIdNumber(id) {
+    try {
+        const response = await fetch(`/api/employees/search?id=${id}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        if (!response.ok) {
+            throw new Error("Empleado no encontrado.");
+        }
+
+        const employee = await response.json();
+        console.log("Empleado encontrado:", employee);
+        // Aquí puedes actualizar la UI con los datos del empleado
+    } catch (error) {
+        console.error("Error al buscar empleado:", error);
+        alert("Error al buscar empleado.");
     }
 }

@@ -1,4 +1,5 @@
 const express = require('express');
+const Employee = require('../models/Employee'); // Importar el modelo Employee
 const { 
     getEmployees, 
     getEmployeeById, 
@@ -6,7 +7,6 @@ const {
     updateEmployee, 
     deleteEmployee, 
     bulkDeleteEmployees, 
-    searchEmployeeByIdNumber, 
     getEmployeeByIdNumber,
     getActiveEmployees 
 } = require('../controllers/employeeController');
@@ -17,12 +17,16 @@ const router = express.Router();
 // Reordenar las rutas específicas primero (orden es importante)
 router.get('/search', authenticate, async (req, res) => {
     try {
-        const { id_number } = req.query;
+        const { id } = req.query; // Cambiar a buscar por `id`
         
-        console.log("Buscando empleado con ID:", id_number); // Debug
+        console.log("Buscando empleado con ID:", id); // Debug
+
+        if (!id) {
+            return res.status(400).json({ message: 'El parámetro "id" es obligatorio.' });
+        }
 
         const employee = await Employee.findOne({
-            where: { id_number: id_number },
+            where: { id: id }, // Buscar por `id`
             attributes: [
                 'id', 'id_number', 'full_name', 'email', 'phone', 'address',
                 'role', 'department', 'position', 'hire_date', 'tipo_contrato',
@@ -32,6 +36,7 @@ router.get('/search', authenticate, async (req, res) => {
         });
 
         if (!employee) {
+            console.log("Empleado no encontrado. Verifica si el ID existe en la base de datos."); // Debug
             return res.status(404).json({ message: 'Empleado no encontrado' });
         }
 
@@ -45,15 +50,16 @@ router.get('/search', authenticate, async (req, res) => {
         });
     }
 });
-router.get('/by-id-number/:id_number', authenticate, authorize(['Administrador']), getEmployeeByIdNumber);
+router.get('/by-id/:id', authenticate, authorize(['Administrador']), getEmployeeById); // Cambiar a buscar por `id`
+router.get('/id/:id', authenticate, authorize(['Administrador']), getEmployeeById);
 router.get('/active', authenticate, authorize(['Administrador']), getActiveEmployees);
 router.post('/bulk-delete', authenticate, authorize(['Administrador']), bulkDeleteEmployees);
 
 // Rutas genéricas después
-router.get('/', authenticate, authorize(['Administrador']), getEmployees);
-router.post('/', authenticate, authorize(['Administrador']), createEmployee);
+router.get('/', authenticate, getEmployees); // Requiere autenticación
+router.post('/', authenticate, createEmployee); // Requiere autenticación
 router.get('/:id', authenticate, authorize(['Administrador']), getEmployeeById);
-router.put('/:id', authenticate, authorize(['Administrador']), updateEmployee);
-router.delete('/:id', authenticate, authorize(['Administrador']), deleteEmployee);
+router.put('/:id', authenticate, updateEmployee); // Requiere autenticación
+router.delete('/:id', authenticate, deleteEmployee); // Requiere autenticación
 
 module.exports = router;

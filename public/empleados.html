@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Empleados</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/empleados.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -24,45 +25,25 @@
                         </button>
                     </div>
                 </li>
-                <li>
-                    <div class="sidebar-action">
-                        <div class="upload-excel-container">
-                            <label for="excelFileInput" class="custom-file-upload">
-                                <i class="fas fa-file-excel"></i> Cargar Excel
-                            </label>
-                            <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="d-none">
-                            <button onclick="uploadExcel()" class="btn btn-success btn-sm mt-2 w-100">
-                                <i class="fas fa-upload"></i> Procesar Archivo
-                            </button>
-                        </div>
-                    </div>
-                </li>
-                <li>
-                    <div class="sidebar-action">
-                        <button id="deleteSelectedButton" class="btn btn-danger w-100">
-                            <i class="fas fa-trash"></i> Eliminar Seleccionados
-                        </button>
-                    </div>
-                </li>
             </ul>
 
             <div class="sidebar-footer">
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/nomina.html'">
                     <i class="fas fa-file-invoice-dollar"></i> Nómina
                 </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/clientes.html'">
                     <i class="fas fa-handshake"></i> Clientes
                 </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
-                    <i class="fas fa-chart-line"></i> Dashboard
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/loans.html'">
+                    <i class="fas fa-hand-holding-usd"></i> Préstamos
                 </button>
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/usuarios.html'">
                     <i class="fas fa-user"></i> Usuarios
                 </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/loans.html'">
-                    <i class="fas fa-hand-holding-usd"></i> Préstamos
-                </button>
-                <button class="btn btn-info w-100" onclick="window.location.href='/roles.html'">
+                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/roles.html'">
                     <i class="fas fa-user-tag"></i> Roles
                 </button>
                 <button class="btn btn-danger w-100" onclick="logout()">
@@ -84,7 +65,7 @@
 
             <div class="content-body">
                 <div class="container mt-4">
-                    <!-- Agregar barra de búsqueda -->
+                    <!-- Barra de búsqueda -->
                     <div class="search-container mb-3">
                         <div class="input-group">
                             <input type="text" id="tableSearch" class="form-control search-input" placeholder="Buscar empleado...">
@@ -98,40 +79,21 @@
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th>Número de Documento</th>
-                                <th>Nombre Completo</th>
+                                <th>Documento</th>
+                                <th>Nombre</th>
                                 <th>Email</th>
                                 <th>Teléfono</th>
-                                <th>Dirección</th>
-                                <th>Rol</th>
+                                <th>Cargo</th>
                                 <th>Salario</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="employeeTableBody">
-                            <!-- Los empleados se cargarán dinámicamente aquí -->
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-info btn-sm action-btn" onclick="viewEmployeeDetails('${employee.id}')" title="Ver detalles">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-warning btn-sm action-btn" onclick="editEmployee('${employee.id}')" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm action-btn" onclick="deleteEmployee('${employee.id}')" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+                            <!-- Los datos se cargarán dinámicamente desde la API -->
                         </tbody>
                     </table>
                 </div>
-
-                <!-- Paginación -->
-                <nav>
-                    <ul class="pagination justify-content-center" id="pagination"></ul>
-                </nav>
             </div>
         </div>
     </div>
@@ -141,220 +103,132 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="employeeModalLabel">Crear/Editar Empleado</h5>
+                    <h5 class="modal-title" id="employeeModalLabel">Empleado</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="employeeForm">
-                        <input type="hidden" id="employeeId">
-                        <!-- Información Personal -->
-                        <h6 class="section-title">Información Personal</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="fullName" class="form-label">Nombre Completo *</label>
-                                    <input type="text" class="form-control" id="fullName" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="idType" class="form-label">Tipo de Identificación *</label>
-                                    <select class="form-select" id="idType" required></select>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="idNumber" class="form-label">Número de Identificación *</label>
-                                    <input type="text" class="form-control" id="idNumber" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="email" class="form-label">Email *</label>
-                                    <input type="email" class="form-control" id="email" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="phone" class="form-label">Teléfono *</label>
-                                    <input type="text" class="form-control" id="phone" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="address" class="form-label">Dirección *</label>
-                                    <input type="text" class="form-control" id="address" required>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Tabs para las secciones -->
+                    <ul class="nav nav-tabs" id="employeeModalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab" aria-controls="personal" aria-selected="true">Información Personal</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">Información de Contacto</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="work-tab" data-bs-toggle="tab" data-bs-target="#work" type="button" role="tab" aria-controls="work" aria-selected="false">Información Laboral</button>
+                        </li>
+                    </ul>
 
-                        <!-- Información Laboral -->
-                        <h6 class="section-title">Información Laboral</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="role" class="form-label">Rol *</label>
-                                    <select class="form-select" id="role" required></select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="department" class="form-label">Departamento *</label>
-                                    <input type="text" class="form-control" id="department" required>
-                                </div>
+                    <!-- Contenido de las pestañas -->
+                    <div class="tab-content" id="employeeModalTabsContent">
+                        <div class="tab-pane fade show active" id="personal" role="tabpanel" aria-labelledby="personal-tab">
+                            <!-- Información Personal -->
+                            <div class="form-section">
+                                <form id="employeeForm">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fullName" class="form-label required">Nombre Completo</label>
+                                                <input type="text" class="form-control" id="fullName" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="idNumber" class="form-label required">Número de Documento</label>
+                                                <input type="text" class="form-control" id="idNumber" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fechaNacimiento" class="form-label">Fecha de Nacimiento</label>
+                                                <input type="date" class="form-control" id="fechaNacimiento">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="genero" class="form-label">Género</label>
+                                                <select class="form-select" id="genero">
+                                                    <option value="Masculino">Masculino</option>
+                                                    <option value="Femenino">Femenino</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
-                            <div la class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="position" class="form-label">Cargo *</label>
-                                    <input type="text" class="form-control" id="position" required>
+                        </div>
+                        <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+                            <!-- Información de Contacto -->
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="telefonoMovil" class="form-label required">Teléfono Móvil</label>
+                                            <input type="tel" class="form-control" id="telefonoMovil" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label required">Email</label>
+                                            <input type="email" class="form-control" id="email" required>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="tipo_contrato" class="form-label">Tipo de Contrato *</label>
-                                    <select class="form-select" id="tipo_contrato" required>
-                                        <option value="Indefinido">Indefinido</option>
-                                        <option value="Fijo">Fijo</option>
-                                        <option value="Obra">Obra</option>
-                                        <option value="Aprendizaje">Aprendizaje</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="salario_base" class="form-label">Salario Base *</label>
-                                    <input type="number" class="form-control" id="salario_base" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="riesgo_arl" class="form-label">Nivel de Riesgo ARL *</label>
-                                    <select class="form-select" id="riesgo_arl" required>
-                                        <option value="1">Nivel I</option>
-                                        <option value="2">Nivel II</option>
-                                        <option value="3">Nivel III</option>
-                                        <option value="4">Nivel IV</option>
-                                        <option value="5">Nivel V</option>
-                                    </select>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="direccion" class="form-label">Dirección</label>
+                                            <input type="text" class="form-control" id="direccion">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Información de Seguridad Social -->
-                        <h6 class="section-title">Seguridad Social</h6>
-                        <div class="form-section">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="eps" class="form-label">EPS</label>
-                                    <input type="text" class="form-control" id="eps" name="eps">
+                        <div class="tab-pane fade" id="work" role="tabpanel" aria-labelledby="work-tab">
+                            <!-- Información Laboral -->
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="cargo" class="form-label required">Cargo</label>
+                                            <input type="text" class="form-control" id="cargo" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="salario" class="form-label required">Salario</label>
+                                            <input type="number" class="form-control" id="salario" required>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="fondo_pension" class="form-label">Fondo de Pensión</label>
-                                    <input type="text" class="form-control" id="fondo_pension" name="fondo_pension">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="estado" class="form-label">Estado</label>
+                                            <select class="form-select" id="estado">
+                                                <option value="Activo">Activo</option>
+                                                <option value="Inactivo">Inactivo</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="fondo_cesantias" class="form-label">Fondo de Cesantías</label>
-                                    <input type="text" class="form-control" id="fondo_cesantias" name="fondo_cesantias">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="caja_compensacion" class="form-label">Caja de Compensación</label>
-                                    <input type="text" class="form-control" id="caja_compensacion" name="caja_compensacion">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Estado y Fecha de Ingreso -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="hireDate" class="form-label">Fecha de Ingreso *</label>
-                                <input type="date" class="form-control" id="hireDate" name="hire_date" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="status" class="form-label">Estado *</label>
-                                <select class="form-select" id="status" required>
-                                    <option value="Activo">Activo</option>
-                                    <option value="Inactivo">Inactivo</option>
-                                    <option value="Suspendido">Suspendido</option>
-                                </select>
                             </div>
                         </div>
-                    </form>
-                </div>
-                <div class="modal-footer d-flex justify-content-between">
-                    <button type="button" class="btn btn-info" id="bankInfoButton" onclick="openBankInfoModal()" style="display: none;">Información Bancaria</button>
-                    <div>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="button" class="btn btn-primary" onclick="validateAndSaveEmployee()">Guardar</button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para información bancaria -->
-    <div class="modal fade" id="bankInfoModal" tabindex="-1" aria-labelledby="bankInfoModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="bankInfoModalLabel">Información Bancaria</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="bankInfoForm">
-                        <div class="mb-3">
-                            <label for="bankAccountNumber" class="form-label">Número de cuenta bancaria *</label>
-                            <input type="text" class="form-control" id="bankAccountNumber" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="bankAccountType" class="form-label">Tipo de cuenta *</label>
-                            <select class="form-select" id="bankAccountType" required>
-                                <option value="Corriente">Corriente</option>
-                                <option value="Ahorros">Ahorros</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="bankName" class="form-label">Banco *</label>
-                            <input type="text" class="form-control" id="bankName" required>
-                        </div>
-                    </form>
-                </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="button" class="btn btn-primary" onclick="saveBankInfo()">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEmployee()">Guardar</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para eliminar empleados seleccionados -->
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Eliminar Empleados Seleccionados</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>¿Estás seguro de que deseas eliminar los empleados seleccionados?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteSelectedEmployees()">Eliminar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Agregar antes del cierre del body -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <!-- El mensaje se insertará aquí -->
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <script src="js/empleados.js"></script>
-    <script>
-        function logout() {
-            localStorage.clear(); // Limpia el almacenamiento local
-            window.location.href = '/login.html'; // Redirige al login
-        }
-    </script>
 </body>
 </html>

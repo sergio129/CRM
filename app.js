@@ -11,6 +11,7 @@ const idTypeRoutes = require('./routes/idTypeRoutes'); // Importa las rutas de t
 const bankInfoRoutes = require('./routes/bankInfoRoutes'); // Importa las rutas de información bancaria
 const loanRoutes = require('./routes/loanRoutes'); // Importa las rutas de préstamos
 const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes'); // Importa las rutas del historial de pagos
+const permissionRoutes = require('./routes/permissionRoutes'); // Importa las rutas de permisos
 const errorHandler = require('./middleware/errorHandler');
 const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
@@ -57,6 +58,7 @@ app.use('/api/id_types', idTypeRoutes); // Añade las rutas de tipos de identifi
 app.use('/api/bank_info', bankInfoRoutes); // Añade las rutas de información bancaria
 app.use('/api/loans', loanRoutes); // Añade las rutas de préstamos
 app.use('/api/payment-history', paymentHistoryRoutes); // Añade las rutas del historial de pagos
+app.use('/api/permissions', permissionRoutes); // Añade las rutas de permisos
 
 // Middleware de errores
 app.use(errorHandler);

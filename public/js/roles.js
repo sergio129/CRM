@@ -1,12 +1,78 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadRoles();
+    loadPermissions();
 
-    document.getElementById("createRoleButton").addEventListener("click", () => {
+    // Event listener para abrir la modal de nuevo rol usando el botón original
+    document.getElementById("newRoleButton").addEventListener("click", () => {
         openRoleModal();
     });
 
-    document.getElementById("searchRole").addEventListener("input", filterRoles);
+    // Event listener para guardar el rol
+    document.getElementById("saveRoleButton").addEventListener("click", saveRole);
 });
+
+function showToast(message, type = "success", duration = 5000) {
+    const toastContainer = document.getElementById("toastContainer");
+
+    // Crear el elemento del toast
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-${type} border-0 show`;
+    toast.role = "alert";
+    toast.ariaLive = "assertive";
+    toast.ariaAtomic = "true";
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    // Agregar el toast al contenedor
+    toastContainer.appendChild(toast);
+
+    // Eliminar el toast después de un tiempo
+    setTimeout(() => {
+        toast.remove();
+    }, duration);
+}
+
+function showConfirmationToast(message, onConfirm) {
+    const toastContainer = document.getElementById("toastContainer");
+
+    // Crear el elemento del toast de confirmación
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-warning border-0 show`;
+    toast.role = "alert";
+    toast.ariaLive = "assertive";
+    toast.ariaAtomic = "true";
+    toast.innerHTML = `
+        <div class="d-flex flex-column">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <div class="d-flex justify-content-end mt-2">
+                <button class="btn btn-danger btn-sm me-2" id="confirmButton">Confirmar</button>
+                <button class="btn btn-secondary btn-sm" id="cancelButton">Cancelar</button>
+            </div>
+        </div>
+    `;
+
+    // Agregar el toast al contenedor
+    toastContainer.appendChild(toast);
+
+    // Manejar el clic en el botón de confirmar
+    document.getElementById("confirmButton").addEventListener("click", () => {
+        onConfirm();
+        toast.remove();
+    });
+
+    // Manejar el clic en el botón de cancelar
+    document.getElementById("cancelButton").addEventListener("click", () => {
+        toast.remove();
+    });
+}
 
 async function loadRoles() {
     try {
@@ -23,61 +89,28 @@ async function loadRoles() {
         }
 
         const roles = await response.json();
-        renderRoles(roles);
+
+        const html = roles.map(role => `
+            <tr>
+                <td>${role.id}</td>
+                <td>${role.role_name}</td>
+                <td>${role.permissions || 'Sin permisos'}</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="editRole(${role.id})">Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRole(${role.id})">Eliminar</button>
+                </td>
+            </tr>
+        `).join("");
+
+        document.getElementById("roleTableBody").innerHTML = html;
+        showToast("Roles cargados correctamente.", "success");
     } catch (error) {
         console.error("Error al cargar roles:", error);
-        alert("Error al cargar roles.");
+        showToast("Error al cargar roles.", "danger");
     }
 }
 
-function renderRoles(roles) {
-    const html = roles.map(role => `
-        <tr>
-            <td>${role.id || 'N/A'}</td>
-            <td>${role.role_name || 'Sin nombre'}</td>
-            <td>${formatPermissions(role.permissions) || 'Sin permisos'}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn btn-info btn-sm" onclick="viewRole(${role.id})" title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-warning btn-sm" onclick="editRole(${role.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteRole(${role.id})" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join("");
-
-    document.getElementById("roleTableBody").innerHTML = html;
-}
-
-function formatPermissions(permissions) {
-    if (!permissions || typeof permissions !== 'object') {
-        return 'Sin permisos';
-    }
-
-    return Object.entries(permissions)
-        .map(([module, actions]) => `${module}: ${Array.isArray(actions) ? actions.join(', ') : actions}`)
-        .join('<br>');
-}
-
-function openRoleModal(role = null) {
-    document.getElementById("roleForm").reset();
-    document.getElementById("roleId").value = role ? role.id : "";
-    document.getElementById("roleName").value = role ? role.name : "";
-    document.getElementById("roleDescription").value = role ? role.description : "";
-    document.getElementById("roleStatus").value = role ? role.status : "Activo";
-
-    loadPermissions(role ? role.permissions : []);
-
-    new bootstrap.Modal(document.getElementById("roleModal")).show();
-}
-
-async function loadPermissions(selectedPermissions = []) {
+async function loadPermissions() {
     try {
         const response = await fetch('/api/permissions', {
             method: "GET",
@@ -92,11 +125,14 @@ async function loadPermissions(selectedPermissions = []) {
         }
 
         const permissions = await response.json();
-        const container = document.getElementById("rolePermissions");
-        container.innerHTML = permissions.map(permission => `
+        const permissionsContainer = document.getElementById("permissionsContainer");
+
+        permissionsContainer.innerHTML = permissions.map(permission => `
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="permission-${permission.id}" value="${permission.id}" ${selectedPermissions.includes(permission.id) ? "checked" : ""}>
-                <label class="form-check-label" for="permission-${permission.id}">${permission.name}</label>
+                <input class="form-check-input" type="checkbox" value="${permission.id}" id="permission-${permission.id}">
+                <label class="form-check-label" for="permission-${permission.id}">
+                    ${permission.permission_name}
+                </label>
             </div>
         `).join("");
     } catch (error) {
@@ -105,65 +141,100 @@ async function loadPermissions(selectedPermissions = []) {
     }
 }
 
-async function saveRole() {
-    const roleId = document.getElementById("roleId").value;
-    const url = roleId ? `/api/roles/${roleId}` : "/api/roles";
-    const method = roleId ? "PUT" : "POST";
+function openRoleModal(role = null) {
+    const modalTitle = document.getElementById("roleModalLabel");
+    const roleNameInput = document.getElementById("roleName");
+    const roleDescriptionInput = document.getElementById("roleDescription");
+    const permissionsContainer = document.getElementById("permissionsContainer");
 
-    const permissions = Array.from(document.querySelectorAll("#rolePermissions .form-check-input:checked")).map(input => input.value);
+    // Restablecer los campos de la modal
+    roleNameInput.value = "";
+    roleDescriptionInput.value = "";
+    permissionsContainer.querySelectorAll("input[type='checkbox']").forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    if (role) {
+        modalTitle.textContent = "Editar Rol";
+        roleNameInput.value = role.role_name;
+        roleDescriptionInput.value = role.description || "";
+
+        // Marcar los permisos asociados al rol
+        role.permissions.forEach(permissionId => {
+            const checkbox = document.getElementById(`permission-${permissionId}`);
+            if (checkbox) checkbox.checked = true;
+        });
+    } else {
+        modalTitle.textContent = "Crear Rol";
+    }
+
+    const roleModal = new bootstrap.Modal(document.getElementById("roleModal"));
+    roleModal.show();
+}
+
+async function saveRole() {
+    const roleName = document.getElementById("roleName").value.trim();
+    const description = document.getElementById("roleDescription").value.trim();
+    const selectedPermissions = Array.from(document.querySelectorAll("#permissionsContainer input[type='checkbox']:checked"))
+        .map(checkbox => checkbox.value);
+
+    if (!roleName) {
+        showToast("El nombre del rol es obligatorio.", "danger");
+        return;
+    }
 
     const roleData = {
-        name: document.getElementById("roleName").value,
-        description: document.getElementById("roleDescription").value,
-        status: document.getElementById("roleStatus").value,
-        permissions
+        role_name: roleName,
+        description,
+        permissions: selectedPermissions
     };
 
     try {
-        const response = await fetch(url, {
-            method,
-            headers: { 
+        const response = await fetch('/api/roles', {
+            method: "POST",
+            headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
             },
             body: JSON.stringify(roleData)
         });
 
         if (!response.ok) {
-            throw new Error("Error al guardar el rol.");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Error al guardar el rol.");
         }
 
-        alert(`Rol ${roleId ? "actualizado" : "creado"} correctamente.`);
+        showToast("Rol guardado correctamente.", "success");
         loadRoles();
         bootstrap.Modal.getInstance(document.getElementById("roleModal")).hide();
     } catch (error) {
         console.error("Error al guardar el rol:", error);
-        alert("Error al guardar el rol.");
+        showToast(error.message, "danger");
     }
 }
 
 async function deleteRole(roleId) {
-    if (!confirm("¿Estás seguro de eliminar este rol?")) return;
+    showConfirmationToast("¿Estás seguro de eliminar este rol?", async () => {
+        try {
+            const response = await fetch(`/api/roles/${roleId}`, {
+                method: "DELETE",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
+                }
+            });
 
-    try {
-        const response = await fetch(`/api/roles/${roleId}`, {
-            method: "DELETE",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}` // Agregar token de autenticación
+            if (!response.ok) {
+                throw new Error("Error al eliminar el rol.");
             }
-        });
 
-        if (!response.ok) {
-            throw new Error("Error al eliminar el rol.");
+            showToast("Rol eliminado correctamente.", "success");
+            loadRoles();
+        } catch (error) {
+            console.error("Error al eliminar el rol:", error);
+            showToast("Error al eliminar el rol.", "danger");
         }
-
-        alert("Rol eliminado correctamente.");
-        loadRoles();
-    } catch (error) {
-        console.error("Error al eliminar el rol:", error);
-        alert("Error al eliminar el rol.");
-    }
+    });
 }
 
 function filterRoles() {

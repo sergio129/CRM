@@ -31,7 +31,8 @@ exports.getEmployeeById = async (req, res) => {
             attributes: [
                 'id', 'full_name', 'email', 'phone', 'address', 'role',
                 'salario_base', 'status', 'id_type_id', 'id_number', 'department',
-                'position', 'hire_date','riesgo_arl', 'eps','fondo_pension','fondo_cesantias','caja_compensacion','contract_type', 'work_schedule'
+                'position', 'hire_date', 'riesgo_arl', 'eps', 'fondo_pension',
+                'fondo_cesantias', 'caja_compensacion', 'contract_type', 'work_schedule'
             ]
         });
 
@@ -46,21 +47,27 @@ exports.getEmployeeById = async (req, res) => {
 
 exports.getEmployeeByIdNumber = async (req, res) => {
     try {
+        const { id_number } = req.params;
+
+        // Buscar empleado por número de identificación (id_number)
         const employee = await Employee.findOne({
-            where: { id_number: req.params.id_number },
+            where: { id_number: id_number },
             attributes: [
-                'id', 'full_name', 'email', 'phone', 'address', 'role',
-                'salario_base', 'status', 'id_type_id', 'id_number', 'department',
-                'position', 'hire_date','riesgo_arl','eps','fondo_pension','fondo_cesantias','caja_compensacion', 'contract_type', 'work_schedule'
+                'id', 'id_number', 'full_name', 'email', 'phone', 'address',
+                'role', 'department', 'position', 'hire_date', 'tipo_contrato',
+                'salario_base', 'eps', 'banco', 'tipo_cuenta', 'cuenta_bancaria',
+                'fondo_pension', 'fondo_cesantias', 'caja_compensacion', 'status'
             ]
         });
 
-        if (!employee) return res.status(404).json({ message: "Empleado no encontrado" });
+        if (!employee) {
+            return res.status(404).json({ message: "Empleado no encontrado" });
+        }
 
         res.json(employee);
     } catch (error) {
-        console.error("Error al obtener el empleado:", error);
-        res.status(500).json({ message: "Error al obtener el empleado", error });
+        console.error("Error al buscar empleado por número de identificación:", error);
+        res.status(500).json({ message: "Error al buscar empleado", error });
     }
 };
 

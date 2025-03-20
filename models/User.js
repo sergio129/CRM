@@ -34,7 +34,7 @@ const User = sequelize.define('User', {
         allowNull: true
     }
 }, {
-    timestamps: false,
+    timestamps: false, // Deshabilitar completamente los timestamps
     tableName: 'users'
 });
 

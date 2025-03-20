@@ -36,6 +36,33 @@ function filterTable() {
     }
 }
 
+function showToast(message, type = "success") {
+    const toastContainer = document.getElementById("toastContainer");
+
+    // Crear el elemento del toast
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-${type} border-0 show`;
+    toast.role = "alert";
+    toast.ariaLive = "assertive";
+    toast.ariaAtomic = "true";
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    // Agregar el toast al contenedor
+    toastContainer.appendChild(toast);
+
+    // Eliminar el toast después de 5 segundos
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
 async function loadClients() {
     try {
         const response = await fetch('/api/clients', {
@@ -51,9 +78,10 @@ async function loadClients() {
 
         const clients = await response.json();
         renderClients(clients);
+        showToast("Clientes cargados correctamente.", "success");
     } catch (error) {
         console.error("Error:", error);
-        showMessage("Error al cargar clientes", "error");
+        showToast("Error al cargar clientes.", "danger");
     }
 }
 
@@ -134,7 +162,7 @@ async function viewClientDetails(identification) {
         document.getElementById("deudasActuales").value = totalPendingDebt.toFixed(2);
     } catch (error) {
         console.error("Error:", error);
-        showMessage(error.message, "error");
+        showToast(error.message, "danger");
     }
 }
 
@@ -314,7 +342,7 @@ async function saveClient() {
             throw new Error(errorData.message || 'Error al guardar cliente');
         }
 
-        showMessage('Cliente guardado exitosamente', 'success');
+        showToast('Cliente guardado exitosamente', 'success');
         await loadClients();
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('clientModal'));
@@ -324,7 +352,7 @@ async function saveClient() {
         
     } catch (error) {
         console.error("Error:", error);
-        showMessage(error.message || "Error al guardar cliente", "error");
+        showToast(error.message || "Error al guardar cliente", "danger");
     }
 }
 
@@ -346,7 +374,7 @@ async function editClient(identification) {
         openClientModal(client, false);
     } catch (error) {
         console.error("Error:", error);
-        showMessage(error.message, "error");
+        showToast(error.message, "danger");
     }
 }
 
@@ -367,11 +395,11 @@ async function deleteClient(identification) {
             throw new Error(error.message || 'Error al eliminar cliente');
         }
 
-        showMessage('Cliente eliminado exitosamente', 'success');
+        showToast('Cliente eliminado exitosamente', 'success');
         loadClients();
     } catch (error) {
         console.error("Error:", error);
-        showMessage(error.message, "error");
+        showToast(error.message, "danger");
     }
 }
 

@@ -21,23 +21,15 @@ Role.init({
             len: [3, 50]
         }
     },
-    permissions: {
-        type: DataTypes.JSON,
-        allowNull: false,
-        defaultValue: [], // Permisos vacíos por defecto
-        validate: {
-            isValidPermissions(value) {
-                if (!Array.isArray(value)) {
-                    throw new Error('Los permisos deben ser un array');
-                }
-            }
-        }
+    description: {
+        type: DataTypes.STRING,
+        allowNull: true
     }
 }, {
     sequelize,
     modelName: 'Role',
     tableName: 'roles',
-    timestamps: false,
+    timestamps: false, // Deshabilitar completamente los timestamps
     indexes: [
         {
             unique: true,
@@ -46,11 +38,13 @@ Role.init({
     ]
 });
 
-// Relación con Usuarios (si aplica)
-Role.associate = function(models) {
-    this.hasMany(models.User, {
-        foreignKey: 'roleId',
-        as: 'users'
+// Relación con permisos
+Role.associate = (models) => {
+    Role.belongsToMany(models.Permission, {
+        through: 'role_permissions',
+        foreignKey: 'role_id',
+        otherKey: 'permission_id',
+        as: 'permissions' // Alias para incluir permisos
     });
 };
 

@@ -223,3 +223,28 @@
     font-size: 0.95rem; /* Aumentar ligeramente el tamaño de los labels */
     margin-bottom: 5px;
 }
+
+/* Estilos para Toast */
+.toast {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.toast .toast-body {
+    font-weight: 500;
+}
+
+.toast.text-bg-success {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+.toast.text-bg-danger {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+.toast.text-bg-warning {
+    background-color: #ffc107 !important;
+    color: black !important;
+}
