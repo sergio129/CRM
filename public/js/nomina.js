@@ -1,7 +1,40 @@
 document.addEventListener("DOMContentLoaded", () => {
-    loadPayrolls();
-    loadEmployeesForPayroll();
+    // Verificar si hay un token de autenticación
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
 
+    // Inicializar la página
+    initializePayrollPage();
+    
+    // Configurar event listeners
+    setupEventListeners();
+});
+
+// Función para inicializar la página de nóminas
+async function initializePayrollPage() {
+    try {
+        // Cargar datos del resumen para los cards
+        await loadPayrollSummary();
+        
+        // Cargar empleados para el filtro y el formulario
+        await loadEmployeesForFilter();
+        
+        // Cargar la lista de nóminas
+        await loadPayrolls();
+        
+        // Configurar los cálculos automáticos
+        setupFormCalculations();
+    } catch (error) {
+        console.error("Error al inicializar la página:", error);
+        showToast("Error al inicializar la página: " + error.message, "danger");
+    }
+}
+
+// Configurar event listeners
+function setupEventListeners() {
     // Agregar el event listener para el botón de crear nómina
     document.getElementById("createPayrollButton").addEventListener("click", openCreatePayrollModal);
     
@@ -26,10 +59,196 @@ document.addEventListener("DOMContentLoaded", () => {
             loadPayrolls(); // Cargar todas las nóminas si el campo está vacío
         }
     });
+
+    // Configurar botón de búsqueda
+    document.querySelector('button[onclick="searchPayroll()"]').onclick = searchPayroll;
+    
+    // Configurar botón de aplicar filtros
+    document.querySelector('button[onclick="applyFilters()"]').onclick = applyFilters;
+    
+    // Configurar botón de actualizar tabla
+    document.querySelector('button[onclick="refreshPayrollTable()"]').onclick = refreshPayrollTable;
     
     // Agregar event listener para el botón de confirmación de eliminación
     document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDeletePayroll);
-});
+    
+    // Agregar event listener para exportar reporte
+    document.querySelector('button[onclick="exportPayrollReport()"]').onclick = exportPayrollReport;
+}
+
+// Función para cargar el resumen de nóminas (actualizar contadores)
+async function loadPayrollSummary() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/dashboard', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al cargar el resumen de nómina');
+        }
+
+        const data = await response.json();
+        
+        // Actualizar los contadores
+        document.getElementById('activePayrollsCount').textContent = data.activePayrolls || 0;
+        document.getElementById('totalPaidAmount').textContent = formatMoney(data.totalPaid || 0);
+        document.getElementById('pendingPayrollsCount').textContent = data.pendingPayrolls || 0;
+        document.getElementById('totalEmployeesCount').textContent = data.employeeCount || 0;
+
+        console.log("Contadores actualizados con datos:", data);
+
+    } catch (error) {
+        console.error('Error al cargar el resumen de nómina:', error);
+        throw error;
+    }
+}
+
+// Función para cargar empleados específicamente para el filtro
+async function loadEmployeesForFilter() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/employees', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al cargar la lista de empleados');
+        }
+
+        const employees = await response.json();
+        
+        // Llenar el selector de filtro de empleados
+        const filterEmployeeSelect = document.getElementById('filterEmployee');
+        filterEmployeeSelect.innerHTML = '<option value="">Todos</option>';
+        
+        if (employees && employees.length > 0) {
+            employees.forEach(employee => {
+                // Añadir al filtro
+                const filterOption = document.createElement('option');
+                filterOption.value = employee.id;
+                filterOption.textContent = `${employee.full_name} (${employee.id_number || ''})`;
+                filterEmployeeSelect.appendChild(filterOption);
+            });
+        }
+
+    } catch (error) {
+        console.error('Error al cargar empleados para filtro:', error);
+        throw error;
+    }
+}
+
+// Variables globales para filtros
+let currentFilters = {
+    month: '',
+    employee: '',
+    status: ''
+};
+
+// Función para aplicar filtros
+function applyFilters() {
+    // Obtener valores de los filtros
+    const filterMonth = document.getElementById('filterMonth').value;
+    const filterEmployee = document.getElementById('filterEmployee').value;
+    const filterStatus = document.getElementById('filterStatus').value;
+    
+    // Guardar filtros actuales
+    currentFilters = {
+        month: filterMonth,
+        employee: filterEmployee,
+        status: filterStatus
+    };
+    
+    // Aplicar filtros y recargar nóminas
+    filterAndLoadPayrolls();
+}
+
+// Función para filtrar y cargar las nóminas según los filtros actuales
+async function filterAndLoadPayrolls() {
+    try {
+        // Mostrar indicador de carga
+        document.getElementById('payrollTableBody').innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        const token = localStorage.getItem('token');
+        
+        // Construir parámetros de consulta según filtros
+        const queryParams = new URLSearchParams();
+        
+        if (currentFilters.month) {
+            queryParams.append('month', currentFilters.month);
+        }
+        
+        if (currentFilters.employee) {
+            queryParams.append('employee_id', currentFilters.employee);
+        }
+        
+        if (currentFilters.status) {
+            queryParams.append('status', currentFilters.status);
+        }
+        
+        // URL para la solicitud con filtros
+        const url = `/api/payrolls${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al filtrar nóminas');
+        }
+
+        const payrolls = await response.json();
+        renderPayrolls(payrolls);
+        
+        showToast('Filtros aplicados correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al aplicar filtros:', error);
+        showToast('Error al aplicar filtros: ' + error.message, 'danger');
+    }
+}
+
+// Función para refrescar la tabla
+async function refreshPayrollTable() {
+    try {
+        // Mostrar un spinner o indicador de carga
+        const tableBody = document.getElementById('payrollTableBody');
+        tableBody.innerHTML = '<tr><td colspan="10" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
+        
+        // Recargar las nóminas
+        await loadPayrolls();
+        
+        // Recargar el resumen para actualizar contadores
+        await loadPayrollSummary();
+        
+        // Aplicar los filtros actuales si hay alguno
+        if (currentFilters.month || currentFilters.employee || currentFilters.status) {
+            await filterAndLoadPayrolls();
+        }
+        
+        // Mostrar mensaje de éxito
+        showToast('Datos actualizados correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al refrescar la tabla:', error);
+        showToast('Error al actualizar las nóminas: ' + error.message, 'danger');
+    }
+}
 
 async function loadPayrolls() {
     try {
@@ -388,10 +607,12 @@ async function editPayroll(payrollId) {
         // Mostrar indicador de carga
         showToast('Cargando datos de la nómina...', 'info');
         
+        // 1. Obtener datos de la nómina
+        const token = localStorage.getItem('token');
         const response = await fetch(`/api/payrolls/${payrollId}`, {
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
+                "Authorization": `Bearer ${token}`
             },
         });
 
@@ -407,7 +628,10 @@ async function editPayroll(payrollId) {
             return;
         }
 
-        // Cargar datos en el formulario
+        // 2. Cargar lista de empleados primero (IMPORTANTE: Esto debe ir antes de establecer el valor)
+        await loadEmployeesForPayroll();
+        
+        // 3. Cargar datos en el formulario
         const form = document.getElementById("payrollForm");
         
         // Limpiar el formulario antes de cargar los nuevos datos
@@ -418,7 +642,10 @@ async function editPayroll(payrollId) {
 
         // Cargar datos básicos
         document.getElementById("payrollId").value = payroll.id;
+        
+        // Ahora que hemos cargado los empleados, podemos establecer el valor seleccionado
         document.getElementById("employeeId").value = payroll.employee_id;
+        
         document.getElementById("periodo").value = payroll.periodo || payroll.PayrollDetail?.periodo || '';
         document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
         document.getElementById("metodo_pago").value = payroll.PayrollDetail?.metodo_pago || 'Transferencia';
@@ -1113,4 +1340,32 @@ document.getElementById("estadoPago").addEventListener("change", function(e) {
     }
 });
 
-// ...existing code...
+// Configurar campos para cálculos automáticos
+function setupFormCalculations() {
+    // Configurar event listeners para los campos que afectan los cálculos
+    const camposAMonitorear = [
+        'salarioBase',
+        'horasExtras',
+        'valorHorasExtras',
+        'horas_extras_nocturnas',
+        'valor_hora_extra_nocturna',
+        'bonificaciones',
+        'comisiones',
+        'recargo_dominical',
+        'auxilio_transporte',
+        'prestamos',
+        'embargos',
+        'otrosDescuentos',
+        'tipoPago'
+    ];
+    
+    camposAMonitorear.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) {
+            elemento.addEventListener('input', calculateTotals);
+            elemento.addEventListener('change', calculateTotals);
+        }
+    });
+}
+setupFormCalculations(); // Llamar a la función al cargar el script
+document.addEventListener('DOMContentLoaded', setupFormCalculations); // Asegurarse de que se ejecute al cargar el DOM
