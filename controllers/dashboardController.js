@@ -84,14 +84,24 @@ exports.findClientByIdNumber = async (req, res) => {
     try {
         const { idNumber } = req.params;
         
+        console.log('Searching for client with ID number:', idNumber);
+        
+        // Try to find the client using either id_number or identification field
         const client = await Client.findOne({
-            where: { idNumber }
+            where: {
+                [Op.or]: [
+                    { id_number: idNumber },
+                    { identification: idNumber }
+                ]
+            }
         });
         
         if (!client) {
+            console.log('Client not found with ID number:', idNumber);
             return res.status(404).json({ message: 'Cliente no encontrado' });
         }
         
+        console.log('Client found:', client.id);
         res.json(client);
     } catch (error) {
         console.error('Error al buscar cliente:', error);
