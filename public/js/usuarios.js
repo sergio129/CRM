@@ -188,10 +188,23 @@ async function saveUser() {
         }
 
         const data = await response.json();
-        showToast(`Usuario ${userId ? "actualizado" : "creado"} correctamente`, "success");
-        loadUsers();
-        const modal = bootstrap.Modal.getInstance(document.getElementById("userModal"));
-        modal.hide();
+        
+        // Cerrar la modal antes de mostrar el mensaje
+        const modalElement = document.getElementById("userModal");
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        
+        if (modalInstance) {
+            modalInstance.hide();
+        } else {
+            // Si no se encuentra la instancia, intentamos otra forma de cerrar
+            jQuery(modalElement).modal('hide');
+        }
+        
+        // Actualizar la lista de usuarios
+        await loadUsers();
+        
+        // Mostrar mensaje de éxito
+        showToast(`Usuario ${userId ? "actualizado" : "creado"} exitosamente`, "success");
     } catch (error) {
         console.error("Error al guardar el usuario:", error);
         showToast("Error al guardar el usuario", "danger");
@@ -235,28 +248,76 @@ async function editUser(userId) {
     }
 }
 
-async function deleteUser(userId) {
-    if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
-
-    try {
-        const response = await fetch(`/api/users/${userId}`, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error("Error al eliminar el usuario");
-        }
-
-        showToast("Usuario eliminado correctamente", "success");
-        loadUsers();
-    } catch (error) {
-        console.error("Error al eliminar el usuario:", error);
-        showToast("Error al eliminar el usuario", "danger");
+// Función para mostrar un modal de confirmación
+function showConfirmationModal(message, onConfirm) {
+    // Crear el contenedor del modal si no existe
+    let modalContainer = document.getElementById("confirmationModal");
+    if (!modalContainer) {
+        modalContainer = document.createElement("div");
+        modalContainer.id = "confirmationModal";
+        modalContainer.innerHTML = `
+            <div class="modal fade" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirmación</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="confirmationMessage"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="confirmButton">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalContainer);
     }
+
+    // Configurar el mensaje del modal
+    document.getElementById("confirmationMessage").textContent = message;
+
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(modalContainer.querySelector(".modal"));
+    modal.show();
+
+    // Configurar el botón de confirmación
+    const confirmButton = document.getElementById("confirmButton");
+    confirmButton.onclick = () => {
+        modal.hide();
+        if (onConfirm) onConfirm();
+    };
+}
+
+// Reemplazar confirmación de eliminación
+async function deleteUser(userId) {
+    showConfirmationModal("¿Estás seguro de eliminar este usuario?", async () => {
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Error al eliminar el usuario");
+            }
+
+            // Mostrar mensaje de éxito
+            showToast("Usuario eliminado exitosamente", "success");
+            
+            // Actualizar la tabla de usuarios
+            loadUsers();
+        } catch (error) {
+            console.error("Error al eliminar el usuario:", error);
+            showToast("Error al eliminar el usuario", "danger");
+        }
+    });
 }
 
 async function searchEmployeeByDocument() {

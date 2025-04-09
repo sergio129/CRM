@@ -55,6 +55,9 @@ router.get('/id/:id', authenticate, authorize(['Administrador']), getEmployeeByI
 router.get('/active', authenticate, authorize(['Administrador']), getActiveEmployees);
 router.post('/bulk-delete', authenticate, authorize(['Administrador']), bulkDeleteEmployees);
 
+// Agregar la ruta para buscar empleados por número de documento
+router.get('/by-id-number/:id_number', authenticate, getEmployeeByIdNumber);
+
 // Rutas genéricas después
 router.get('/', authenticate, getEmployees); // Requiere autenticación
 router.post('/', authenticate, createEmployee); // Requiere autenticación
