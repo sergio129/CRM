@@ -356,28 +356,30 @@ exports.updatePayroll = async (req, res) => {
             console.warn('No se encontró detalle de nómina para actualizar o no se proporcionaron datos de detalle');
         }
 
-        // Obtener nómina actualizada con todos sus datos para la respuesta
-        const updatedPayroll = await Payroll.findOne({ 
-            where: { id: payroll.id },
-            include: [
-                {
-                    model: Employee,
-                    as: 'Employee'
-                }
-            ]
+        // En este punto, forzamos la obtención de la nómina y el detalle con JSON.parse(JSON.stringify())
+        // Esto nos asegura que tenemos objetos planos de JavaScript sin métodos de Sequelize
+        
+        // Obtenemos la nómina actualizada
+        const updatedPayrollRaw = await Payroll.findByPk(req.params.id);
+        const updatedPayroll = JSON.parse(JSON.stringify(updatedPayrollRaw));
+        
+        // Obtenemos el detalle actualizado
+        let updatedPayrollDetail = null;
+        const updatedDetailRaw = await PayrollDetail.findOne({
+            where: { payroll_id: req.params.id }
         });
-
-        // Obtener el detalle actualizado de forma separada
-        const updatedPayrollDetail = await PayrollDetail.findOne({
-            where: { payroll_id: payroll.id }
-        });
-
-        // Responder con los datos completos
-        res.json({ 
-            message: "Nómina actualizada correctamente", 
+        
+        if (updatedDetailRaw) {
+            updatedPayrollDetail = JSON.parse(JSON.stringify(updatedDetailRaw));
+        }
+        
+        // Construimos manualmente la respuesta para asegurar la estructura correcta
+        return res.json({
+            message: "Nómina actualizada correctamente",
             payroll: updatedPayroll,
-            payrollDetail: updatedPayrollDetail 
+            payrollDetail: updatedPayrollDetail
         });
+
     } catch (error) {
         console.error("Error al actualizar la nómina:", error);
         res.status(500).json({ 
