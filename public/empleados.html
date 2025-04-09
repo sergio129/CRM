@@ -6,7 +6,7 @@
     <title>Gestión de Empleados</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/empleados.css">
+    <link rel="stylesheet" href="css/usuarios.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -228,7 +228,65 @@
         </div>
     </div>
 
+    <!-- Modal para ver detalles del empleado -->
+    <div class="modal fade" id="employeeDetailModal" tabindex="-1" aria-labelledby="employeeDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="employeeDetailModalLabel">Detalles del Empleado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="employee-details">
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Nombre Completo:</div>
+                            <div class="col-md-8" id="employeeFullName"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Email:</div>
+                            <div class="col-md-8" id="employeeEmail"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Teléfono:</div>
+                            <div class="col-md-8" id="employeePhone"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Cargo:</div>
+                            <div class="col-md-8" id="employeePosition"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Departamento:</div>
+                            <div class="col-md-8" id="employeeDepartment"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Fecha de Contratación:</div>
+                            <div class="col-md-8" id="employeeHireDate"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Estado:</div>
+                            <div class="col-md-8">
+                                <span class="estado-badge" id="employeeStatus"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container para notificaciones -->
+    <div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/empleados.js"></script>
+    <script>
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+    </script>
 </body>
 </html>

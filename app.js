@@ -8,6 +8,7 @@ const roleRoutes = require('./routes/roleRoutes');
 const payrollRoutes = require('./routes/payrollRoutes'); // Importa las rutas de nómina
 const employeeRoutes = require('./routes/employeeRoutes'); // Importa las rutas de empleados
 const idTypeRoutes = require('./routes/idTypeRoutes'); // Importa las rutas de tipos de identificación
+const identificationTypeRoutes = require('./routes/identificationTypeRoutes'); // Importa las rutas de tipos de identificación (nuevo)
 const bankInfoRoutes = require('./routes/bankInfoRoutes'); // Importa las rutas de información bancaria
 const loanRoutes = require('./routes/loanRoutes'); // Importa las rutas de préstamos
 const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes'); // Importa las rutas del historial de pagos
@@ -55,6 +56,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/payrolls', payrollRoutes); // Añade las rutas de nómina
 app.use('/api/employees', employeeRoutes); // Añade las rutas de empleados
 app.use('/api/id_types', idTypeRoutes); // Añade las rutas de tipos de identificación
+app.use('/api/identification-types', identificationTypeRoutes); // Añade las rutas con el formato que espera el frontend
 app.use('/api/bank_info', bankInfoRoutes); // Añade las rutas de información bancaria
 app.use('/api/loans', loanRoutes); // Añade las rutas de préstamos
 app.use('/api/payment-history', paymentHistoryRoutes); // Añade las rutas del historial de pagos

@@ -820,6 +820,7 @@ async function viewEmployeeDetails(id) {
         }
 
         const employee = await response.json();
+        console.log("Datos del empleado:", employee); // Para depuración
 
         // Llenar los datos en la modal
         document.getElementById("employeeFullName").textContent = employee.full_name || "No registrado";
@@ -828,14 +829,25 @@ async function viewEmployeeDetails(id) {
         document.getElementById("employeePosition").textContent = employee.position || "No registrado";
         document.getElementById("employeeDepartment").textContent = employee.department || "No registrado";
         document.getElementById("employeeHireDate").textContent = employee.hire_date || "No registrado";
-        document.getElementById("employeeStatus").textContent = employee.status || "No definido";
+        
+        // Agregar clase según el estado
+        const statusElement = document.getElementById("employeeStatus");
+        statusElement.textContent = employee.status || "No definido";
+        statusElement.className = "estado-badge"; // Resetear clases
+        
+        // Agregar clase según el estado
+        if (employee.status === "Activo") {
+            statusElement.classList.add("estado-activo");
+        } else {
+            statusElement.classList.add("estado-inactivo");
+        }
 
-        // Mostrar la modal
-        const employeeModal = new bootstrap.Modal(document.getElementById("employeeModal"));
-        employeeModal.show();
+        // Mostrar la modal de detalles
+        const detailModal = new bootstrap.Modal(document.getElementById("employeeDetailModal"));
+        detailModal.show();
     } catch (error) {
         console.error("Error al obtener detalles del empleado:", error);
-        showToast("Error al obtener detalles del empleado.", "danger");
+        showToast("Error al obtener detalles del empleado: " + error.message, "danger");
     }
 }
 
