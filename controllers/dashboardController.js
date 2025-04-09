@@ -14,21 +14,53 @@ exports.getDashboardData = async (req, res) => {
         // Get total payroll count
         const payrollCount = await Payroll.count();
         
-        // Get clients grouped by type
-        const clientsByType = await Client.findAll({
+        // Get active payrolls (status = 'Pagado' or 'Pendiente', assuming active means not cancelled)
+        const activePayrolls = await Payroll.count({
+            where: {
+                status: {
+                    [Op.or]: ['Pendiente', 'Pagado']
+                }
+            }
+        });
+
+        // Get pending payrolls (status = 'Pendiente')
+        const pendingPayrolls = await Payroll.count({
+            where: {
+                status: 'Pendiente'
+            }
+        });
+
+        // Calculate total paid amount
+        const totalPaid = await PayrollDetail.sum('neto_pagar', {
+            where: {
+                estado: 'Pagado'
+            }
+        }) || 0;
+
+        // Get clients grouped by status instead of clientType (which doesn't exist)
+        const clientsByStatus = await Client.findAll({
             attributes: [
-                'clientType',
+                'status',
                 [sequelize.fn('COUNT', sequelize.col('id')), 'count']
             ],
-            group: ['clientType']
+            group: ['status']
         });
         
-        // Format client types data
-        const formattedClientsByType = clientsByType.map(item => {
+        // Format client status data
+        const formattedClientsByStatus = clientsByStatus.map(item => {
             return {
-                type: item.clientType || 'No especificado',
+                type: item.status || 'No especificado',
                 count: parseInt(item.dataValues.count)
             };
+        });
+
+        console.log('Dashboard data calculated successfully:', {
+            clientCount,
+            employeeCount,
+            payrollCount,
+            activePayrolls,
+            pendingPayrolls,
+            totalPaid
         });
 
         // Send the dashboard data
@@ -36,7 +68,10 @@ exports.getDashboardData = async (req, res) => {
             clientCount,
             employeeCount,
             payrollCount,
-            clientsByType: formattedClientsByType
+            activePayrolls,
+            pendingPayrolls,
+            totalPaid,
+            clientsByType: formattedClientsByStatus // Keep the same key for frontend compatibility
         });
     } catch (error) {
         console.error('Error al obtener datos del dashboard:', error);
