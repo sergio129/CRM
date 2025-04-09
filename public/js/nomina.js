@@ -397,7 +397,7 @@ async function editPayroll(payrollId) {
         }
 
         const payroll = await response.json();
-        console.log('Datos recibidos de la nómina:', payroll); // Para depuración
+        console.log('Datos recibidos para editar nómina:', payroll); // Para depuración
 
         if (payroll.status === 'Pagado') {
             showToast("No se puede editar una nómina que ya ha sido pagada.", "warning");
@@ -445,10 +445,8 @@ async function editPayroll(payrollId) {
 
         // --- CARGAR DEDUCCIONES ---
         // Deducciones de salud y pensión
-        const deduccionSalud = payroll.PayrollDetail?.aporte_salud_empleado || 0;
-        const deduccionPension = payroll.PayrollDetail?.aporte_pension_empleado || 0;
-        document.getElementById("deduccionSalud").value = deduccionSalud;
-        document.getElementById("deduccionPension").value = deduccionPension;
+        document.getElementById("deduccionSalud").value = payroll.PayrollDetail?.aporte_salud_empleado || 0;
+        document.getElementById("deduccionPension").value = payroll.PayrollDetail?.aporte_pension_empleado || 0;
         
         // Aportes del empleador
         document.getElementById("aporte_salud_empleador").value = payroll.PayrollDetail?.aporte_salud_empleador || 0;
@@ -470,21 +468,21 @@ async function editPayroll(payrollId) {
         document.getElementById("provision_cesantias").value = payroll.PayrollDetail?.provision_cesantias || 0;
         document.getElementById("provision_intereses_cesantias").value = payroll.PayrollDetail?.provision_intereses_cesantias || 0;
         document.getElementById("provision_vacaciones").value = payroll.PayrollDetail?.provision_vacaciones || 0;
+        document.getElementById("total_provisiones").value = payroll.PayrollDetail?.total_provisiones || 0;
         document.getElementById("observaciones").value = payroll.PayrollDetail?.observaciones || '';
 
         // --- CARGAR TOTALES ---
-        document.getElementById("totalIngresos").value = payroll.total_ingresos || 0;
-        document.getElementById("totalDeducciones").value = payroll.total_deducciones || 0;
-        document.getElementById("total_provisiones").value = payroll.PayrollDetail?.total_provisiones || 0;
-        document.getElementById("netoPagar").value = payroll.neto_pagar || 0;
+        document.getElementById("totalIngresos").value = payroll.total_ingresos || payroll.PayrollDetail?.total_ingresos || 0;
+        document.getElementById("totalDeducciones").value = payroll.total_deducciones || payroll.PayrollDetail?.total_deducciones || 0;
+        document.getElementById("netoPagar").value = payroll.neto_pagar || payroll.PayrollDetail?.neto_pagar || 0;
 
         // Calcular y mostrar totales
         calculateTotals();
         
         // Actualizar el estado del checkbox según el estado de la nómina
         const estadoPagoCheckbox = document.getElementById("estadoPago");
-        estadoPagoCheckbox.checked = payroll.status === 'Pagado';
-        estadoPagoCheckbox.disabled = payroll.status === 'Pagado';
+        estadoPagoCheckbox.checked = payroll.status === 'Pagado' || payroll.PayrollDetail?.estado === 'Pagado';
+        estadoPagoCheckbox.disabled = payroll.status === 'Pagado' || payroll.PayrollDetail?.estado === 'Pagado';
 
         // Mostrar el modal
         const modal = new bootstrap.Modal(document.getElementById("payrollModal"));
@@ -758,43 +756,72 @@ async function viewPayrollDetails(id) {
         // Establecer el título del modal
         document.getElementById("payrollModalLabel").textContent = "Detalles de Nómina";
 
-        // Llenar los campos con los datos
+        // Cargar datos básicos
         document.getElementById("payrollId").value = payroll.id;
         document.getElementById("employeeId").value = payroll.employee_id;
-        document.getElementById("periodo").value = payroll.PayrollDetail?.periodo || payroll.periodo || '';
+        document.getElementById("periodo").value = payroll.periodo || payroll.PayrollDetail?.periodo || '';
         document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
-        document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
-        document.getElementById("salarioBase").value = payroll.salario_base || 0;
+        document.getElementById("metodo_pago").value = payroll.PayrollDetail?.metodo_pago || 'Transferencia';
         
-        // Corregir carga de campos de extras y bonificaciones
+        // Cargar días
+        document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
+        document.getElementById("dias_vacaciones").value = payroll.PayrollDetail?.dias_vacaciones || 0;
+        document.getElementById("dias_incapacidad").value = payroll.PayrollDetail?.dias_incapacidad || 0;
+        
+        // Cargar salario base
+        document.getElementById("salarioBase").value = payroll.salario_base || 0;
+
+        // --- CARGAR INGRESOS ---
+        // Auxilio de transporte
+        document.getElementById("auxilio_transporte").value = payroll.PayrollDetail?.auxilio_transporte || 0;
+        
+        // Cargar datos de extras y bonificaciones
         document.getElementById("horasExtras").value = payroll.PayrollDetail?.horas_extras_diurnas || 0;
         document.getElementById("valorHorasExtras").value = payroll.PayrollDetail?.valor_hora_extra_diurna || 0;
+        document.getElementById("horas_extras_nocturnas").value = payroll.PayrollDetail?.horas_extras_nocturnas || 0;
+        document.getElementById("valor_hora_extra_nocturna").value = payroll.PayrollDetail?.valor_hora_extra_nocturna || 0;
+        
+        // Bonificaciones y comisiones
         document.getElementById("bonificaciones").value = payroll.PayrollDetail?.bonificaciones || 0;
         document.getElementById("comisiones").value = payroll.PayrollDetail?.comisiones || 0;
+        document.getElementById("recargo_dominical").value = payroll.PayrollDetail?.recargo_dominical || 0;
+
+        // --- CARGAR DEDUCCIONES ---
+        // Deducciones de salud y pensión
+        document.getElementById("deduccionSalud").value = payroll.PayrollDetail?.aporte_salud_empleado || 0;
+        document.getElementById("deduccionPension").value = payroll.PayrollDetail?.aporte_pension_empleado || 0;
         
-        // Corregir carga de campos de deducciones
+        // Aportes del empleador
+        document.getElementById("aporte_salud_empleador").value = payroll.PayrollDetail?.aporte_salud_empleador || 0;
+        document.getElementById("aporte_pension_empleador").value = payroll.PayrollDetail?.aporte_pension_empleador || 0;
+        
+        // Parafiscales
+        document.getElementById("aporte_arl").value = payroll.PayrollDetail?.aporte_arl || 0;
+        document.getElementById("aporte_caja_compensacion").value = payroll.PayrollDetail?.aporte_caja_compensacion || 0;
+        document.getElementById("aporte_icbf").value = payroll.PayrollDetail?.aporte_icbf || 0;
+        document.getElementById("aporte_sena").value = payroll.PayrollDetail?.aporte_sena || 0;
+        
+        // Otras deducciones
         document.getElementById("prestamos").value = payroll.PayrollDetail?.prestamos || 0;
+        document.getElementById("embargos").value = payroll.PayrollDetail?.embargos || 0;
         document.getElementById("otrosDescuentos").value = payroll.PayrollDetail?.otros_descuentos || 0;
 
-        // Calcular deducciones de salud y pensión según el tipo de pago
-        const salarioBase = parseFloat(payroll.salario_base) || 0;
-        let porcentaje = 0.08; // Valor por defecto
-        switch (payroll.PayrollDetail?.tipo_pago) {
-            case 'Mensual': porcentaje = 0.08; break;
-            case 'Quincenal': porcentaje = 0.04; break;
-            case 'Semanal': porcentaje = 0.02; break;
-        }
-        
-        document.getElementById("deduccionSalud").value = (salarioBase * porcentaje).toFixed(2);
-        document.getElementById("deduccionPension").value = (salarioBase * porcentaje).toFixed(2);
-        
-        document.getElementById("totalIngresos").value = payroll.total_ingresos || 0;
-        document.getElementById("totalDeducciones").value = payroll.total_deducciones || 0;
-        document.getElementById("netoPagar").value = payroll.neto_pagar || 0;
+        // --- CARGAR PROVISIONES ---
+        document.getElementById("provision_prima").value = payroll.PayrollDetail?.provision_prima || 0;
+        document.getElementById("provision_cesantias").value = payroll.PayrollDetail?.provision_cesantias || 0;
+        document.getElementById("provision_intereses_cesantias").value = payroll.PayrollDetail?.provision_intereses_cesantias || 0;
+        document.getElementById("provision_vacaciones").value = payroll.PayrollDetail?.provision_vacaciones || 0;
+        document.getElementById("observaciones").value = payroll.PayrollDetail?.observaciones || '';
+        document.getElementById("total_provisiones").value = payroll.PayrollDetail?.total_provisiones || 0;
+
+        // --- CARGAR TOTALES ---
+        document.getElementById("totalIngresos").value = payroll.total_ingresos || payroll.PayrollDetail?.total_ingresos || 0;
+        document.getElementById("totalDeducciones").value = payroll.total_deducciones || payroll.PayrollDetail?.total_deducciones || 0;
+        document.getElementById("netoPagar").value = payroll.neto_pagar || payroll.PayrollDetail?.neto_pagar || 0;
 
         // Estado de pago
         const estadoPagoCheckbox = document.getElementById("estadoPago");
-        estadoPagoCheckbox.checked = payroll.status === 'Pagado';
+        estadoPagoCheckbox.checked = payroll.status === 'Pagado' || payroll.PayrollDetail?.estado === 'Pagado';
         estadoPagoCheckbox.disabled = true;
 
         // Deshabilitar todos los campos del formulario
