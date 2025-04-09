@@ -62,4 +62,7 @@ Payroll.belongsTo(Employee, {
     as: 'Employee'
 });
 
+// Añadir relación con PayrollDetail
+// Esta línea debe ejecutarse después de importar PayrollDetail, lo haremos en app.js
+
 module.exports = Payroll;

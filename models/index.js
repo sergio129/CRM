@@ -22,6 +22,17 @@ Employee.hasMany(Payroll, {
     as: 'Payrolls' // Alias único para la relación inversa
 });
 
+// Agregar relación entre Payroll y PayrollDetail
+Payroll.hasOne(PayrollDetail, {
+    foreignKey: 'payroll_id',
+    as: 'PayrollDetail'
+});
+
+PayrollDetail.belongsTo(Payroll, {
+    foreignKey: 'payroll_id',
+    as: 'Payroll'
+});
+
 Employee.hasMany(PayrollDetail, { 
     foreignKey: 'employee_id',
     as: 'PayrollDetails' // Alias único

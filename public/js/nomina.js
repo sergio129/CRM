@@ -151,23 +151,115 @@ function validateAndSavePayroll() {
 
 async function savePayroll() {
     try {
+        // Mostrar indicador de carga
+        showToast('Guardando datos de la nómina...', 'info');
+
+        // --- RECOPILAR DATOS BÁSICOS ---
+        const employee_id = document.getElementById('employeeId').value;
+        const periodo = document.getElementById('periodo').value;
+        const tipoPago = document.getElementById('tipoPago').value;
+        const metodoPago = document.getElementById('metodo_pago').value;
+        
+        // --- RECOPILAR DATOS DE SALARIO Y DÍAS ---
+        const salario_base = parseFloat(document.getElementById('salarioBase').value) || 0;
+        const dias_trabajados = parseInt(document.getElementById('diasTrabajados').value) || 30;
+        const dias_vacaciones = parseInt(document.getElementById('dias_vacaciones').value) || 0;
+        const dias_incapacidad = parseInt(document.getElementById('dias_incapacidad').value) || 0;
+        
+        // --- RECOPILAR DATOS DE INGRESOS ---
+        const auxilio_transporte = parseFloat(document.getElementById('auxilio_transporte').value) || 0;
+        const horas_extras_diurnas = parseInt(document.getElementById('horasExtras').value) || 0;
+        const valor_hora_extra_diurna = parseFloat(document.getElementById('valorHorasExtras').value) || 0;
+        const horas_extras_nocturnas = parseInt(document.getElementById('horas_extras_nocturnas').value) || 0;
+        const valor_hora_extra_nocturna = parseFloat(document.getElementById('valor_hora_extra_nocturna').value) || 0;
+        const bonificaciones = parseFloat(document.getElementById('bonificaciones').value) || 0;
+        const comisiones = parseFloat(document.getElementById('comisiones').value) || 0;
+        const recargo_dominical = parseFloat(document.getElementById('recargo_dominical').value) || 0;
+        
+        // --- RECOPILAR DATOS DE DEDUCCIONES ---
+        const aporte_salud_empleado = parseFloat(document.getElementById('deduccionSalud').value) || 0;
+        const aporte_pension_empleado = parseFloat(document.getElementById('deduccionPension').value) || 0;
+        const aporte_salud_empleador = parseFloat(document.getElementById('aporte_salud_empleador').value) || 0;
+        const aporte_pension_empleador = parseFloat(document.getElementById('aporte_pension_empleador').value) || 0;
+        const aporte_arl = parseFloat(document.getElementById('aporte_arl').value) || 0;
+        const aporte_caja_compensacion = parseFloat(document.getElementById('aporte_caja_compensacion').value) || 0;
+        const aporte_icbf = parseFloat(document.getElementById('aporte_icbf').value) || 0;
+        const aporte_sena = parseFloat(document.getElementById('aporte_sena').value) || 0;
+        const prestamos = parseFloat(document.getElementById('prestamos').value) || 0;
+        const embargos = parseFloat(document.getElementById('embargos').value) || 0;
+        const otros_descuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
+        
+        // --- RECOPILAR DATOS DE PROVISIONES ---
+        const provision_prima = parseFloat(document.getElementById('provision_prima').value) || 0;
+        const provision_cesantias = parseFloat(document.getElementById('provision_cesantias').value) || 0;
+        const provision_intereses_cesantias = parseFloat(document.getElementById('provision_intereses_cesantias').value) || 0;
+        const provision_vacaciones = parseFloat(document.getElementById('provision_vacaciones').value) || 0;
+        const observaciones = document.getElementById('observaciones').value || '';
+        
+        // --- RECOPILAR TOTALES ---
+        const total_ingresos = parseFloat(document.getElementById('totalIngresos').value) || 0;
+        const total_deducciones = parseFloat(document.getElementById('totalDeducciones').value) || 0;
+        const total_provisiones = parseFloat(document.getElementById('total_provisiones').value) || 0;
+        const neto_pagar = parseFloat(document.getElementById('netoPagar').value) || 0;
+        
+        // Estado de pago
+        const status = document.getElementById('estadoPago').checked ? 'Pagado' : 'Pendiente';
+
+        // Construir el objeto de datos completo
         const payrollData = {
-            employee_id: document.getElementById('employeeId').value,
-            periodo: document.getElementById('periodo').value, // Asegurarnos que este campo se incluya
+            employee_id,
+            periodo,
+            salario_base,
+            total_ingresos,
+            total_deducciones,
+            neto_pagar,
             payment_date: new Date().toISOString(),
-            salario_base: parseFloat(document.getElementById('salarioBase').value) || 0,
-            total_ingresos: parseFloat(document.getElementById('totalIngresos').value) || 0,
-            total_deducciones: parseFloat(document.getElementById('totalDeducciones').value) || 0,
-            neto_pagar: parseFloat(document.getElementById('netoPagar').value) || 0,
-            status: document.getElementById('estadoPago').checked ? 'Pagado' : 'Pendiente',
+            status,
+            // Incluir todos los datos del detalle de nómina
             PayrollDetail: {
-                periodo: document.getElementById('periodo').value, // También incluirlo en PayrollDetail
-                tipo_pago: document.getElementById('tipoPago').value,
-                dias_trabajados: parseInt(document.getElementById('diasTrabajados').value) || 30,
-                bonificaciones: parseFloat(document.getElementById('bonificaciones').value) || 0,
-                comisiones: parseFloat(document.getElementById('comisiones').value) || 0,
-                prestamos: parseFloat(document.getElementById('prestamos').value) || 0,
-                otros_descuentos: parseFloat(document.getElementById('otrosDescuentos').value) || 0
+                periodo,
+                tipo_pago: tipoPago,
+                dias_trabajados,
+                dias_vacaciones,
+                dias_incapacidad,
+                salario_base, // Asegurar que el salario base sea consistente
+                auxilio_transporte,
+                // Horas extras
+                horas_extras_diurnas,
+                valor_hora_extra_diurna,
+                horas_extras_nocturnas,
+                valor_hora_extra_nocturna,
+                // Bonificaciones y comisiones
+                bonificaciones,
+                comisiones,
+                recargo_dominical,
+                // Deducciones de ley
+                aporte_salud_empleado,
+                aporte_pension_empleado,
+                aporte_salud_empleador,
+                aporte_pension_empleador,
+                aporte_arl,
+                aporte_caja_compensacion,
+                aporte_icbf,
+                aporte_sena,
+                // Otras deducciones
+                prestamos,
+                embargos,
+                otros_descuentos,
+                // Provisiones
+                provision_prima,
+                provision_cesantias,
+                provision_intereses_cesantias,
+                provision_vacaciones,
+                // Totales
+                total_ingresos,
+                total_deducciones,
+                total_provisiones,
+                neto_pagar,
+                // Otros datos
+                estado: status,
+                metodo_pago: metodoPago,
+                observaciones
             }
         };
 
@@ -180,6 +272,8 @@ async function savePayroll() {
         const payrollId = document.getElementById('payrollId')?.value;
         const method = payrollId ? 'PUT' : 'POST';
         const url = payrollId ? `/api/payrolls/${payrollId}` : '/api/payrolls';
+
+        console.log('Enviando datos de nómina:', payrollData); // Para depuración
 
         const response = await fetch(url, {
             method: method,
@@ -195,6 +289,9 @@ async function savePayroll() {
             throw new Error(error.message || 'Error al guardar nómina');
         }
 
+        const responseData = await response.json();
+        console.log('Respuesta del servidor:', responseData); // Para depuración
+
         showMessage('Nómina guardada exitosamente', 'success');
         await loadPayrolls();
 
@@ -203,7 +300,7 @@ async function savePayroll() {
             modal.hide();
         }
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error al guardar nómina:", error);
         showMessage(error.message || "Error al guardar nómina", "error");
     }
 }
@@ -285,6 +382,9 @@ async function generatePayrollPDF(payrollId) {
 
 async function editPayroll(payrollId) {
     try {
+        // Mostrar indicador de carga
+        showToast('Cargando datos de la nómina...', 'info');
+        
         const response = await fetch(`/api/payrolls/${payrollId}`, {
             headers: {
                 "Content-Type": "application/json",
@@ -297,9 +397,10 @@ async function editPayroll(payrollId) {
         }
 
         const payroll = await response.json();
+        console.log('Datos recibidos de la nómina:', payroll); // Para depuración
 
         if (payroll.status === 'Pagado') {
-            showToast("No se puede editar una nómina que ya ha sido pagada.");
+            showToast("No se puede editar una nómina que ya ha sido pagada.", "warning");
             return;
         }
 
@@ -315,20 +416,67 @@ async function editPayroll(payrollId) {
         // Cargar datos básicos
         document.getElementById("payrollId").value = payroll.id;
         document.getElementById("employeeId").value = payroll.employee_id;
-        document.getElementById("periodo").value = payroll.PayrollDetail?.periodo || '';
+        document.getElementById("periodo").value = payroll.periodo || payroll.PayrollDetail?.periodo || '';
         document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
+        document.getElementById("metodo_pago").value = payroll.PayrollDetail?.metodo_pago || 'Transferencia';
+        
+        // Cargar días
         document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
+        document.getElementById("dias_vacaciones").value = payroll.PayrollDetail?.dias_vacaciones || 0;
+        document.getElementById("dias_incapacidad").value = payroll.PayrollDetail?.dias_incapacidad || 0;
+        
+        // Cargar salario base
         document.getElementById("salarioBase").value = payroll.salario_base || 0;
 
+        // --- CARGAR INGRESOS ---
+        // Auxilio de transporte
+        document.getElementById("auxilio_transporte").value = payroll.PayrollDetail?.auxilio_transporte || 0;
+        
         // Cargar datos de extras y bonificaciones
         document.getElementById("horasExtras").value = payroll.PayrollDetail?.horas_extras_diurnas || 0;
         document.getElementById("valorHorasExtras").value = payroll.PayrollDetail?.valor_hora_extra_diurna || 0;
+        document.getElementById("horas_extras_nocturnas").value = payroll.PayrollDetail?.horas_extras_nocturnas || 0;
+        document.getElementById("valor_hora_extra_nocturna").value = payroll.PayrollDetail?.valor_hora_extra_nocturna || 0;
+        
+        // Bonificaciones y comisiones
         document.getElementById("bonificaciones").value = payroll.PayrollDetail?.bonificaciones || 0;
         document.getElementById("comisiones").value = payroll.PayrollDetail?.comisiones || 0;
+        document.getElementById("recargo_dominical").value = payroll.PayrollDetail?.recargo_dominical || 0;
 
-        // Cargar deducciones
+        // --- CARGAR DEDUCCIONES ---
+        // Deducciones de salud y pensión
+        const deduccionSalud = payroll.PayrollDetail?.aporte_salud_empleado || 0;
+        const deduccionPension = payroll.PayrollDetail?.aporte_pension_empleado || 0;
+        document.getElementById("deduccionSalud").value = deduccionSalud;
+        document.getElementById("deduccionPension").value = deduccionPension;
+        
+        // Aportes del empleador
+        document.getElementById("aporte_salud_empleador").value = payroll.PayrollDetail?.aporte_salud_empleador || 0;
+        document.getElementById("aporte_pension_empleador").value = payroll.PayrollDetail?.aporte_pension_empleador || 0;
+        
+        // Parafiscales
+        document.getElementById("aporte_arl").value = payroll.PayrollDetail?.aporte_arl || 0;
+        document.getElementById("aporte_caja_compensacion").value = payroll.PayrollDetail?.aporte_caja_compensacion || 0;
+        document.getElementById("aporte_icbf").value = payroll.PayrollDetail?.aporte_icbf || 0;
+        document.getElementById("aporte_sena").value = payroll.PayrollDetail?.aporte_sena || 0;
+        
+        // Otras deducciones
         document.getElementById("prestamos").value = payroll.PayrollDetail?.prestamos || 0;
+        document.getElementById("embargos").value = payroll.PayrollDetail?.embargos || 0;
         document.getElementById("otrosDescuentos").value = payroll.PayrollDetail?.otros_descuentos || 0;
+
+        // --- CARGAR PROVISIONES ---
+        document.getElementById("provision_prima").value = payroll.PayrollDetail?.provision_prima || 0;
+        document.getElementById("provision_cesantias").value = payroll.PayrollDetail?.provision_cesantias || 0;
+        document.getElementById("provision_intereses_cesantias").value = payroll.PayrollDetail?.provision_intereses_cesantias || 0;
+        document.getElementById("provision_vacaciones").value = payroll.PayrollDetail?.provision_vacaciones || 0;
+        document.getElementById("observaciones").value = payroll.PayrollDetail?.observaciones || '';
+
+        // --- CARGAR TOTALES ---
+        document.getElementById("totalIngresos").value = payroll.total_ingresos || 0;
+        document.getElementById("totalDeducciones").value = payroll.total_deducciones || 0;
+        document.getElementById("total_provisiones").value = payroll.PayrollDetail?.total_provisiones || 0;
+        document.getElementById("netoPagar").value = payroll.neto_pagar || 0;
 
         // Calcular y mostrar totales
         calculateTotals();
@@ -343,7 +491,7 @@ async function editPayroll(payrollId) {
         modal.show();
     } catch (error) {
         console.error("Error al editar la nómina:", error);
-        showToast("Error al editar la nómina: " + error.message);
+        showToast("Error al editar la nómina: " + error.message, "danger");
     }
 }
 
