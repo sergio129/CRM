@@ -34,7 +34,7 @@ sequelize.authenticate()
 // Configuración de CORS
 app.use(
   cors({
-    origin: "http://localhost:5000", // Reemplaza con el puerto de tu frontend
+    origin: "http://localhost:3000", // Permitir solicitudes desde el frontend
     allowedHeaders: ["Content-Type", "Authorization"],
     exposedHeaders: ["Authorization"],
   })

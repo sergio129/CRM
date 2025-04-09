@@ -19,6 +19,34 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("tableSearch").addEventListener("keyup", filterTable);
 });
 
+// Función para mostrar notificaciones tipo toast
+function showToast(message, type = "success") {
+    const toastContainer = document.getElementById("toastContainer");
+
+    // Crear el elemento del toast
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-${type} border-0 show`;
+    toast.role = "alert";
+    toast.ariaLive = "assertive";
+    toast.ariaAtomic = "true";
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    // Agregar el toast al contenedor
+    toastContainer.appendChild(toast);
+
+    // Eliminar el toast después de 5 segundos
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
 async function loadUsers() {
     try {
         const response = await fetch('/api/users', {
@@ -37,7 +65,7 @@ async function loadUsers() {
         renderUsers(users);
     } catch (error) {
         console.error("Error al obtener usuarios:", error);
-        alert("Error al obtener usuarios.");
+        showToast("Error al obtener usuarios.", "danger");
     }
 }
 
@@ -106,13 +134,19 @@ function openUserModal(user = null, readOnly = false) {
 
     // Habilitar/deshabilitar campos según modo
     const form = document.getElementById("userForm");
-    const inputs = form.getElementsByTagName('input');
-    const selects = form.getElementsByTagName('select');
-    
-    [...inputs, ...selects].forEach(element => {
-        element.readOnly = readOnly;
-        if (element.tagName === 'SELECT') {
-            element.disabled = readOnly;
+    const inputs = form.querySelectorAll('input, select');
+
+    inputs.forEach(element => {
+        if (readOnly) {
+            element.setAttribute('readonly', true);
+            if (element.tagName === 'SELECT') {
+                element.setAttribute('disabled', true);
+            }
+        } else {
+            element.removeAttribute('readonly');
+            if (element.tagName === 'SELECT') {
+                element.removeAttribute('disabled');
+            }
         }
     });
 
@@ -154,13 +188,13 @@ async function saveUser() {
         }
 
         const data = await response.json();
-        alert(`Usuario ${userId ? "actualizado" : "creado"} correctamente`);
+        showToast(`Usuario ${userId ? "actualizado" : "creado"} correctamente`, "success");
         loadUsers();
         const modal = bootstrap.Modal.getInstance(document.getElementById("userModal"));
         modal.hide();
     } catch (error) {
         console.error("Error al guardar el usuario:", error);
-        alert("Error al guardar el usuario");
+        showToast("Error al guardar el usuario", "danger");
     }
 }
 
@@ -217,11 +251,11 @@ async function deleteUser(userId) {
             throw new Error("Error al eliminar el usuario");
         }
 
-        alert("Usuario eliminado correctamente");
+        showToast("Usuario eliminado correctamente", "success");
         loadUsers();
     } catch (error) {
         console.error("Error al eliminar el usuario:", error);
-        alert("Error al eliminar el usuario");
+        showToast("Error al eliminar el usuario", "danger");
     }
 }
 
