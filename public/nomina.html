@@ -6,8 +6,346 @@
     <title>Gestión de Nómina</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/nomina.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #16a085;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --info-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .wrapper {
+            display: flex;
+            width: 100%;
+            align-items: stretch;
+            min-height: 100vh;
+        }
+        
+        #sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background: var(--secondary-color);
+            color: #fff;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #sidebar.active {
+            margin-left: -250px;
+        }
+        
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        #sidebar .sidebar-header h3 {
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--primary-color);
+        }
+        
+        #sidebar ul.components {
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #sidebar ul li a {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        #sidebar ul li a:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        #sidebar .sidebar-action {
+            padding: 15px 20px;
+        }
+        
+        #sidebar .sidebar-footer {
+            padding: 20px;
+            margin-top: auto;
+        }
+        
+        #content {
+            width: 100%;
+            padding: 0;
+            min-height: 100vh;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+        
+        #content .navbar {
+            background: #fff !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+        }
+        
+        .content-body {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        
+        .btn-info {
+            background-color: var(--info-color);
+            border-color: var(--info-color);
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background-color: #217dbb;
+            border-color: #217dbb;
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var (--success-color);
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+            border-color: #27ae60;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+            border-color: #c0392b;
+        }
+        
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .table thead th {
+            background-color: var(--secondary-color);
+            color: white;
+            border-bottom: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            padding: 15px;
+            vertical-align: middle;
+        }
+        
+        .table tbody tr:nth-of-type(odd) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        .table td {
+            padding: 15px;
+            vertical-align: middle;
+        }
+        
+        .payroll-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            display: inline-block;
+            min-width: 80px;
+        }
+        
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .modal-content {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            border-radius: 0;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #dee2e6;
+            padding: 15px 20px;
+        }
+        
+        .nav-tabs {
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .nav-tabs .nav-link {
+            margin-bottom: -2px;
+            border: none;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            border-color: transparent;
+            color: var(--primary-color);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background-color: transparent;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .section-title {
+            color: var(--secondary-color);
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .action-buttons .btn {
+            margin-right: 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 6px;
+            padding: 10px 15px;
+            box-shadow: none;
+            border: 1px solid #dcdfe6;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-box .form-control {
+            padding-right: 35px;
+        }
+        
+        #searchIcon {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            color: #6c757d;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .card-body {
+            padding: 20px;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .toast {
+            background-color: var(--success-color);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -60,7 +398,7 @@
                 <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/loans.html'">
                     <i class="fas fa-hand-holding-usd"></i> Préstamos
                 </button>
-                <button class="btn btn-info w-100" onclick="window.location.href='/roles.html'">
+                <button class="btn btn-info w-100 mb-3" onclick="window.location.href='/roles.html'">
                     <i class="fas fa-user-tag"></i> Roles
                 </button>
                 <button class="btn btn-danger w-100" onclick="logout()">
@@ -71,36 +409,144 @@
 
         <!-- Page Content -->
         <div id="content">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <nav class="navbar navbar-expand-lg navbar-light">
                 <div class="container-fluid">
                     <button type="button" id="sidebarCollapse" class="btn btn-info">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <h2 class="ml-3">Gestión de Nómina</h2>
+                    <h2 class="ml-3 mb-0">Gestión de Nómina</h2>
                 </div>
             </nav>
 
             <div class="content-body">
+                <!-- Dashboard Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="stat-label">Nóminas Activas</h5>
+                                        <h2 class="stat-value" id="activePayrollsCount">0</h2>
+                                    </div>
+                                    <div class="bg-primary rounded-circle p-3 text-white">
+                                        <i class="fas fa-file-invoice-dollar fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="stat-label">Total Pagado</h5>
+                                        <h2 class="stat-value" id="totalPaidAmount">$0</h2>
+                                    </div>
+                                    <div class="bg-success rounded-circle p-3 text-white">
+                                        <i class="fas fa-dollar-sign fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="stat-label">Nóminas Pendientes</h5>
+                                        <h2 class="stat-value" id="pendingPayrollsCount">0</h2>
+                                    </div>
+                                    <div class="bg-warning rounded-circle p-3 text-white">
+                                        <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="stat-label">Total Empleados</h5>
+                                        <h2 class="stat-value" id="totalEmployeesCount">0</h2>
+                                    </div>
+                                    <div class="bg-info rounded-circle p-3 text-white">
+                                        <i class="fas fa-users fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros y Ordenamiento -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="filterMonth" class="form-label">Filtrar por Mes</label>
+                                <input type="month" class="form-control" id="filterMonth">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterEmployee" class="form-label">Filtrar por Empleado</label>
+                                <select class="form-select" id="filterEmployee">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterStatus" class="form-label">Filtrar por Estado</label>
+                                <select class="form-select" id="filterStatus">
+                                    <option value="">Todos</option>
+                                    <option value="Pagado">Pagado</option>
+                                    <option value="Pendiente">Pendiente</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                                    <i class="fas fa-filter me-2"></i> Aplicar Filtros
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Tabla de Nómina -->
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Documento</th>
-                                <th>Empleado</th>
-                                <th>Período</th>
-                                <th>Salario Base</th>
-                                <th>Total Ingresos</th>
-                                <th>Total Deducciones</th>
-                                <th>Neto a Pagar</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="payrollTableBody">
-                        </tbody>
-                    </table>
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Listado de Nóminas</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshPayrollTable()">
+                                <i class="fas fa-sync-alt"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Documento</th>
+                                        <th>Empleado</th>
+                                        <th>Período</th>
+                                        <th>Salario Base</th>
+                                        <th>Total Ingresos</th>
+                                        <th>Total Deducciones</th>
+                                        <th>Neto a Pagar</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payrollTableBody">
+                                    <!-- La tabla se llena con JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -122,68 +568,114 @@
                         <!-- Navegación por pestañas -->
                         <ul class="nav nav-tabs" id="payrollTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">Información Básica</button>
+                                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">
+                                    <i class="fas fa-info-circle me-2"></i>Información Básica
+                                </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="ingresos-tab" data-bs-toggle="tab" data-bs-target="#ingresos" type="button" role="tab" aria-controls="ingresos" aria-selected="false">Ingresos</button>
+                                <button class="nav-link" id="ingresos-tab" data-bs-toggle="tab" data-bs-target="#ingresos" type="button" role="tab" aria-controls="ingresos" aria-selected="false">
+                                    <i class="fas fa-plus-circle me-2"></i>Ingresos
+                                </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="deducciones-tab" data-bs-toggle="tab" data-bs-target="#deducciones" type="button" role="tab" aria-controls="deducciones" aria-selected="false">Deducciones</button>
+                                <button class="nav-link" id="deducciones-tab" data-bs-toggle="tab" data-bs-target="#deducciones" type="button" role="tab" aria-controls="deducciones" aria-selected="false">
+                                    <i class="fas fa-minus-circle me-2"></i>Deducciones
+                                </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="provisiones-tab" data-bs-toggle="tab" data-bs-target="#provisiones" type="button" role="tab" aria-controls="provisiones" aria-selected="false">Provisiones</button>
+                                <button class="nav-link" id="provisiones-tab" data-bs-toggle="tab" data-bs-target="#provisiones" type="button" role="tab" aria-controls="provisiones" aria-selected="false">
+                                    <i class="fas fa-piggy-bank me-2"></i>Provisiones
+                                </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="totales-tab" data-bs-toggle="tab" data-bs-target="#totales" type="button" role="tab" aria-controls="totales" aria-selected="false">Totales</button>
+                                <button class="nav-link" id="totales-tab" data-bs-toggle="tab" data-bs-target="#totales" type="button" role="tab" aria-controls="totales" aria-selected="false">
+                                    <i class="fas fa-calculator me-2"></i>Totales
+                                </button>
                             </li>
                         </ul>
 
                         <div class="tab-content py-3" id="payrollTabsContent">
                             <!-- Pestaña 1: Información Básica -->
                             <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="employeeId" class="form-label">Empleado</label>
-                                            <select class="form-select" id="employeeId" required></select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="periodo" class="form-label">Período</label>
-                                            <input type="month" class="form-control" id="periodo" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="tipoPago" class="form-label">Tipo de Pago</label>
-                                            <select class="form-select" id="tipoPago" required>
-                                                <option value="Mensual">Mensual</option>
-                                                <option value="Quincenal">Quincenal</option>
-                                                <option value="Semanal">Semanal</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="metodo_pago" class="form-label">Método de Pago</label>
-                                            <select class="form-select" id="metodo_pago">
-                                                <option value="Transferencia">Transferencia</option>
-                                                <option value="Cheque">Cheque</option>
-                                                <option value="Efectivo">Efectivo</option>
-                                            </select>
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Datos del Empleado y Período</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="employeeId" class="form-label">Empleado</label>
+                                                    <select class="form-select" id="employeeId" required></select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="periodo" class="form-label">Período</label>
+                                                    <input type="month" class="form-control" id="periodo" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="tipoPago" class="form-label">Tipo de Pago</label>
+                                                    <select class="form-select" id="tipoPago" required>
+                                                        <option value="Mensual">Mensual</option>
+                                                        <option value="Quincenal">Quincenal</option>
+                                                        <option value="Semanal">Semanal</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="metodo_pago" class="form-label">Método de Pago</label>
+                                                    <select class="form-select" id="metodo_pago">
+                                                        <option value="Transferencia">Transferencia</option>
+                                                        <option value="Cheque">Cheque</option>
+                                                        <option value="Efectivo">Efectivo</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="salarioBase" class="form-label">Salario Base</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="salarioBase" required>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="fechaPago" class="form-label">Fecha de Pago</label>
+                                                    <input type="date" class="form-control" id="fechaPago">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="salarioBase" class="form-label">Salario Base</label>
-                                            <input type="number" class="form-control" id="salarioBase" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="diasTrabajados" class="form-label">Días Trabajados</label>
-                                            <input type="number" class="form-control" id="diasTrabajados" value="30" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="dias_vacaciones" class="form-label">Días Vacaciones</label>
-                                            <input type="number" class="form-control" id="dias_vacaciones" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="dias_incapacidad" class="form-label">Días Incapacidad</label>
-                                            <input type="number" class="form-control" id="dias_incapacidad" value="0">
+                                </div>
+
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Asistencia</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="diasTrabajados" class="form-label">Días Trabajados</label>
+                                                    <input type="number" class="form-control" id="diasTrabajados" value="30" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="dias_vacaciones" class="form-label">Días Vacaciones</label>
+                                                    <input type="number" class="form-control" id="dias_vacaciones" value="0">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="dias_incapacidad" class="form-label">Días Incapacidad</label>
+                                                    <input type="number" class="form-control" id="dias_incapacidad" value="0">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="dias_ausencia" class="form-label">Días Ausencia</label>
+                                                    <input type="number" class="form-control" id="dias_ausencia" value="0">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -191,43 +683,88 @@
                             
                             <!-- Pestaña 2: Ingresos -->
                             <div class="tab-pane fade" id="ingresos" role="tabpanel" aria-labelledby="ingresos-tab">
-                                <h6 class="section-title">Ingresos y Bonificaciones</h6>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="auxilio_transporte" class="form-label">Auxilio de Transporte</label>
-                                            <input type="number" class="form-control" id="auxilio_transporte" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="bonificaciones" class="form-label">Bonificaciones</label>
-                                            <input type="number" class="form-control" id="bonificaciones" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="comisiones" class="form-label">Comisiones</label>
-                                            <input type="number" class="form-control" id="comisiones" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="recargo_dominical" class="form-label">Recargo Dominical</label>
-                                            <input type="number" class="form-control" id="recargo_dominical" value="0">
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Ingresos y Bonificaciones</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="auxilio_transporte" class="form-label">Auxilio de Transporte</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="auxilio_transporte" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="bonificaciones" class="form-label">Bonificaciones</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="bonificaciones" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="comisiones" class="form-label">Comisiones</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="comisiones" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="recargo_dominical" class="form-label">Recargo Dominical</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="recargo_dominical" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <h6>Horas extras</h6>
-                                        <div class="mb-3">
-                                            <label for="horasExtras" class="form-label">Horas Extras Diurnas</label>
-                                            <input type="number" class="form-control" id="horasExtras" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="valorHorasExtras" class="form-label">Valor Horas Extras Diurnas</label>
-                                            <input type="number" class="form-control" id="valorHorasExtras" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="horas_extras_nocturnas" class="form-label">Horas Extras Nocturnas</label>
-                                            <input type="number" class="form-control" id="horas_extras_nocturnas" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="valor_hora_extra_nocturna" class="form-label">Valor Horas Extras Nocturnas</label>
-                                            <input type="number" class="form-control" id="valor_hora_extra_nocturna" value="0">
+                                </div>
+
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Horas Extras</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="horasExtras" class="form-label">Horas Extras Diurnas</label>
+                                                    <input type="number" class="form-control" id="horasExtras" value="0">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="valorHorasExtras" class="form-label">Valor Horas Extras Diurnas</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="valorHorasExtras" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="horas_extras_nocturnas" class="form-label">Horas Extras Nocturnas</label>
+                                                    <input type="number" class="form-control" id="horas_extras_nocturnas" value="0">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="valor_hora_extra_nocturna" class="form-label">Valor H.E. Nocturnas</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="valor_hora_extra_nocturna" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -236,77 +773,132 @@
                             <!-- Pestaña 3: Deducciones -->
                             <div class="tab-pane fade" id="deducciones" role="tabpanel" aria-labelledby="deducciones-tab">
                                 <!-- Deducciones de ley -->
-                                <h6 class="section-title">Deducciones de Ley</h6>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="deduccionSalud" class="form-label">Aporte Salud Empleado</label>
-                                            <input type="number" class="form-control" id="deduccionSalud" readonly>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="deduccionPension" class="form-label">Aporte Pensión Empleado</label>
-                                            <input type="number" class="form-control" id="deduccionPension" readonly>
-                                        </div>
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Deducciones de Ley</h5>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="aporte_salud_empleador" class="form-label">Aporte Salud Empleador</label>
-                                            <input type="number" class="form-control" id="aporte_salud_empleador" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="aporte_pension_empleador" class="form-label">Aporte Pensión Empleador</label>
-                                            <input type="number" class="form-control" id="aporte_pension_empleador" value="0">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="deduccionSalud" class="form-label">Aporte Salud Empleado</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="deduccionSalud" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="deduccionPension" class="form-label">Aporte Pensión Empleado</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="deduccionPension" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="aporte_salud_empleador" class="form-label">Aporte Salud Empleador</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="aporte_salud_empleador" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="aporte_pension_empleador" class="form-label">Aporte Pensión Empleador</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="aporte_pension_empleador" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <h6 class="section-title mt-3">Parafiscales</h6>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="aporte_arl" class="form-label">Aporte ARL</label>
-                                            <input type="number" class="form-control" id="aporte_arl" value="0">
-                                        </div>
+                                <div class="card border-0 shadow-sm mb-3">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Parafiscales</h5>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="aporte_caja_compensacion" class="form-label">Aporte Caja</label>
-                                            <input type="number" class="form-control" id="aporte_caja_compensacion" value="0">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="aporte_icbf" class="form-label">Aporte ICBF</label>
-                                            <input type="number" class="form-control" id="aporte_icbf" value="0">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="aporte_sena" class="form-label">Aporte SENA</label>
-                                            <input type="number" class="form-control" id="aporte_sena" value="0">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="aporte_arl" class="form-label">Aporte ARL</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="aporte_arl" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="aporte_caja_compensacion" class="form-label">Aporte Caja</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="aporte_caja_compensacion" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="aporte_icbf" class="form-label">Aporte ICBF</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="aporte_icbf" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="mb-3">
+                                                    <label for="aporte_sena" class="form-label">Aporte SENA</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="aporte_sena" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Otras deducciones -->
-                                <h6 class="section-title mt-3">Otras Deducciones</h6>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="prestamos" class="form-label">Préstamos</label>
-                                            <input type="number" class="form-control" id="prestamos" value="0">
-                                        </div>
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Otras Deducciones</h5>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="embargos" class="form-label">Embargos</label>
-                                            <input type="number" class="form-control" id="embargos" value="0">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="otrosDescuentos" class="form-label">Otros Descuentos</label>
-                                            <input type="number" class="form-control" id="otrosDescuentos" value="0">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label for="prestamos" class="form-label">Préstamos</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="prestamos" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label for="embargos" class="form-label">Embargos</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="embargos" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label for="otrosDescuentos" class="form-label">Otros Descuentos</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="otrosDescuentos" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -314,32 +906,50 @@
                             
                             <!-- Pestaña 4: Provisiones -->
                             <div class="tab-pane fade" id="provisiones" role="tabpanel" aria-labelledby="provisiones-tab">
-                                <h6 class="section-title">Provisiones Sociales</h6>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="provision_prima" class="form-label">Provisión Prima</label>
-                                            <input type="number" class="form-control" id="provision_prima" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="provision_cesantias" class="form-label">Provisión Cesantías</label>
-                                            <input type="number" class="form-control" id="provision_cesantias" value="0">
-                                        </div>
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Provisiones Sociales</h5>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="provision_intereses_cesantias" class="form-label">Provisión Intereses Cesantías</label>
-                                            <input type="number" class="form-control" id="provision_intereses_cesantias" value="0">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="provision_vacaciones" class="form-label">Provisión Vacaciones</label>
-                                            <input type="number" class="form-control" id="provision_vacaciones" value="0">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="mb-3">
-                                            <label for="observaciones" class="form-label">Observaciones</label>
-                                            <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="provision_prima" class="form-label">Provisión Prima</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="provision_prima" value="0">
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="provision_cesantias" class="form-label">Provisión Cesantías</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="provision_cesantias" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="provision_intereses_cesantias" class="form-label">Provisión Intereses Cesantías</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="provision_intereses_cesantias" value="0">
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="provision_vacaciones" class="form-label">Provisión Vacaciones</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control" id="provision_vacaciones" value="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <div class="mb-3">
+                                                    <label for="observaciones" class="form-label">Observaciones</label>
+                                                    <textarea class="form-control" id="observaciones" rows="3" placeholder="Ingrese cualquier comentario relevante aquí..."></textarea>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -347,40 +957,62 @@
                             
                             <!-- Pestaña 5: Totales -->
                             <div class="tab-pane fade" id="totales" role="tabpanel" aria-labelledby="totales-tab">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="totalIngresos" class="form-label">Total Ingresos</label>
-                                            <input type="number" class="form-control" id="totalIngresos" readonly>
-                                        </div>
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Resumen de Nómina</h5>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="totalDeducciones" class="form-label">Total Deducciones</label>
-                                            <input type="number" class="form-control" id="totalDeducciones" readonly>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label for="totalIngresos" class="form-label">Total Ingresos</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control bg-light" id="totalIngresos" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label for="totalDeducciones" class="form-label">Total Deducciones</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control bg-light" id="totalDeducciones" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label for="total_provisiones" class="form-label">Total Provisiones</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" class="form-control bg-light" id="total_provisiones" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="total_provisiones" class="form-label">Total Provisiones</label>
-                                            <input type="number" class="form-control" id="total_provisiones" readonly>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="mb-3">
-                                            <label for="netoPagar" class="form-label">Neto a Pagar</label>
-                                            <input type="number" class="form-control" id="netoPagar" readonly>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="form-check mb-3">
-                                            <input type="checkbox" class="form-check-input" id="estadoPago">
-                                            <label class="form-check-label" for="estadoPago">Marcar como Pagado</label>
+                                        <hr class="my-4">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="mb-3">
+                                                    <label for="netoPagar" class="form-label fw-bold">NETO A PAGAR</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text bg-success text-white">$</span>
+                                                        <input type="number" class="form-control fs-4 fw-bold bg-success text-white" id="netoPagar" readonly>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row mt-4">
+                                            <div class="col-md-12">
+                                                <div class="form-check mb-3">
+                                                    <input type="checkbox" class="form-check-input" id="estadoPago">
+                                                    <label class="form-check-label" for="estadoPago">Marcar como Pagado</label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -396,7 +1028,7 @@
         </div>
     </div>
 
-    <!-- Agregar el Toast -->
+    <!-- Toast para notificaciones -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
         <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
@@ -433,38 +1065,112 @@
         </div>
     </div>
 
-    <!-- Modificar el modal de confirmación -->
+    <!-- Modal para vista previa y confirmación de pago -->
     <div class="modal fade" id="confirmPaymentModal" tabindex="-1" aria-labelledby="confirmPaymentModalLabel" aria-modal="true" role="dialog">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
+                <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="confirmPaymentModalLabel">Confirmar Pago</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        ¿Está seguro que desea marcar esta nómina como pagada?
-                        <br><br>
-                        <strong>¡Atención!</strong> Esta acción no se puede deshacer.
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Está a punto de marcar esta nómina como pagada. Por favor revise los detalles antes de continuar.
                     </div>
+                    
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Información del Empleado</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Empleado:</strong> <span id="previewEmployeeName">-</span></p>
+                                    <p><strong>Documento:</strong> <span id="previewEmployeeDocument">-</span></p>
+                                    <p><strong>Salario Base:</strong> <span id="previewSalarioBase">-</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Período:</strong> <span id="previewPeriodo">-</span></p>
+                                    <p><strong>Tipo de Pago:</strong> <span id="previewTipoPago">-</span></p>
+                                    <p><strong>Método de Pago:</strong> <span id="previewMetodoPago">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Resumen de Pago</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 text-center bg-light">
+                                        <h6 class="text-muted mb-1">Total Ingresos</h6>
+                                        <h4 class="text-primary">$<span id="previewTotalIngresos">0</span></h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 text-center bg-light">
+                                        <h6 class="text-muted mb-1">Total Deducciones</h6>
+                                        <h4 class="text-danger">$<span id="previewTotalDeducciones">0</span></h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 text-center bg-light">
+                                        <h6 class="text-muted mb-1">Neto a Pagar</h6>
+                                        <h4 class="text-success">$<span id="previewNetoPagar">0</span></h4>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-0">
+                                <label for="fechaPagoConfirmacion" class="form-label">Fecha Efectiva de Pago</label>
+                                <input type="date" class="form-control" id="fechaPagoConfirmacion">
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="confirmPayrollId">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="confirmPaymentBtn">Confirmar Pago</button>
+                    <button type="button" class="btn btn-primary" id="confirmPaymentBtn">
+                        <i class="fas fa-check me-1"></i> Confirmar Pago
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para ver detalles completos de nómina -->
+    <div class="modal fade" id="viewPayrollModal" tabindex="-1" aria-labelledby="viewPayrollModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="viewPayrollModalLabel">Detalles de Nómina</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="payrollDetailsContent">
+                    <!-- El contenido se llenará dinámicamente -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-info" onclick="printPayrollDetails()">
+                        <i class="fas fa-print me-1"></i> Imprimir
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <script src="js/nomina.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        function logout() {
-            localStorage.clear(); // Limpia el almacenamiento local
-            window.location.href = '/login.html'; // Redirige al login
-        }
-    </script>
 </body>
 </html>
