@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
             loadPayrolls(); // Cargar todas las nóminas si el campo está vacío
         }
     });
+    
+    // Agregar event listener para el botón de confirmación de eliminación
+    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDeletePayroll);
 });
 
 async function loadPayrolls() {
@@ -493,15 +496,27 @@ async function editPayroll(payrollId) {
     }
 }
 
-async function deletePayroll(payrollId) {
+function deletePayroll(payrollId) {
+    // Guardar el ID de la nómina en el modal
+    document.getElementById('deletePayrollId').value = payrollId;
+    
+    // Mostrar el modal de confirmación
+    const deleteModal = new bootstrap.Modal(document.getElementById('deletePayrollModal'));
+    deleteModal.show();
+}
+
+// Función que realiza la eliminación real después de la confirmación
+async function confirmDeletePayroll() {
     try {
-        // Usar confirm nativo de JavaScript en lugar de SweetAlert2
-        if (!confirm("¿Estás seguro de eliminar esta nómina? Esta acción no se puede deshacer.")) {
-            return;
-        }
+        // Obtener el ID de la nómina a eliminar del modal
+        const payrollId = document.getElementById('deletePayrollId').value;
         
-        // Mostrar indicador de carga
+        // Mostrar indicador de carga 
         showToast('Eliminando nómina...', 'info');
+        
+        // Cerrar el modal
+        const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deletePayrollModal'));
+        deleteModal.hide();
         
         const response = await fetch(`/api/payrolls/${payrollId}`, {
             method: "DELETE",
