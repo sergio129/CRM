@@ -416,6 +416,7 @@ exports.deletePayroll = async (req, res) => {
 
 exports.generatePayrollPDF = async (req, res) => {
     try {
+        // Obtener la nómina con los datos del empleado
         const payroll = await Payroll.findOne({
             where: { id: req.params.id },
             include: [
@@ -423,7 +424,7 @@ exports.generatePayrollPDF = async (req, res) => {
                     model: Employee,
                     as: 'Employee',
                     required: true,
-                    attributes: ['full_name', 'id_number']
+                    attributes: ['full_name', 'id_number', 'position', 'department', 'hire_date']
                 }
             ]
         });
@@ -437,107 +438,296 @@ exports.generatePayrollPDF = async (req, res) => {
             where: { payroll_id: payroll.id }
         });
 
-        // Función auxiliar para formatear números
-        const formatNumber = (value) => {
+        if (!payrollDetail) {
+            return res.status(404).json({ message: "Detalle de nómina no encontrado" });
+        }
+
+        // Función para formatear valores monetarios
+        const formatCurrency = (value) => {
             const num = parseFloat(value) || 0;
             return num.toLocaleString('es-CO', {
                 style: 'currency',
                 currency: 'COP',
-                minimumFractionDigits: 2
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
             });
         };
 
-        // Crear PDF
-        const doc = new PDFDocument({ margin: 40 });
+        // Crear nuevo documento PDF
+        const doc = new PDFDocument({
+            size: 'LETTER',
+            margin: 30,
+            info: {
+                Title: `Desprendible de Nómina - ${payroll.Employee.full_name}`,
+                Author: 'Sistema de Nómina CRM'
+            }
+        });
+
+        // Configuración de respuesta HTTP
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=Nomina_CRM_${payroll.id}.pdf`);
+        res.setHeader('Content-Disposition', `attachment; filename=Nomina_${payroll.Employee.id_number}_${payrollDetail.periodo}.pdf`);
         doc.pipe(res);
 
-        // Encabezado
-        doc
-            .fontSize(20)
-            .fillColor('#2c3e50')
-            .text('Nómina CRM', { align: 'center' })
-            .moveDown(0.5)
-            .fontSize(12)
-            .fillColor('#7f8c8d')
-            .text(`Fecha de Generación: ${new Date().toLocaleDateString()}`, { align: 'center' })
-            .moveDown(1);
+        // Colores del tema
+        const colors = {
+            primary: '#003366',     // Azul oscuro para títulos principales
+            secondary: '#336699',   // Azul medio para subtítulos
+            accent: '#6699CC',      // Azul claro para bordes y fondos
+            text: '#333333',        // Gris oscuro para texto normal
+            lightText: '#666666',   // Gris medio para texto secundario
+            highlight: '#990000',   // Rojo oscuro para destacados (total a pagar)
+            table: {
+                header: '#E6E6E6',  // Gris claro para encabezados de tabla
+                odd: '#FFFFFF',     // Blanco para filas impares
+                even: '#F5F5F5'     // Gris muy claro para filas pares
+            }
+        };
 
-        // Información del empleado
-        doc
-            .fontSize(14)
-            .fillColor('#34495e')
-            .text('Información del Empleado', { underline: true })
-            .moveDown(0.5)
-            .fontSize(12)
-            .text(`Nombre: ${payroll.Employee.full_name}`)
-            .text(`Documento: ${payroll.Employee.id_number}`)
-            .text(`Fecha de Pago: ${new Date(payroll.payment_date).toLocaleDateString()}`)
-            .text(`Período: ${payrollDetail?.periodo || 'No especificado'}`)
-            .moveDown(1);
+        // Función para crear encabezado con logo (simulado con texto estilizado)
+        const addHeader = () => {
+            // Rectángulo de fondo para el encabezado
+            doc.rect(30, 30, doc.page.width - 60, 80)
+               .fillAndStroke(colors.primary, colors.primary);
+            
+            // Nombre de la empresa (en vez de logo)
+            doc.fontSize(24)
+               .fillColor('#FFFFFF')
+               .font('Helvetica-Bold')
+               .text('EMPRESA CRM S.A.S', 50, 45);
+            
+            // Información de la empresa
+            doc.fontSize(10)
+               .fillColor('#FFFFFF')
+               .font('Helvetica')
+               .text('NIT: 901.123.456-7', 50, 75)
+               .text('Calle Principal #123, Bogotá D.C.', 50, 90)
+               .text('Tel: (601) 123-4567', 50, 105);
+            
+            // Título del documento
+            doc.fontSize(16)
+               .fillColor('#FFFFFF')
+               .font('Helvetica-Bold')
+               .text('DESPRENDIBLE DE PAGO', doc.page.width - 230, 60, {
+                   width: 180,
+                   align: 'right'
+               });
 
-        // Ingresos
-        doc
-            .fontSize(14)
-            .fillColor('#34495e')
-            .text('Ingresos', { underline: true })
-            .moveDown(0.5)
-            .fontSize(12)
-            .fillColor('#2c3e50')
-            .text(`Salario Base: ${formatNumber(payroll.salario_base)}`)
-            .text(`Horas Extras: ${formatNumber(payrollDetail?.valor_hora_extra_diurna || 0)}`)
-            .text(`Bonificaciones: ${formatNumber(payrollDetail?.bonificaciones || 0)}`)
-            .text(`Comisiones: ${formatNumber(payrollDetail?.comisiones || 0)}`)
-            .text(`Total Ingresos: ${formatNumber(payrollDetail?.total_ingresos || 0)}`)
-            .moveDown(1);
+            // Periodo de la nómina
+            doc.fontSize(12)
+               .fillColor('#FFFFFF')
+               .font('Helvetica')
+               .text(`Periodo: ${payrollDetail.periodo}`, doc.page.width - 230, 85, {
+                   width: 180,
+                   align: 'right'
+               });
+        };
 
-        // Deducciones
-        doc
-            .fontSize(14)
-            .fillColor('#34495e')
-            .text('Deducciones', { underline: true })
-            .moveDown(0.5)
-            .fontSize(12)
-            .fillColor('#e74c3c')
-            .text(`Salud: ${formatNumber(payrollDetail?.deduccion_salud || 0)}`)
-            .text(`Pensión: ${formatNumber(payrollDetail?.deduccion_pension || 0)}`)
-            .text(`Préstamos: ${formatNumber(payrollDetail?.prestamos || 0)}`)
-            .text(`Otros Descuentos: ${formatNumber(payrollDetail?.otros_descuentos || 0)}`)
-            .text(`Total Deducciones: ${formatNumber(payrollDetail?.total_deducciones || 0)}`)
-            .moveDown(1);
+        // Función para agregar información del empleado
+        const addEmployeeInfo = () => {
+            const startY = 130;
+            
+            // Rectángulo de fondo para información del empleado
+            doc.rect(30, startY, doc.page.width - 60, 100)
+               .fillAndStroke('#F5F9FC', colors.accent);
+            
+            // Título de la sección
+            doc.fontSize(12)
+               .fillColor(colors.primary)
+               .font('Helvetica-Bold')
+               .text('INFORMACIÓN DEL EMPLEADO', 40, startY + 10);
+            
+            doc.fontSize(10)
+               .fillColor(colors.text)
+               .font('Helvetica');
+            
+            // Primera columna
+            doc.text(`Nombre: ${payroll.Employee.full_name}`, 40, startY + 30)
+               .text(`Documento: ${payroll.Employee.id_number}`, 40, startY + 45)
+               .text(`Cargo: ${payroll.Employee.position || 'No especificado'}`, 40, startY + 60)
+               .text(`Departamento: ${payroll.Employee.department || 'No especificado'}`, 40, startY + 75);
+            
+            // Segunda columna
+            doc.text(`Salario Base: ${formatCurrency(payroll.salario_base)}`, 300, startY + 30)
+               .text(`Fecha de Ingreso: ${payroll.Employee.hire_date ? new Date(payroll.Employee.hire_date).toLocaleDateString() : 'No especificada'}`, 300, startY + 45)
+               .text(`Días Trabajados: ${payrollDetail.dias_trabajados || 30}`, 300, startY + 60)
+               .text(`Fecha de Pago: ${new Date(payroll.payment_date).toLocaleDateString()}`, 300, startY + 75);
+        };
 
-        // Neto a Pagar
-        doc
-            .fontSize(16)
-            .fillColor('#27ae60')
-            .text(`Neto a Pagar: ${formatNumber(payrollDetail?.neto_pagar || 0)}`, { underline: true })
-            .moveDown(2);
+        // Función para crear tabla de conceptos
+        const createTableSection = (title, items, startY) => {
+            // Título de la sección
+            doc.fontSize(12)
+               .fillColor(colors.primary)
+               .font('Helvetica-Bold')
+               .text(title, 40, startY);
+            
+            // Variables para la tabla
+            const tableTop = startY + 20;
+            const tableWidth = doc.page.width - 80;
+            const colWidth1 = tableWidth * 0.7;  // 70% para descripción
+            const colWidth2 = tableWidth * 0.3;  // 30% para valor
+            
+            // Encabezado de la tabla
+            doc.rect(40, tableTop, tableWidth, 20)
+               .fill(colors.table.header);
+            
+            doc.fontSize(10)
+               .fillColor(colors.primary)
+               .font('Helvetica-Bold')
+               .text('CONCEPTO', 50, tableTop + 6)
+               .text('VALOR', 40 + colWidth1 + 5, tableTop + 6, { width: colWidth2, align: 'right' });
+            
+            // Filas de datos
+            let currentY = tableTop + 20;
+            let rowIndex = 0;
+            
+            items.forEach(item => {
+                // Fila alternada
+                if (item.value) {
+                    // Color de fondo para filas alternadas
+                    const fillColor = rowIndex % 2 === 0 ? colors.table.odd : colors.table.even;
+                    doc.rect(40, currentY, tableWidth, 20).fill(fillColor);
+                    
+                    // Contenido de la fila
+                    doc.fontSize(10)
+                       .fillColor(colors.text)
+                       .font('Helvetica')
+                       .text(item.label, 50, currentY + 6)
+                       .font(item.highlight ? 'Helvetica-Bold' : 'Helvetica')
+                       .fillColor(item.highlight ? colors.highlight : colors.text)
+                       .text(formatCurrency(item.value), 40 + colWidth1 + 5, currentY + 6, { 
+                           width: colWidth2,
+                           align: 'right'
+                       });
+                    
+                    currentY += 20;
+                    rowIndex++;
+                }
+            });
+            
+            // Agregar línea al final de la tabla
+            doc.moveTo(40, currentY)
+               .lineTo(40 + tableWidth, currentY)
+               .stroke(colors.accent);
+            
+            // Retornar la posición Y después de la tabla
+            return currentY + 10;
+        };
 
-        // Firmas
-        doc
-            .fontSize(12)
-            .fillColor('#2c3e50')
-            .text('_______________________', { align: 'left' })
-            .text('Firma Empleador', { align: 'left' })
-            .moveDown()
-            .text('_______________________', { align: 'right' })
-            .text('Firma Empleado', { align: 'right' });
+        // Función para crear pie de página
+        const addFooter = () => {
+            const footerTop = doc.page.height - 70;
+            
+            // Línea divisoria
+            doc.moveTo(30, footerTop)
+               .lineTo(doc.page.width - 30, footerTop)
+               .stroke(colors.accent);
+            
+            // Texto del pie de página
+            doc.fontSize(8)
+               .fillColor(colors.lightText)
+               .font('Helvetica')
+               .text('Este documento fue generado electrónicamente por el sistema de nómina y no requiere firma.',
+                     30, footerTop + 10, { align: 'center', width: doc.page.width - 60 })
+               .text('Si tiene alguna duda sobre su liquidación, por favor diríjase al departamento de recursos humanos.',
+                     30, footerTop + 25, { align: 'center', width: doc.page.width - 60 });
+            
+            // Fecha y hora de generación del documento
+            doc.fontSize(8)
+               .fillColor(colors.lightText)
+               .text(`Generado el ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`,
+                     30, footerTop + 40, { align: 'center', width: doc.page.width - 60 });
+        };
 
-        // Pie de página
-        doc
-            .moveDown(2)
-            .fontSize(10)
-            .fillColor('#7f8c8d')
-            .text('Este documento fue generado automáticamente por el sistema Nómina CRM.', { align: 'center' });
+        // Generar el PDF
+        addHeader();
+        addEmployeeInfo();
 
-        // Finalizar PDF
+        // Crear la sección de ingresos
+        let currentY = 250;
+        const ingresos = [
+            { label: 'Salario Base', value: payrollDetail.salario_base },
+            { label: 'Auxilio de Transporte', value: payrollDetail.auxilio_transporte },
+            { label: 'Horas Extras Diurnas', value: payrollDetail.horas_extras_diurnas > 0 ? 
+                (payrollDetail.horas_extras_diurnas * payrollDetail.valor_hora_extra_diurna) : 0 },
+            { label: 'Horas Extras Nocturnas', value: payrollDetail.horas_extras_nocturnas > 0 ?
+                (payrollDetail.horas_extras_nocturnas * payrollDetail.valor_hora_extra_nocturna) : 0 },
+            { label: 'Bonificaciones', value: payrollDetail.bonificaciones },
+            { label: 'Comisiones', value: payrollDetail.comisiones },
+            { label: 'Recargo Dominical', value: payrollDetail.recargo_dominical },
+            { label: 'TOTAL INGRESOS', value: payrollDetail.total_ingresos, highlight: true }
+        ];
+        currentY = createTableSection('DEVENGADOS', ingresos, currentY);
+
+        // Asegurar que hay suficiente espacio para la siguiente sección, de lo contrario, nueva página
+        if (currentY + 150 > doc.page.height - 70) {
+            doc.addPage();
+            currentY = 40;
+        }
+
+        // Crear la sección de deducciones
+        currentY += 20;
+        const deducciones = [
+            { label: 'Aporte a Salud', value: payrollDetail.aporte_salud_empleado },
+            { label: 'Aporte a Pensión', value: payrollDetail.aporte_pension_empleado },
+            { label: 'Préstamos', value: payrollDetail.prestamos },
+            { label: 'Embargos', value: payrollDetail.embargos },
+            { label: 'Otros Descuentos', value: payrollDetail.otros_descuentos },
+            { label: 'TOTAL DEDUCCIONES', value: payrollDetail.total_deducciones, highlight: true }
+        ];
+        currentY = createTableSection('DEDUCCIONES', deducciones, currentY);
+
+        // Sección total a pagar
+        if (currentY + 100 > doc.page.height - 70) {
+            doc.addPage();
+            currentY = 40;
+        } else {
+            currentY += 20;
+        }
+
+        doc.rect(40, currentY, doc.page.width - 80, 50)
+           .fillAndStroke('#F5F9FC', colors.accent);
+
+        doc.fontSize(14)
+           .fillColor(colors.primary)
+           .font('Helvetica-Bold')
+           .text('NETO A PAGAR:', 60, currentY + 18);
+
+        doc.fontSize(14)
+           .fillColor(colors.highlight)
+           .font('Helvetica-Bold')
+           .text(formatCurrency(payrollDetail.neto_pagar), 300, currentY + 18, {
+                width: doc.page.width - 380,
+                align: 'right'
+           });
+
+        // Espacio para firmas si hay espacio suficiente
+        if (currentY + 150 < doc.page.height - 70) {
+            currentY += 80;
+            
+            doc.moveTo(60, currentY)
+               .lineTo(250, currentY)
+               .stroke();
+            
+            doc.moveTo(340, currentY)
+               .lineTo(530, currentY)
+               .stroke();
+            
+            doc.fontSize(10)
+               .fillColor(colors.text)
+               .font('Helvetica')
+               .text('FIRMA EMPLEADOR', 60, currentY + 5, { width: 190, align: 'center' })
+               .text('FIRMA EMPLEADO', 340, currentY + 5, { width: 190, align: 'center' });
+        }
+
+        addFooter();
         doc.end();
     } catch (error) {
         console.error("Error al generar PDF:", error);
         res.status(500).json({ 
             message: "Error al generar PDF", 
-            error: error.message 
+            error: error.message,
+            stack: error.stack 
         });
     }
 };
