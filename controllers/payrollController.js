@@ -731,3 +731,69 @@ exports.generatePayrollPDF = async (req, res) => {
         });
     }
 };
+
+// Nueva función para marcar una nómina como pagada
+exports.markPayrollAsPaid = async (req, res) => {
+    try {
+        // Verificar que la nómina existe
+        const payroll = await Payroll.findByPk(req.params.id);
+        if (!payroll) return res.status(404).json({ message: "Nómina no encontrada" });
+
+        // Verificar si ya está marcada como pagada
+        if (payroll.status === 'Pagado') {
+            return res.status(400).json({ 
+                message: "Esta nómina ya está marcada como pagada" 
+            });
+        }
+
+        // Obtener la fecha de pago del cuerpo de la solicitud o usar la fecha actual
+        const payment_date = req.body.payment_date || new Date().toISOString();
+
+        // Actualizar la nómina principal
+        await payroll.update({
+            status: 'Pagado',
+            payment_date
+        });
+
+        // Buscar el detalle de la nómina
+        const payrollDetail = await PayrollDetail.findOne({
+            where: { payroll_id: payroll.id }
+        });
+
+        // Si existe el detalle, actualizarlo también
+        if (payrollDetail) {
+            await payrollDetail.update({
+                estado: 'Pagado',
+                fecha_pago: payment_date
+            });
+        }
+
+        // Obtener la nómina actualizada con su detalle y empleado para la respuesta
+        const updatedPayroll = await Payroll.findOne({
+            where: { id: req.params.id },
+            include: [
+                {
+                    model: Employee,
+                    as: 'Employee',
+                    attributes: ['id', 'full_name', 'id_number']
+                },
+                {
+                    model: PayrollDetail,
+                    as: 'PayrollDetail',
+                    required: false
+                }
+            ]
+        });
+
+        res.json({
+            message: "Nómina marcada como pagada correctamente",
+            payroll: updatedPayroll
+        });
+    } catch (error) {
+        console.error("Error al marcar la nómina como pagada:", error);
+        res.status(500).json({ 
+            message: "Error al marcar la nómina como pagada", 
+            error: error.message 
+        });
+    }
+};

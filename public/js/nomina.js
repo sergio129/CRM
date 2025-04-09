@@ -884,42 +884,181 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Reemplazar el event listener del checkbox y agregar manejo del modal
-let confirmationModal = null;
-let currentCheckbox = null;
-
 document.getElementById("estadoPago").addEventListener("change", function(e) {
     if (this.checked) {
-        currentCheckbox = this;
         // Prevenir el cambio inmediato del checkbox
         e.preventDefault();
         this.checked = false;
         
-        // Inicializar y mostrar el modal
-        confirmationModal = new bootstrap.Modal(document.getElementById('confirmPaymentModal'), {
-            backdrop: 'static',
-            keyboard: false
-        });
-        confirmationModal.show();
+        // Obtener el ID de la nómina del formulario
+        const payrollId = document.getElementById('payrollId').value;
+        
+        // Si hay un ID, abrir el modal de confirmación de pago
+        if (payrollId) {
+            openConfirmPaymentModal(payrollId);
+        } else {
+            showToast('Error: No se encontró el ID de la nómina', 'danger');
+        }
     }
 });
 
+// Función para abrir y poblar el modal de confirmación de pago
+async function openConfirmPaymentModal(payrollId) {
+    try {
+        // Obtener los datos actuales del formulario
+        const employeeSelect = document.getElementById('employeeId');
+        const selectedOption = employeeSelect.options[employeeSelect.selectedIndex];
+        
+        // Verificar si hay un empleado seleccionado
+        if (!selectedOption || !selectedOption.value) {
+            throw new Error('No se ha seleccionado un empleado válido');
+        }
+        
+        // Obtener textos y valores necesarios del formulario
+        const employeeName = selectedOption.textContent || 'No disponible';
+        const salarioBase = document.getElementById('salarioBase').value || '0';
+        const periodo = document.getElementById('periodo').value || 'No especificado';
+        const tipoPago = document.getElementById('tipoPago').options[document.getElementById('tipoPago').selectedIndex].text || 'No especificado';
+        const metodoPago = document.getElementById('metodo_pago').options[document.getElementById('metodo_pago').selectedIndex].text || 'No especificado';
+        
+        // Obtener totales
+        const totalIngresos = document.getElementById('totalIngresos').value || '0';
+        const totalDeducciones = document.getElementById('totalDeducciones').value || '0';
+        const netoPagar = document.getElementById('netoPagar').value || '0';
+        
+        // Obtener documento del empleado (hacer una solicitud al servidor)
+        const token = localStorage.getItem('token');
+        const employeeId = selectedOption.value;
+        
+        const response = await fetch(`/api/employees/${employeeId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('No se pudo obtener la información del empleado');
+        }
+        
+        const employeeData = await response.json();
+        const employeeDocument = employeeData.id_number || 'No disponible';
+        
+        // Establecer los valores en el modal
+        document.getElementById('previewEmployeeName').textContent = employeeName;
+        document.getElementById('previewEmployeeDocument').textContent = employeeDocument;
+        document.getElementById('previewSalarioBase').textContent = formatMoney(parseFloat(salarioBase));
+        document.getElementById('previewPeriodo').textContent = periodo;
+        document.getElementById('previewTipoPago').textContent = tipoPago;
+        document.getElementById('previewMetodoPago').textContent = metodoPago;
+        
+        // Establecer los valores financieros
+        document.getElementById('previewTotalIngresos').textContent = formatNumber(parseFloat(totalIngresos));
+        document.getElementById('previewTotalDeducciones').textContent = formatNumber(parseFloat(totalDeducciones));
+        document.getElementById('previewNetoPagar').textContent = formatNumber(parseFloat(netoPagar));
+        
+        // Establecer fecha actual por defecto
+        document.getElementById('fechaPagoConfirmacion').valueAsDate = new Date();
+        
+        // Guardar el ID de la nómina en el campo oculto
+        document.getElementById('confirmPayrollId').value = payrollId;
+        
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('confirmPaymentModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error al abrir el modal de confirmación:', error);
+        showToast('Error: ' + error.message, 'danger');
+    }
+}
+
+// Función para formatear números con separadores de miles
+function formatNumber(number) {
+    return number.toLocaleString('es-CO', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
 // Agregar event listeners para el modal de confirmación
 document.addEventListener('DOMContentLoaded', function() {
-    const confirmBtn = document.getElementById('confirmPaymentBtn');
-    const confirmModal = document.getElementById('confirmPaymentModal');
+    // Obtener botón de confirmar pago
+    const confirmPaymentBtn = document.getElementById('confirmPaymentBtn');
+    
+    // Verificar que el botón existe
+    if (confirmPaymentBtn) {
+        // Añadir escuchador de eventos al botón de confirmación
+        confirmPaymentBtn.addEventListener('click', async function() {
+            try {
+                // Obtener el ID de la nómina desde el campo oculto
+                const payrollId = document.getElementById('confirmPayrollId').value;
+                
+                if (!payrollId) {
+                    throw new Error('No se encontró el ID de la nómina');
+                }
+                
+                // Mostrar un mensaje de carga
+                showToast('Procesando pago...', 'info');
+                
+                // Obtener la fecha de pago elegida (o usar la fecha actual si no se especificó)
+                const fechaPago = document.getElementById('fechaPagoConfirmacion').value || new Date().toISOString().split('T')[0];
+                
+                // Hacer la petición al servidor para actualizar la nómina
+                const response = await fetch(`/api/payrolls/${payrollId}/pay`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        status: 'Pagado',
+                        payment_date: fechaPago
+                    })
+                });
+                
+                // Verificar la respuesta
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Error al procesar el pago');
+                }
+                
+                // Cerrar el modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmPaymentModal'));
+                modal.hide();
+                
+                // Marcar el checkbox como pagado en el formulario principal
+                document.getElementById('estadoPago').checked = true;
+                document.getElementById('estadoPago').disabled = true;
+                
+                // Mensaje de éxito
+                showToast('Nómina marcada como pagada correctamente', 'success');
+                
+                // Actualizar la tabla de nóminas y los contadores
+                await loadPayrolls();
+                await loadPayrollSummary();
+                
+                // Si estaba editando, cerrar el modal principal también
+                const payrollModal = bootstrap.Modal.getInstance(document.getElementById('payrollModal'));
+                if (payrollModal) {
+                    payrollModal.hide();
+                }
+                
+            } catch (error) {
+                console.error('Error al confirmar el pago:', error);
+                showToast(`Error: ${error.message}`, 'danger');
+            }
+        });
+    }
 
-    confirmBtn.addEventListener('click', function() {
-        if (currentCheckbox) {
-            currentCheckbox.checked = true;
-        }
-        confirmationModal.hide();
-    });
-
-    confirmModal.addEventListener('hidden.bs.modal', function() {
-        if (currentCheckbox) {
-            currentCheckbox.checked = currentCheckbox.checked;
-        }
-        currentCheckbox = null;
+    // Configurar botones de cancelar
+    const cancelButtons = document.querySelectorAll('#confirmPaymentModal button[data-bs-dismiss="modal"]');
+    cancelButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Desmarcar el checkbox cuando se cancela la acción
+            document.getElementById('estadoPago').checked = false;
+        });
     });
 });
 

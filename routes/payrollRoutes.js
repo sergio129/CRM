@@ -5,7 +5,8 @@ const {
     createPayroll, 
     updatePayroll, 
     deletePayroll,
-    generatePayrollPDF
+    generatePayrollPDF,
+    markPayrollAsPaid
 } = require('../controllers/payrollController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const Payroll = require('../models/Payroll');
@@ -81,5 +82,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 router.delete('/:id', authenticate, authorize(['Administrador']), deletePayroll);
 router.get('/:id/pdf', authenticate, authorize(['Administrador']), generatePayrollPDF);
+// Añadir nueva ruta para marcar nómina como pagada
+router.put('/:id/pay', authenticate, authorize(['Administrador']), markPayrollAsPaid);
 
 module.exports = router;
