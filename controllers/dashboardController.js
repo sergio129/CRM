@@ -93,7 +93,16 @@ exports.findClientByIdNumber = async (req, res) => {
                     { id_number: idNumber },
                     { identification: idNumber }
                 ]
-            }
+            },
+            include: [
+                {
+                    model: Loan,
+                    as: 'Loans', // Asegúrate de que el alias coincida con el definido en las asociaciones
+                    attributes: ['total_due'],
+                    where: { loan_status: 'Activo' },
+                    required: false // Permitir clientes sin préstamos activos
+                }
+            ]
         });
         
         if (!client) {
@@ -106,13 +115,32 @@ exports.findClientByIdNumber = async (req, res) => {
         // For debugging - log the actual client data from the database
         console.log('Raw client data:', JSON.stringify(client, null, 2));
         
-        // Determine payment status based on client data
-        let paymentStatus = 'Al día'; // default status
+        // Calcular la deuda total del cliente sumando los total_due de sus préstamos activos
+        let deudaTotal = 0;
+        if (client.Loans && client.Loans.length > 0) {
+            deudaTotal = client.Loans.reduce((sum, loan) => sum + parseFloat(loan.total_due || 0), 0);
+        } else {
+            // Si no hay préstamos activos, usar el valor almacenado en el cliente
+            deudaTotal = client.deuda_total || 0;
+        }
         
-        if (client.status === 'Bloqueado') {
-            paymentStatus = 'Bloqueado';
-        } else if (client.deuda_total > 0) {
-            paymentStatus = 'En mora';
+        // Determine payment status based on client data
+        let paymentStatus;
+        
+        // Usar estado_financiero si está disponible
+        if (client.estado_financiero) {
+            paymentStatus = client.estado_financiero;
+        } else {
+            // Lógica de respaldo con un umbral mínimo para considerar "En mora"
+            const DEUDA_MINIMA = 1.00; // Umbral mínimo de $1.00 para considerar "En mora"
+            
+            if (client.status === 'Bloqueado') {
+                paymentStatus = 'Bloqueado';
+            } else if (deudaTotal > DEUDA_MINIMA) {
+                paymentStatus = 'En mora';
+            } else {
+                paymentStatus = 'Al día';
+            }
         }
         
         // Extract name parts from full_name if available
@@ -142,7 +170,7 @@ exports.findClientByIdNumber = async (req, res) => {
             phone: client.phone || client.telefono_movil || '',
             address: client.address || '',
             clientType: client.tipo_documento || 'No especificado',
-            deudaTotal: client.deuda_total || 0,
+            deudaTotal: deudaTotal,
             status: client.status || 'Activo',
             paymentStatus: paymentStatus
         };
