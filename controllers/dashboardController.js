@@ -102,7 +102,55 @@ exports.findClientByIdNumber = async (req, res) => {
         }
         
         console.log('Client found:', client.id);
-        res.json(client);
+        
+        // For debugging - log the actual client data from the database
+        console.log('Raw client data:', JSON.stringify(client, null, 2));
+        
+        // Determine payment status based on client data
+        let paymentStatus = 'Al día'; // default status
+        
+        if (client.status === 'Bloqueado') {
+            paymentStatus = 'Bloqueado';
+        } else if (client.deuda_total > 0) {
+            paymentStatus = 'En mora';
+        }
+        
+        // Extract name parts from full_name if available
+        let firstName = '';
+        let lastName = '';
+        
+        if (client.full_name) {
+            const nameParts = client.full_name.split(' ');
+            if (nameParts.length >= 2) {
+                firstName = nameParts[0];
+                lastName = nameParts.slice(1).join(' ');
+            } else {
+                firstName = client.full_name;
+            }
+        }
+        
+        // Format the response to match what the frontend expects
+        const formattedClient = {
+            id: client.id,
+            firstName: firstName || '',
+            lastName: lastName || '',
+            name: firstName || '',
+            // Use all possible identification fields to ensure we have a value
+            identification: client.identification || client.id_number || '',
+            idNumber: client.id_number || client.identification || '',
+            email: client.email || '',
+            phone: client.phone || client.telefono_movil || '',
+            address: client.address || '',
+            clientType: client.tipo_documento || 'No especificado',
+            deudaTotal: client.deuda_total || 0,
+            status: client.status || 'Activo',
+            paymentStatus: paymentStatus
+        };
+        
+        // Log the formatted client data we're sending to the frontend
+        console.log('Formatted client data:', formattedClient);
+        
+        res.json(formattedClient);
     } catch (error) {
         console.error('Error al buscar cliente:', error);
         res.status(500).json({ message: 'Error al buscar cliente' });

@@ -179,6 +179,31 @@ async function searchClient() {
         
         const client = await response.json();
         
+        // Function to set badge color based on status
+        const getStatusBadgeColor = (status) => {
+            if (status === 'Activo') return 'success';
+            if (status === 'Bloqueado') return 'danger';
+            if (status === 'Inactivo') return 'secondary';
+            return 'primary';
+        };
+        
+        // Function to set payment status badge color
+        const getPaymentStatusBadgeColor = (paymentStatus) => {
+            if (paymentStatus === 'Al día') return 'success';
+            if (paymentStatus === 'En mora') return 'danger';
+            if (paymentStatus === 'Bloqueado') return 'dark';
+            return 'warning';
+        };
+        
+        // Format money function
+        const formatMoney = (amount) => {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0
+            }).format(amount);
+        };
+        
         resultElement.innerHTML = `
             <div class="card mt-3">
                 <div class="card-header bg-info text-white">
@@ -189,6 +214,9 @@ async function searchClient() {
                     <p><strong>Tipo:</strong> ${client.clientType || 'No especificado'}</p>
                     <p><strong>Email:</strong> ${client.email || 'No especificado'}</p>
                     <p><strong>Teléfono:</strong> ${client.phone || 'No especificado'}</p>
+                    <p><strong>Deuda Total:</strong> ${formatMoney(client.deudaTotal || 0)}</p>
+                    <p><strong>Estado:</strong> <span class="badge bg-${getStatusBadgeColor(client.status)}">${client.status || 'No especificado'}</span></p>
+                    <p><strong>Estado de Pago:</strong> <span class="badge bg-${getPaymentStatusBadgeColor(client.paymentStatus)}">${client.paymentStatus || 'No especificado'}</span></p>
                     <a href="/clientes.html?id=${client.id}" class="btn btn-primary btn-sm">Ver detalles</a>
                 </div>
             </div>
