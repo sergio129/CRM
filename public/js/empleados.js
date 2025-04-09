@@ -145,34 +145,79 @@ function openEmployeeModal(employee = null, readOnly = false) {
 
     form.reset();
 
+    // Configurar título del modal
     document.getElementById('employeeModalLabel').textContent = 
         readOnly ? 'Detalles del Empleado' : 
         employee ? 'Editar Empleado' : 'Nuevo Empleado';
 
     if (employee) {
-        const fields = {
-            'fullName': employee.full_name,
-            'idNumber': employee.identification,
-            'fechaNacimiento': employee.fecha_nacimiento,
-            'genero': employee.genero,
-            'telefonoMovil': employee.phone,
-            'email': employee.email,
-            'cargo': employee.cargo,
-            'salario': employee.salario,
-            'status': employee.status
+        // Mapeo de campos del empleado a los IDs del formulario
+        const fieldMapping = {
+            id_number: 'idNumber',
+            full_name: 'fullName',
+            email: 'email',
+            phone: 'phone',
+            address: 'address',
+            role: 'role',
+            department: 'department',
+            position: 'position',
+            hire_date: 'hireDate',
+            tipo_contrato: 'tipoContrato',
+            salario_base: 'salarioBase',
+            eps: 'eps',
+            banco: 'banco',
+            tipo_cuenta: 'tipoCuenta',
+            cuenta_bancaria: 'cuentaBancaria',
+            fondo_pension: 'fondoPension',
+            fondo_cesantias: 'fondoCesantias',
+            caja_compensacion: 'cajaCompensacion',
+            status: 'status'
         };
 
-        Object.entries(fields).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.value = value || '';
+        // Llenar los campos del formulario
+        Object.entries(fieldMapping).forEach(([apiField, formId]) => {
+            const input = document.getElementById(formId);
+            if (input && employee[apiField] !== undefined) {
+                // Formatear fechas
+                if (input.type === 'date' && employee[apiField]) {
+                    input.value = new Date(employee[apiField]).toISOString().split('T')[0];
+                }
+                // Formatear valores numéricos
+                else if (input.type === 'number' && employee[apiField]) {
+                    input.value = parseFloat(employee[apiField]);
+                }
+                // Resto de campos
+                else {
+                    input.value = employee[apiField] || '';
+                }
             }
         });
+
+        // Establecer los valores en el formulario
+        document.getElementById("fullName").value = employee.full_name || '';
+        document.getElementById("email").value = employee.email || '';
+        document.getElementById("phone").value = employee.phone || '';
+        document.getElementById("address").value = employee.address || '';
+        document.getElementById("role").value = employee.role || '';
+        document.getElementById("idType").value = employee.id_type_id || '';
+        document.getElementById("idNumber").value = employee.id_number || '';
+        document.getElementById("department").value = employee.department || '';
+        document.getElementById("position").value = employee.position || '';
+        document.getElementById("hireDate").value = employee.hire_date || '';
+        document.getElementById("tipoContrato").value = employee.tipo_contrato || 'Indefinido';
+        document.getElementById("salarioBase").value = employee.salario_base || employee.salary || 0;
+        document.getElementById("riesgoArl").value = employee.riesgo_arl || '1';
+        document.getElementById("eps").value = employee.eps || '';
+        document.getElementById("fondoPension").value = employee.fondo_pension || '';
+        document.getElementById("fondoCesantias").value = employee.fondo_cesantias || '';
+        document.getElementById("cajaCompensacion").value = employee.caja_compensacion || '';
+        document.getElementById("status").value = employee.status || 'Activo';
     }
 
+    // Habilitar/deshabilitar campos según modo
     const inputs = form.getElementsByTagName('input');
     const selects = form.getElementsByTagName('select');
-
+    
     [...inputs, ...selects].forEach(element => {
         element.readOnly = readOnly;
         if (element.tagName === 'SELECT') {
@@ -180,6 +225,7 @@ function openEmployeeModal(employee = null, readOnly = false) {
         }
     });
 
+    // Mostrar/ocultar botón de guardar según modo
     const saveButton = document.querySelector('.modal-footer .btn-primary');
     if (saveButton) {
         saveButton.style.display = readOnly ? 'none' : 'block';
@@ -246,102 +292,6 @@ async function loadIdTypes() {
         console.error("Error al obtener tipos de identificación:", error);
         alert("Error al obtener tipos de identificación.");
     }
-}
-
-function openEmployeeModal(employee = null, readOnly = false) {
-    const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
-    const form = document.getElementById('employeeForm');
-    form.reset();
-
-    // Configurar título del modal
-    document.getElementById('employeeModalLabel').textContent = 
-        readOnly ? 'Detalles del Empleado' : 
-        employee ? 'Editar Empleado' : 'Nuevo Empleado';
-
-    if (employee) {
-        // Mapeo de campos del empleado a los IDs del formulario
-        const fieldMapping = {
-            id_number: 'idNumber',
-            full_name: 'fullName',
-            email: 'email',
-            phone: 'phone',
-            address: 'address',
-            role: 'role',
-            department: 'department',
-            position: 'position',
-            hire_date: 'hireDate',
-            tipo_contrato: 'tipoContrato',
-            salario_base: 'salarioBase',
-            eps: 'eps',
-            banco: 'banco',
-            tipo_cuenta: 'tipoCuenta',
-            cuenta_bancaria: 'cuentaBancaria',
-            fondo_pension: 'fondoPension',
-            fondo_cesantias: 'fondoCesantias',
-            caja_compensacion: 'cajaCompensacion',
-            status: 'status'
-        };
-
-        // Llenar los campos del formulario
-        Object.entries(fieldMapping).forEach(([apiField, formId]) => {
-            const input = document.getElementById(formId);
-            if (input && employee[apiField] !== undefined) {
-                // Formatear fechas
-                if (input.type === 'date' && employee[apiField]) {
-                    input.value = new Date(employee[apiField]).toISOString().split('T')[0];
-                }
-                // Formatear valores numéricos
-                else if (input.type === 'number' && employee[apiField]) {
-                    input.value = parseFloat(employee[apiField]);
-                }
-                // Resto de campos
-                else {
-                    input.value = employee[apiField] || '';
-                }
-            }
-        });
-    }
-
-    // Habilitar/deshabilitar campos según modo
-    const inputs = form.getElementsByTagName('input');
-    const selects = form.getElementsByTagName('select');
-    
-    [...inputs, ...selects].forEach(element => {
-        element.readOnly = readOnly;
-        if (element.tagName === 'SELECT') {
-            element.disabled = readOnly;
-        }
-    });
-
-    // Mostrar/ocultar botón de guardar según modo
-    const saveButton = document.querySelector('.modal-footer .btn-primary');
-    if (saveButton) {
-        saveButton.style.display = readOnly ? 'none' : 'block';
-    }
-
-    if (employee) {
-        // Establecer los valores en el formulario
-        document.getElementById("fullName").value = employee.full_name;
-        document.getElementById("email").value = employee.email;
-        document.getElementById("phone").value = employee.phone;
-        document.getElementById("address").value = employee.address;
-        document.getElementById("role").value = employee.role;
-        document.getElementById("idType").value = employee.id_type_id;
-        document.getElementById("idNumber").value = employee.id_number;
-        document.getElementById("department").value = employee.department;
-        document.getElementById("position").value = employee.position;
-        document.getElementById("hireDate").value = employee.hire_date;
-        document.getElementById("tipo_contrato").value = employee.tipo_contrato || 'Indefinido';
-        document.getElementById("salario_base").value = employee.salario_base || employee.salary || 0;
-        document.getElementById("riesgo_arl").value = employee.riesgo_arl || '1';
-        document.getElementById("eps").value = employee.eps;
-        document.getElementById("fondo_pension").value = employee.fondo_pension;
-        document.getElementById("fondo_cesantias").value = employee.fondo_cesantias;
-        document.getElementById("caja_compensacion").value = employee.caja_compensacion;
-        document.getElementById("status").value = employee.status || 'Activo';
-    }
-
-    new bootstrap.Modal(document.getElementById("employeeModal")).show();
 }
 
 function openBankInfoModal() {
@@ -431,9 +381,9 @@ async function saveEmployee() {
     }
 }
 
-async function editEmployee(id_number) {
+async function editEmployee(id) {
     try {
-        const response = await fetch(`/api/employees/by-id-number/${id_number}`, {
+        const response = await fetch(`/api/employees/by-id/${id}`, {
             headers: {
                 "Authorization": `Bearer ${localStorage.getItem("token")}`,
                 "Content-Type": "application/json"
@@ -448,7 +398,7 @@ async function editEmployee(id_number) {
         openEmployeeModal(employee, false); // false para modo edición
     } catch (error) {
         console.error("Error:", error);
-        showMessage(error.message, "error");
+        showToast(error.message, "danger");
     }
 }
 
