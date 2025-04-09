@@ -601,6 +601,7 @@ async function viewPayrollDetails(id) {
         }
 
         const payroll = await response.json();
+        console.log("Datos de la nómina:", payroll); // Para depuración
         
         // Limpiar el formulario antes de mostrar los detalles
         const form = document.getElementById("payrollForm");
@@ -612,16 +613,33 @@ async function viewPayrollDetails(id) {
         // Llenar los campos con los datos
         document.getElementById("payrollId").value = payroll.id;
         document.getElementById("employeeId").value = payroll.employee_id;
-        document.getElementById("periodo").value = payroll.periodo || '';
+        document.getElementById("periodo").value = payroll.PayrollDetail?.periodo || payroll.periodo || '';
         document.getElementById("tipoPago").value = payroll.PayrollDetail?.tipo_pago || 'Mensual';
         document.getElementById("diasTrabajados").value = payroll.PayrollDetail?.dias_trabajados || 30;
         document.getElementById("salarioBase").value = payroll.salario_base || 0;
+        
+        // Corregir carga de campos de extras y bonificaciones
         document.getElementById("horasExtras").value = payroll.PayrollDetail?.horas_extras_diurnas || 0;
         document.getElementById("valorHorasExtras").value = payroll.PayrollDetail?.valor_hora_extra_diurna || 0;
         document.getElementById("bonificaciones").value = payroll.PayrollDetail?.bonificaciones || 0;
         document.getElementById("comisiones").value = payroll.PayrollDetail?.comisiones || 0;
+        
+        // Corregir carga de campos de deducciones
         document.getElementById("prestamos").value = payroll.PayrollDetail?.prestamos || 0;
         document.getElementById("otrosDescuentos").value = payroll.PayrollDetail?.otros_descuentos || 0;
+
+        // Calcular deducciones de salud y pensión según el tipo de pago
+        const salarioBase = parseFloat(payroll.salario_base) || 0;
+        let porcentaje = 0.08; // Valor por defecto
+        switch (payroll.PayrollDetail?.tipo_pago) {
+            case 'Mensual': porcentaje = 0.08; break;
+            case 'Quincenal': porcentaje = 0.04; break;
+            case 'Semanal': porcentaje = 0.02; break;
+        }
+        
+        document.getElementById("deduccionSalud").value = (salarioBase * porcentaje).toFixed(2);
+        document.getElementById("deduccionPension").value = (salarioBase * porcentaje).toFixed(2);
+        
         document.getElementById("totalIngresos").value = payroll.total_ingresos || 0;
         document.getElementById("totalDeducciones").value = payroll.total_deducciones || 0;
         document.getElementById("netoPagar").value = payroll.neto_pagar || 0;
@@ -651,7 +669,7 @@ async function viewPayrollDetails(id) {
 
     } catch (error) {
         console.error("Error:", error);
-        showMessage(error.message, "error");
+        showToast(error.message, "danger");
     }
 }
 

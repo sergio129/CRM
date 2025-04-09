@@ -128,33 +128,94 @@ exports.updatePayroll = async (req, res) => {
     }
 
     try {
-        const { employee_id, salario_base, payment_date, status } = req.body;
+        // Extraer todos los datos de la solicitud
+        const { 
+            employee_id, 
+            salario_base, 
+            payment_date, 
+            status,
+            total_ingresos,
+            total_deducciones,
+            neto_pagar,
+            PayrollDetail: payrollDetailData
+        } = req.body;
+        
+        // Verificar que la nómina existe
         const payroll = await Payroll.findByPk(req.params.id);
         if (!payroll) return res.status(404).json({ message: "Nómina no encontrada" });
 
-        // Actualizar la nómina
+        // Actualizar la nómina principal
         await payroll.update({
             employee_id,
-            salario_base, // Actualizado
+            salario_base,
             payment_date,
-            status: status || 'Pendiente'  // Asegurarse de actualizar el estado
+            total_ingresos,
+            total_deducciones,
+            neto_pagar,
+            status: status || 'Pendiente'
         });
 
-        // Actualizar también el estado en el detalle de la nómina
+        // Buscar y actualizar el detalle de la nómina
         const payrollDetail = await PayrollDetail.findOne({
             where: { payroll_id: payroll.id }
         });
 
-        if (payrollDetail) {
+        if (payrollDetail && payrollDetailData) {
+            // Actualizar todos los campos del detalle de la nómina
             await payrollDetail.update({
+                periodo: payrollDetailData.periodo,
+                tipo_pago: payrollDetailData.tipo_pago,
+                dias_trabajados: payrollDetailData.dias_trabajados,
+                salario_base: salario_base, // Asegurar sincronización
+                horas_extras_diurnas: payrollDetailData.horas_extras_diurnas || payrollDetailData.horas_extras || 0,
+                valor_hora_extra_diurna: payrollDetailData.valor_hora_extra_diurna || payrollDetailData.valor_horas_extras || 0,
+                bonificaciones: payrollDetailData.bonificaciones || 0,
+                comisiones: payrollDetailData.comisiones || 0,
+                prestamos: payrollDetailData.prestamos || 0,
+                otros_descuentos: payrollDetailData.otros_descuentos || 0,
+                total_ingresos: total_ingresos,
+                total_deducciones: total_deducciones,
+                neto_pagar: neto_pagar,
                 estado: status || 'Pendiente'
             });
+            
+            console.log('PayrollDetail actualizado correctamente:', {
+                id: payrollDetail.id,
+                data: payrollDetailData
+            });
+        } else {
+            console.warn('No se encontró detalle de nómina para actualizar o no se proporcionaron datos de detalle');
         }
 
-        res.json({ message: "Nómina actualizada correctamente", payroll });
+        // Obtener la nómina actualizada con su detalle para responder
+        const updatedPayroll = await Payroll.findByPk(req.params.id, {
+            include: [{
+                model: Employee,
+                as: 'Employee',
+                attributes: ['id', 'full_name', 'id_number']
+            }]
+        });
+
+        const updatedPayrollDetail = await PayrollDetail.findOne({
+            where: { payroll_id: updatedPayroll.id }
+        });
+
+        const fullUpdatedData = {
+            ...updatedPayroll.toJSON(),
+            PayrollDetail: updatedPayrollDetail
+        };
+
+        res.json({ 
+            message: "Nómina actualizada correctamente", 
+            payroll: fullUpdatedData 
+        });
     } catch (error) {
         console.error("Error al actualizar la nómina:", error);
-        res.status(500).json({ message: "Error al actualizar la nómina", error });
+        res.status(500).json({ 
+            message: "Error al actualizar la nómina", 
+            error: error.message,
+            stack: error.stack 
+        });
     }
 };
 

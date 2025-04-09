@@ -118,6 +118,9 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="work-tab" data-bs-toggle="tab" data-bs-target="#work" type="button" role="tab" aria-controls="work" aria-selected="false">Información Laboral</button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="social-tab" data-bs-toggle="tab" data-bs-target="#social" type="button" role="tab" aria-controls="social" aria-selected="false">Seguridad Social y Banco</button>
+                        </li>
                     </ul>
 
                     <!-- Contenido de las pestañas -->
@@ -206,6 +209,62 @@
                                     </div>
                                 </div>
                                 <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="departamento" class="form-label">Departamento</label>
+                                            <input type="text" class="form-control" id="departamento">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="role" class="form-label">Rol</label>
+                                            <select class="form-select" id="role">
+                                                <option value="">Sin rol asignado</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="fechaContratacion" class="form-label">Fecha de Contratación</label>
+                                            <input type="date" class="form-control" id="fechaContratacion">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="tipoContrato" class="form-label">Tipo de Contrato</label>
+                                            <select class="form-select" id="tipoContrato">
+                                                <option value="">Seleccione tipo</option>
+                                                <option value="Indefinido">Indefinido</option>
+                                                <option value="Fijo">Término Fijo</option>
+                                                <option value="Obra Labor">Obra o Labor</option>
+                                                <option value="Prestación Servicios">Prestación de Servicios</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="horarioLaboral" class="form-label">Horario Laboral</label>
+                                            <input type="text" class="form-control" id="horarioLaboral" placeholder="Ej. Lunes-Viernes 8am-5pm">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="riesgoARL" class="form-label">Nivel de Riesgo ARL</label>
+                                            <select class="form-select" id="riesgoARL">
+                                                <option value="1">Nivel I</option>
+                                                <option value="2">Nivel II</option>
+                                                <option value="3">Nivel III</option>
+                                                <option value="4">Nivel IV</option>
+                                                <option value="5">Nivel V</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
                                     <div class="col-md-12">
                                         <div class="mb-3">
                                             <label for="estado" class="form-label">Estado</label>
@@ -213,6 +272,56 @@
                                                 <option value="Activo">Activo</option>
                                                 <option value="Inactivo">Inactivo</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="social" role="tabpanel" aria-labelledby="social-tab">
+                            <!-- Seguridad Social y Banco -->
+                            <div class="form-section">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="eps" class="form-label">EPS</label>
+                                            <input type="text" class="form-control" id="eps">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="afp" class="form-label">AFP</label>
+                                            <input type="text" class="form-control" id="afp">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="cajaCompensacion" class="form-label">Caja de Compensación</label>
+                                            <input type="text" class="form-control" id="cajaCompensacion">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="banco" class="form-label">Banco</label>
+                                            <input type="text" class="form-control" id="banco">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="tipoCuenta" class="form-label">Tipo de Cuenta</label>
+                                            <select class="form-select" id="tipoCuenta">
+                                                <option value="Ahorros">Ahorros</option>
+                                                <option value="Corriente">Corriente</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="numeroCuenta" class="form-label">Número de Cuenta</label>
+                                            <input type="text" class="form-control" id="numeroCuenta">
                                         </div>
                                     </div>
                                 </div>

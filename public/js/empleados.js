@@ -176,7 +176,22 @@ function openEmployeeModal(employee = null, readOnly = false) {
         // Información Laboral (tab 3)
         if (document.getElementById("cargo")) document.getElementById("cargo").value = employee.position || '';
         if (document.getElementById("salario")) document.getElementById("salario").value = employee.salario_base || 0;
+        if (document.getElementById("departamento")) document.getElementById("departamento").value = employee.department || '';
+        if (document.getElementById("role")) document.getElementById("role").value = employee.role || '';
+        if (document.getElementById("fechaContratacion")) document.getElementById("fechaContratacion").value = employee.hire_date || '';
+        if (document.getElementById("tipoContrato")) document.getElementById("tipoContrato").value = employee.tipo_contrato || '';
+        if (document.getElementById("horarioLaboral")) document.getElementById("horarioLaboral").value = employee.work_schedule || '';
+        if (document.getElementById("riesgoARL")) document.getElementById("riesgoARL").value = employee.riesgo_arl || 1;
         if (document.getElementById("estado")) document.getElementById("estado").value = employee.status || 'Activo';
+        
+        // Seguridad Social y Banco (tab 4)
+        if (document.getElementById("eps")) document.getElementById("eps").value = employee.eps || '';
+        if (document.getElementById("fondoPension")) document.getElementById("fondoPension").value = employee.fondo_pension || '';
+        if (document.getElementById("fondoCesantias")) document.getElementById("fondoCesantias").value = employee.fondo_cesantias || '';
+        if (document.getElementById("cajaCompensacion")) document.getElementById("cajaCompensacion").value = employee.caja_compensacion || '';
+        if (document.getElementById("banco")) document.getElementById("banco").value = employee.banco || '';
+        if (document.getElementById("tipoCuenta")) document.getElementById("tipoCuenta").value = employee.tipo_cuenta || 'Ahorros';
+        if (document.getElementById("numeroCuenta")) document.getElementById("numeroCuenta").value = employee.cuenta_bancaria || '';
     }
 
     // Habilitar/deshabilitar campos según modo
@@ -297,17 +312,26 @@ async function saveEmployee() {
             position: document.getElementById("cargo").value,
             salario_base: document.getElementById("salario").value,
             status: document.getElementById("estado").value,
+            fecha_nacimiento: document.getElementById("fechaNacimiento").value || null,
             
             // The API requires an id_type_id - using default 1 if not present
             id_type_id: 1,
             
             // Include other optional fields
-            department: "",
-            role: "",
-            eps: "",
-            fondo_pension: "",
-            fondo_cesantias: "",
-            caja_compensacion: ""
+            department: document.getElementById("departamento")?.value || "",
+            role: document.getElementById("role")?.value || "",
+            hire_date: document.getElementById("fechaContratacion")?.value || null,
+            contract_type: document.getElementById("tipoContrato")?.value || null,
+            work_schedule: document.getElementById("horarioLaboral")?.value || null,
+            tipo_contrato: document.getElementById("tipoContrato")?.value || null,
+            riesgo_arl: document.getElementById("riesgoARL")?.value || 1,
+            cuenta_bancaria: document.getElementById("cuentaBancaria")?.value || null,
+            banco: document.getElementById("banco")?.value || null,
+            tipo_cuenta: document.getElementById("tipoCuenta")?.value || null,
+            eps: document.getElementById("eps")?.value || null,
+            fondo_pension: document.getElementById("fondoPension")?.value || null,
+            fondo_cesantias: document.getElementById("fondoCesantias")?.value || null,
+            caja_compensacion: document.getElementById("cajaCompensacion")?.value || null
         };
 
         // Validar campos requeridos

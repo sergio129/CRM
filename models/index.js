@@ -44,12 +44,12 @@ PayrollLoan.belongsTo(Employee, {
 
 // Asociaciones para Role
 Role.hasMany(Employee, { 
-    foreignKey: 'roleId', 
+    foreignKey: 'role', 
     as: 'Employees' // Relación entre Role y Employee
 });
 
 Employee.belongsTo(Role, { 
-    foreignKey: 'roleId', 
+    foreignKey: 'role', 
     as: 'Role' // Relación inversa entre Employee y Role
 });
 
