@@ -244,7 +244,7 @@ exports.updatePayroll = async (req, res) => {
         // Actualizar la nómina principal
         await payroll.update({
             employee_id,
-            periodo,  // Incluir periodo en la actualización principal
+            periodo,
             salario_base,
             payment_date,
             total_ingresos,
@@ -253,92 +253,97 @@ exports.updatePayroll = async (req, res) => {
             status: status || 'Pendiente'
         });
 
-        // Buscar y actualizar el detalle de la nómina
-        const payrollDetail = await PayrollDetail.findOne({
+        // Buscar el detalle de la nómina
+        let payrollDetail = await PayrollDetail.findOne({
             where: { payroll_id: payroll.id }
         });
 
-        if (payrollDetail && payrollDetailData) {
-            // Crear un objeto de actualización con todos los campos posibles
-            const updateData = {
-                // Datos básicos
-                periodo: payrollDetailData.periodo || periodo,
+        // Si no existe el detalle pero nos envían datos, lo creamos
+        if (!payrollDetail && payrollDetailData) {
+            payrollDetail = await PayrollDetail.create({
+                employee_id,
+                payroll_id: payroll.id,
+                periodo,
+                fecha_pago: new Date(),
                 tipo_pago: payrollDetailData.tipo_pago || 'Mensual',
                 dias_trabajados: payrollDetailData.dias_trabajados || 30,
-                salario_base: salario_base, // Asegurar sincronización
-
-                // Ingresos
+                dias_vacaciones: payrollDetailData.dias_vacaciones || 0,
+                dias_incapacidad: payrollDetailData.dias_incapacidad || 0,
+                salario_base,
+                auxilio_transporte: payrollDetailData.auxilio_transporte || 0,
                 horas_extras_diurnas: payrollDetailData.horas_extras_diurnas || 0,
                 valor_hora_extra_diurna: payrollDetailData.valor_hora_extra_diurna || 0,
+                horas_extras_nocturnas: payrollDetailData.horas_extras_nocturnas || 0,
+                valor_hora_extra_nocturna: payrollDetailData.valor_hora_extra_nocturna || 0,
                 bonificaciones: payrollDetailData.bonificaciones || 0,
                 comisiones: payrollDetailData.comisiones || 0,
-                
-                // Deducciones
+                recargo_dominical: payrollDetailData.recargo_dominical || 0,
                 aporte_salud_empleado: payrollDetailData.aporte_salud_empleado || 0,
                 aporte_pension_empleado: payrollDetailData.aporte_pension_empleado || 0,
+                aporte_salud_empleador: payrollDetailData.aporte_salud_empleador || 0,
+                aporte_pension_empleador: payrollDetailData.aporte_pension_empleador || 0,
+                aporte_arl: payrollDetailData.aporte_arl || 0,
+                aporte_caja_compensacion: payrollDetailData.aporte_caja_compensacion || 0,
+                aporte_icbf: payrollDetailData.aporte_icbf || 0,
+                aporte_sena: payrollDetailData.aporte_sena || 0,
                 prestamos: payrollDetailData.prestamos || 0,
+                embargos: payrollDetailData.embargos || 0,
                 otros_descuentos: payrollDetailData.otros_descuentos || 0,
-                
-                // Totales
-                total_ingresos: total_ingresos,
-                total_deducciones: total_deducciones,
-                neto_pagar: neto_pagar,
-                
-                // Estado
-                estado: status || 'Pendiente'
+                provision_prima: payrollDetailData.provision_prima || 0,
+                provision_cesantias: payrollDetailData.provision_cesantias || 0,
+                provision_intereses_cesantias: payrollDetailData.provision_intereses_cesantias || 0,
+                provision_vacaciones: payrollDetailData.provision_vacaciones || 0,
+                total_provisiones: payrollDetailData.total_provisiones || 0,
+                total_ingresos,
+                total_deducciones,
+                neto_pagar,
+                estado: status || 'Pendiente',
+                metodo_pago: payrollDetailData.metodo_pago || 'Transferencia',
+                observaciones: payrollDetailData.observaciones || ''
+            });
+            console.log('PayrollDetail creado correctamente:', payrollDetail.id);
+        } 
+        // Si existe el detalle y nos envían datos, lo actualizamos
+        else if (payrollDetail && payrollDetailData) {
+            // Crear un objeto con todos los campos a actualizar
+            const updateData = {
+                periodo: payrollDetailData.periodo || periodo,
+                tipo_pago: payrollDetailData.tipo_pago || 'Mensual',
+                dias_trabajados: payrollDetailData.dias_trabajados !== undefined ? payrollDetailData.dias_trabajados : 30,
+                dias_vacaciones: payrollDetailData.dias_vacaciones !== undefined ? payrollDetailData.dias_vacaciones : 0,
+                dias_incapacidad: payrollDetailData.dias_incapacidad !== undefined ? payrollDetailData.dias_incapacidad : 0,
+                salario_base: salario_base,
+                auxilio_transporte: payrollDetailData.auxilio_transporte !== undefined ? payrollDetailData.auxilio_transporte : 0,
+                horas_extras_diurnas: payrollDetailData.horas_extras_diurnas !== undefined ? payrollDetailData.horas_extras_diurnas : 0,
+                valor_hora_extra_diurna: payrollDetailData.valor_hora_extra_diurna !== undefined ? payrollDetailData.valor_hora_extra_diurna : 0,
+                horas_extras_nocturnas: payrollDetailData.horas_extras_nocturnas !== undefined ? payrollDetailData.horas_extras_nocturnas : 0,
+                valor_hora_extra_nocturna: payrollDetailData.valor_hora_extra_nocturna !== undefined ? payrollDetailData.valor_hora_extra_nocturna : 0,
+                bonificaciones: payrollDetailData.bonificaciones !== undefined ? payrollDetailData.bonificaciones : 0,
+                comisiones: payrollDetailData.comisiones !== undefined ? payrollDetailData.comisiones : 0,
+                recargo_dominical: payrollDetailData.recargo_dominical !== undefined ? payrollDetailData.recargo_dominical : 0,
+                aporte_salud_empleado: payrollDetailData.aporte_salud_empleado !== undefined ? payrollDetailData.aporte_salud_empleado : 0,
+                aporte_pension_empleado: payrollDetailData.aporte_pension_empleado !== undefined ? payrollDetailData.aporte_pension_empleado : 0,
+                aporte_salud_empleador: payrollDetailData.aporte_salud_empleador !== undefined ? payrollDetailData.aporte_salud_empleador : 0,
+                aporte_pension_empleador: payrollDetailData.aporte_pension_empleador !== undefined ? payrollDetailData.aporte_pension_empleador : 0,
+                aporte_arl: payrollDetailData.aporte_arl !== undefined ? payrollDetailData.aporte_arl : 0,
+                aporte_caja_compensacion: payrollDetailData.aporte_caja_compensacion !== undefined ? payrollDetailData.aporte_caja_compensacion : 0,
+                aporte_icbf: payrollDetailData.aporte_icbf !== undefined ? payrollDetailData.aporte_icbf : 0,
+                aporte_sena: payrollDetailData.aporte_sena !== undefined ? payrollDetailData.aporte_sena : 0,
+                prestamos: payrollDetailData.prestamos !== undefined ? payrollDetailData.prestamos : 0,
+                embargos: payrollDetailData.embargos !== undefined ? payrollDetailData.embargos : 0,
+                otros_descuentos: payrollDetailData.otros_descuentos !== undefined ? payrollDetailData.otros_descuentos : 0,
+                provision_prima: payrollDetailData.provision_prima !== undefined ? payrollDetailData.provision_prima : 0,
+                provision_cesantias: payrollDetailData.provision_cesantias !== undefined ? payrollDetailData.provision_cesantias : 0,
+                provision_intereses_cesantias: payrollDetailData.provision_intereses_cesantias !== undefined ? payrollDetailData.provision_intereses_cesantias : 0,
+                provision_vacaciones: payrollDetailData.provision_vacaciones !== undefined ? payrollDetailData.provision_vacaciones : 0,
+                total_provisiones: payrollDetailData.total_provisiones !== undefined ? payrollDetailData.total_provisiones : 0,
+                total_ingresos,
+                total_deducciones,
+                neto_pagar,
+                estado: status || 'Pendiente',
+                metodo_pago: payrollDetailData.metodo_pago !== undefined ? payrollDetailData.metodo_pago : 'Transferencia',
+                observaciones: payrollDetailData.observaciones !== undefined ? payrollDetailData.observaciones : ''
             };
-            
-            // Incluir otros campos si están presentes en payrollDetailData
-            if (payrollDetailData.auxilio_transporte !== undefined) 
-                updateData.auxilio_transporte = payrollDetailData.auxilio_transporte;
-            
-            if (payrollDetailData.horas_extras_nocturnas !== undefined) 
-                updateData.horas_extras_nocturnas = payrollDetailData.horas_extras_nocturnas;
-            
-            if (payrollDetailData.valor_hora_extra_nocturna !== undefined) 
-                updateData.valor_hora_extra_nocturna = payrollDetailData.valor_hora_extra_nocturna;
-            
-            if (payrollDetailData.recargo_dominical !== undefined) 
-                updateData.recargo_dominical = payrollDetailData.recargo_dominical;
-            
-            if (payrollDetailData.aporte_salud_empleador !== undefined) 
-                updateData.aporte_salud_empleador = payrollDetailData.aporte_salud_empleador;
-            
-            if (payrollDetailData.aporte_pension_empleador !== undefined) 
-                updateData.aporte_pension_empleador = payrollDetailData.aporte_pension_empleador;
-            
-            if (payrollDetailData.aporte_arl !== undefined) 
-                updateData.aporte_arl = payrollDetailData.aporte_arl;
-            
-            if (payrollDetailData.aporte_caja_compensacion !== undefined) 
-                updateData.aporte_caja_compensacion = payrollDetailData.aporte_caja_compensacion;
-            
-            if (payrollDetailData.aporte_icbf !== undefined) 
-                updateData.aporte_icbf = payrollDetailData.aporte_icbf;
-            
-            if (payrollDetailData.aporte_sena !== undefined) 
-                updateData.aporte_sena = payrollDetailData.aporte_sena;
-            
-            if (payrollDetailData.embargos !== undefined) 
-                updateData.embargos = payrollDetailData.embargos;
-            
-            if (payrollDetailData.provision_prima !== undefined) 
-                updateData.provision_prima = payrollDetailData.provision_prima;
-            
-            if (payrollDetailData.provision_cesantias !== undefined) 
-                updateData.provision_cesantias = payrollDetailData.provision_cesantias;
-            
-            if (payrollDetailData.provision_intereses_cesantias !== undefined) 
-                updateData.provision_intereses_cesantias = payrollDetailData.provision_intereses_cesantias;
-            
-            if (payrollDetailData.provision_vacaciones !== undefined) 
-                updateData.provision_vacaciones = payrollDetailData.provision_vacaciones;
-            
-            if (payrollDetailData.total_provisiones !== undefined) 
-                updateData.total_provisiones = payrollDetailData.total_provisiones;
-            
-            if (payrollDetailData.metodo_pago !== undefined) 
-                updateData.metodo_pago = payrollDetailData.metodo_pago;
             
             // Actualizar el detalle de nómina con todos los campos
             await payrollDetail.update(updateData);
@@ -351,30 +356,27 @@ exports.updatePayroll = async (req, res) => {
             console.warn('No se encontró detalle de nómina para actualizar o no se proporcionaron datos de detalle');
         }
 
-        // Obtener la nómina actualizada con su detalle para responder
-        const updatedPayroll = await Payroll.findOne({
-            where: { id: req.params.id },
+        // Obtener nómina actualizada con todos sus datos para la respuesta
+        const updatedPayroll = await Payroll.findOne({ 
+            where: { id: payroll.id },
             include: [
                 {
                     model: Employee,
-                    as: 'Employee',
-                    attributes: ['id', 'full_name', 'id_number']
-                },
-                {
-                    model: PayrollDetail,
-                    as: 'PayrollDetail',
-                    required: false
+                    as: 'Employee'
                 }
             ]
         });
 
-        if (!updatedPayroll) {
-            return res.status(404).json({ message: "No se pudo encontrar la nómina actualizada" });
-        }
+        // Obtener el detalle actualizado de forma separada
+        const updatedPayrollDetail = await PayrollDetail.findOne({
+            where: { payroll_id: payroll.id }
+        });
 
+        // Responder con los datos completos
         res.json({ 
             message: "Nómina actualizada correctamente", 
-            payroll: updatedPayroll
+            payroll: updatedPayroll,
+            payrollDetail: updatedPayrollDetail 
         });
     } catch (error) {
         console.error("Error al actualizar la nómina:", error);
@@ -388,14 +390,25 @@ exports.updatePayroll = async (req, res) => {
 
 exports.deletePayroll = async (req, res) => {
     try {
+        // Verificar que la nómina existe
         const payroll = await Payroll.findByPk(req.params.id);
         if (!payroll) return res.status(404).json({ message: "Nómina no encontrada" });
 
+        // Eliminar primero los detalles de la nómina (registros en payroll_details)
+        await PayrollDetail.destroy({
+            where: { payroll_id: payroll.id }
+        });
+
+        // Luego eliminar la nómina principal
         await payroll.destroy();
+        
         res.json({ message: "Nómina eliminada correctamente" });
     } catch (error) {
         console.error("Error al eliminar la nómina:", error);
-        res.status(500).json({ message: "Error al eliminar la nómina", error });
+        res.status(500).json({ 
+            message: "Error al eliminar la nómina", 
+            error: error.message 
+        });
     }
 };
 

@@ -494,9 +494,15 @@ async function editPayroll(payrollId) {
 }
 
 async function deletePayroll(payrollId) {
-    if (!confirm("¿Estás seguro de eliminar esta nómina?")) return;
-
     try {
+        // Usar confirm nativo de JavaScript en lugar de SweetAlert2
+        if (!confirm("¿Estás seguro de eliminar esta nómina? Esta acción no se puede deshacer.")) {
+            return;
+        }
+        
+        // Mostrar indicador de carga
+        showToast('Eliminando nómina...', 'info');
+        
         const response = await fetch(`/api/payrolls/${payrollId}`, {
             method: "DELETE",
             headers: {
@@ -506,14 +512,15 @@ async function deletePayroll(payrollId) {
         });
 
         if (!response.ok) {
-            throw new Error("Error al eliminar la nómina");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Error al eliminar la nómina");
         }
 
-        alert("Nómina eliminada correctamente");
+        showToast("Nómina eliminada correctamente", "success");
         loadPayrolls();
     } catch (error) {
         console.error("Error al eliminar la nómina:", error);
-        alert("Error al eliminar la nómina");
+        showToast("Error al eliminar la nómina: " + error.message, "danger");
     }
 }
 
