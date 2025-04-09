@@ -135,7 +135,8 @@ async function loadIdentificationTypes() {
 }
 
 function openEmployeeModal(employee = null, readOnly = false) {
-    const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+    const modalElement = document.getElementById('employeeModal');
+    const modal = new bootstrap.Modal(modalElement);
     const form = document.getElementById('employeeForm');
 
     if (!form) {
@@ -143,7 +144,9 @@ function openEmployeeModal(employee = null, readOnly = false) {
         return;
     }
 
+    // Reset form and stored employee ID
     form.reset();
+    modalElement.removeAttribute('data-employee-id');
 
     // Configurar título del modal
     document.getElementById('employeeModalLabel').textContent = 
@@ -151,6 +154,11 @@ function openEmployeeModal(employee = null, readOnly = false) {
         employee ? 'Editar Empleado' : 'Nuevo Empleado';
 
     if (employee) {
+        // Store the employee ID in the modal for later use in saveEmployee
+        if (employee.id) {
+            modalElement.setAttribute('data-employee-id', employee.id);
+        }
+        
         // Mapear los campos del API a los campos del formulario
         console.log("Employee data:", employee); // Para depuración
 
@@ -276,46 +284,79 @@ function validateAndSaveEmployee() {
 
 async function saveEmployee() {
     try {
+        // Get stored employee ID if we're editing
+        const employeeId = document.getElementById("employeeModal").getAttribute("data-employee-id");
+        
+        // Create proper API data structure from form fields
         const employeeData = {
             full_name: document.getElementById("fullName").value,
-            idNumber: document.getElementById("idNumber").value,
-            fechaNacimiento: document.getElementById("fechaNacimiento").value,
-            genero: document.getElementById("genero").value,
-            telefonoMovil: document.getElementById("telefonoMovil").value,
+            id_number: document.getElementById("idNumber").value,
             email: document.getElementById("email").value,
-            direccion: document.getElementById("direccion").value,
-            cargo: document.getElementById("cargo").value,
-            salario: document.getElementById("salario").value,
-            status: document.getElementById("estado").value
+            phone: document.getElementById("telefonoMovil").value,
+            address: document.getElementById("direccion")?.value || "",
+            position: document.getElementById("cargo").value,
+            salario_base: document.getElementById("salario").value,
+            status: document.getElementById("estado").value,
+            
+            // The API requires an id_type_id - using default 1 if not present
+            id_type_id: 1,
+            
+            // Include other optional fields
+            department: "",
+            role: "",
+            eps: "",
+            fondo_pension: "",
+            fondo_cesantias: "",
+            caja_compensacion: ""
         };
 
         // Validar campos requeridos
-        const requiredFields = ['full_name', 'idNumber', 'telefonoMovil', 'email', 'cargo', 'salario'];
+        const requiredFields = ['full_name', 'id_number', 'email', 'phone', 'position', 'salario_base'];
         for (const field of requiredFields) {
             if (!employeeData[field]) {
                 throw new Error(`El campo ${field} es obligatorio`);
             }
         }
 
-        let method = 'POST';
         let url = '/api/employees';
+        let method = 'POST';
 
-        // Verificar si el empleado ya existe
-        const checkResponse = await fetch(`/api/employees/${employeeData.idNumber}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" }
-        });
-
-        if (checkResponse.ok) {
-            // Si el empleado existe, cambiamos a método PUT
-            const existingEmployee = await checkResponse.json();
+        // If we have an employee ID, it's an update
+        if (employeeId) {
+            url = `/api/employees/${employeeId}`;
             method = 'PUT';
-            url = `/api/employees/${existingEmployee.id}`;
+        } else {
+            // If it's a new employee, check if one with the same ID number already exists
+            try {
+                const searchResponse = await fetch(`/api/employees/search?id_number=${employeeData.id_number}`, {
+                    method: "GET",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    }
+                });
+                
+                const searchData = await searchResponse.json();
+                
+                // If employee exists with this ID number, do an update instead
+                if (searchResponse.ok && searchData && searchData.length > 0) {
+                    const existingEmployee = searchData[0];
+                    url = `/api/employees/${existingEmployee.id}`;
+                    method = 'PUT';
+                }
+            } catch (error) {
+                console.log("No existing employee found, creating new one");
+            }
         }
+
+        console.log(`${method} request to ${url} with data:`, employeeData);
 
         const response = await fetch(url, {
             method: method,
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`  
+            },
             body: JSON.stringify(employeeData)
         });
 
