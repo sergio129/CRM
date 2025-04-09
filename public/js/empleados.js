@@ -151,67 +151,24 @@ function openEmployeeModal(employee = null, readOnly = false) {
         employee ? 'Editar Empleado' : 'Nuevo Empleado';
 
     if (employee) {
-        // Mapeo de campos del empleado a los IDs del formulario
-        const fieldMapping = {
-            id_number: 'idNumber',
-            full_name: 'fullName',
-            email: 'email',
-            phone: 'phone',
-            address: 'address',
-            role: 'role',
-            department: 'department',
-            position: 'position',
-            hire_date: 'hireDate',
-            tipo_contrato: 'tipoContrato',
-            salario_base: 'salarioBase',
-            eps: 'eps',
-            banco: 'banco',
-            tipo_cuenta: 'tipoCuenta',
-            cuenta_bancaria: 'cuentaBancaria',
-            fondo_pension: 'fondoPension',
-            fondo_cesantias: 'fondoCesantias',
-            caja_compensacion: 'cajaCompensacion',
-            status: 'status'
-        };
+        // Mapear los campos del API a los campos del formulario
+        console.log("Employee data:", employee); // Para depuración
 
-        // Llenar los campos del formulario
-        Object.entries(fieldMapping).forEach(([apiField, formId]) => {
-            const input = document.getElementById(formId);
-            if (input && employee[apiField] !== undefined) {
-                // Formatear fechas
-                if (input.type === 'date' && employee[apiField]) {
-                    input.value = new Date(employee[apiField]).toISOString().split('T')[0];
-                }
-                // Formatear valores numéricos
-                else if (input.type === 'number' && employee[apiField]) {
-                    input.value = parseFloat(employee[apiField]);
-                }
-                // Resto de campos
-                else {
-                    input.value = employee[apiField] || '';
-                }
-            }
-        });
+        // Información Personal (tab 1)
+        if (document.getElementById("fullName")) document.getElementById("fullName").value = employee.full_name || '';
+        if (document.getElementById("idNumber")) document.getElementById("idNumber").value = employee.id_number || '';
+        if (document.getElementById("fechaNacimiento")) document.getElementById("fechaNacimiento").value = employee.fecha_nacimiento || '';
+        if (document.getElementById("genero")) document.getElementById("genero").value = employee.genero || 'Masculino';
 
-        // Establecer los valores en el formulario
-        document.getElementById("fullName").value = employee.full_name || '';
-        document.getElementById("email").value = employee.email || '';
-        document.getElementById("phone").value = employee.phone || '';
-        document.getElementById("address").value = employee.address || '';
-        document.getElementById("role").value = employee.role || '';
-        document.getElementById("idType").value = employee.id_type_id || '';
-        document.getElementById("idNumber").value = employee.id_number || '';
-        document.getElementById("department").value = employee.department || '';
-        document.getElementById("position").value = employee.position || '';
-        document.getElementById("hireDate").value = employee.hire_date || '';
-        document.getElementById("tipoContrato").value = employee.tipo_contrato || 'Indefinido';
-        document.getElementById("salarioBase").value = employee.salario_base || employee.salary || 0;
-        document.getElementById("riesgoArl").value = employee.riesgo_arl || '1';
-        document.getElementById("eps").value = employee.eps || '';
-        document.getElementById("fondoPension").value = employee.fondo_pension || '';
-        document.getElementById("fondoCesantias").value = employee.fondo_cesantias || '';
-        document.getElementById("cajaCompensacion").value = employee.caja_compensacion || '';
-        document.getElementById("status").value = employee.status || 'Activo';
+        // Información de Contacto (tab 2)
+        if (document.getElementById("telefonoMovil")) document.getElementById("telefonoMovil").value = employee.phone || '';
+        if (document.getElementById("email")) document.getElementById("email").value = employee.email || '';
+        if (document.getElementById("direccion")) document.getElementById("direccion").value = employee.address || '';
+
+        // Información Laboral (tab 3)
+        if (document.getElementById("cargo")) document.getElementById("cargo").value = employee.position || '';
+        if (document.getElementById("salario")) document.getElementById("salario").value = employee.salario_base || 0;
+        if (document.getElementById("estado")) document.getElementById("estado").value = employee.status || 'Activo';
     }
 
     // Habilitar/deshabilitar campos según modo
