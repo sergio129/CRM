@@ -1,236 +1,251 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const token = localStorage.getItem("token");
-    console.log("Token en dashboard:", token); // 🔍 Verificar que el token esté disponible
-
+// Dashboard Controller
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
     if (!token) {
-        alert("Tu sesión ha expirado. Inicia sesión nuevamente.");
-        window.location.href = "login.html"; // 🔹 Redirigir al login
+        window.location.href = '/login.html';
+        return;
     }
 
-    loadDashboardData();
-    loadDashboardStats();
+    // Load dashboard data
+    fetchDashboardData();
+    
+    // Initialize event handlers
+    document.getElementById('sidebarCollapse').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
 });
 
-async function searchClient() {
-    const token = localStorage.getItem("token");
-    if (!token) {
-        alert("Tu sesión ha expirado. Inicia sesión nuevamente.");
-        window.location.href = "login.html"; // 🔹 Redirigir al login
-        return;
-    }
-
-    const clientId = document.getElementById("clientId").value.trim();
-    const resultDiv = document.getElementById("clientResult");
-
-    if (!clientId) {
-        resultDiv.innerHTML = "<p class='text-danger'>Ingrese un número de identificación válido.</p>";
-        return;
-    }
-
+// Fetch all dashboard data
+async function fetchDashboardData() {
     try {
-        const response = await fetch(`http://localhost:5000/api/clients/${clientId}`, {
-            method: "GET",
+        const response = await fetch('/api/dashboard', {
+            method: 'GET',
             headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
+            throw new Error('Error al cargar datos del dashboard');
         }
 
         const data = await response.json();
-
-        const estadosFinancieros = {
-            "Al día": { class: "alert-success", text: "✅ El cliente está al día con sus pagos." },
-            "En mora": { class: "alert-warning", text: "⚠️ El cliente tiene pagos atrasados." },
-            "Bloqueado": { class: "alert-danger", text: "❌ El cliente está bloqueado por deudas." },
-            default: { class: "alert-secondary", text: "ℹ️ Estado financiero no disponible." }
-        };
-
-        const estado = estadosFinancieros[data.estado_financiero] || estadosFinancieros.default;
-
-        resultDiv.innerHTML = `
-            <div class="alert ${estado.class}" role="alert">${estado.text}</div>
-            <p><strong>Cliente:</strong> ${data.full_name}</p>
-            <p><strong>Email:</strong> ${data.email}</p>
-            <p><strong>Teléfono:</strong> ${data.phone}</p>
-            <p><strong>Dirección:</strong> ${data.address}</p>
-            <p><strong>Deuda Total:</strong> $${data.deuda_total}</p>
-            <p><strong>Último Pago:</strong> ${data.ultimo_pago || 'No disponible'}</p>
-        `;
+        
+        // Update dashboard counters
+        updateDashboardCounters(data);
+        
+        // Initialize charts with the data
+        initializeCharts(data);
+        
     } catch (error) {
-        console.error("Error al buscar cliente:", error);
-        resultDiv.innerHTML = `<p class='text-danger'>Ocurrió un error al buscar el cliente: ${error.message}</p>`;
+        console.error('Error al cargar el dashboard:', error);
+        showAlert('danger', `Error al cargar datos: ${error.message}`);
     }
 }
 
-const user = JSON.parse(localStorage.getItem("user"));
-const permission = user ? user.permission : {};
-
-if (!permission.roles.includes("read")) {
-    document.getElementById("rolesModule").style.display = "none";
+// Update dashboard counters
+function updateDashboardCounters(data) {
+    // Update basic counters
+    document.getElementById('totalClients').textContent = data.clientCount || 0;
+    document.getElementById('totalEmployees').textContent = data.employeeCount || 0;
+    document.getElementById('totalPayrolls').textContent = data.payrollCount || 0;
 }
 
-if (!permission.users.includes("read")) {
-    document.getElementById("usersModule").style.display = "none";
-}
-
-function toggleSubmenu(event) {
-    event.preventDefault(); // Evita que el enlace recargue la página
-
-    let parent = event.currentTarget.parentElement;
-    let submenu = parent.querySelector(".submenu");
-
-    if (submenu.classList.contains("show")) {
-        submenu.classList.remove("show");
-    } else {
-        submenu.classList.add("show");
-    }
-}
-
-async function loadDashboardData() {
-    try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            window.location.href = '/login.html';
-            return;
-        }
-
-        const [clientsResponse, employeesResponse, payrollsResponse] = await Promise.all([
-            fetch('/api/clients', { headers: { "Authorization": `Bearer ${token}` } }),
-            fetch('/api/employees?page=1&limit=1000', { 
-                headers: { "Authorization": `Bearer ${token}` } 
-            }),
-            fetch('/api/payrolls', { headers: { "Authorization": `Bearer ${token}` } })
-        ]);
-
-        if (!clientsResponse.ok || !employeesResponse.ok || !payrollsResponse.ok) {
-            throw new Error("Error al obtener datos del dashboard.");
-        }
-
-        const clients = await clientsResponse.json();
-        const employeesData = await employeesResponse.json();
-        const payrolls = await payrollsResponse.json();
-
-        // Actualizar contadores
-        document.getElementById("totalClients").textContent = clients.length;
-        document.getElementById("totalEmployees").textContent = employeesData.employees ? employeesData.employees.length : '0';
-        document.getElementById("totalPayrolls").textContent = payrolls.length;
-
-        // Renderizar gráficos
-        renderClientsChart(clients);
-        renderClientsPercentageChart(clients);
-    } catch (error) {
-        console.error("Error al cargar datos del dashboard:", error);
-        showToast("Error al cargar datos del dashboard");
-    }
-}
-
-async function loadDashboardStats() {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = '/login.html';
-            return;
-        }
-
-        const response = await fetch('/api/dashboard/stats', {
-            headers: {
-                'Authorization': `Bearer ${token}`
+// Initialize dashboard charts
+function initializeCharts(data) {
+    // Client distribution chart (bar chart)
+    if (data.clientsByType && data.clientsByType.length > 0) {
+        const clientLabels = data.clientsByType.map(item => item.type);
+        const clientData = data.clientsByType.map(item => item.count);
+        
+        new Chart(document.getElementById('clientsChart'), {
+            type: 'bar',
+            data: {
+                labels: clientLabels,
+                datasets: [{
+                    label: 'Clientes por Tipo',
+                    data: clientData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribución de Clientes por Tipo'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
         });
+    }
 
-        if (!response.ok) {
-            throw new Error('Error al cargar estadísticas');
-        }
-
-        const stats = await response.json();
+    // Client percentage chart (pie chart)
+    if (data.clientsByType && data.clientsByType.length > 0) {
+        const clientLabels = data.clientsByType.map(item => item.type);
+        const clientData = data.clientsByType.map(item => item.count);
         
-        // Actualizar estadísticas en el DOM
-        document.getElementById('totalEmployees').textContent = stats.totalEmployees || '0';
-        document.getElementById('totalPayrolls').textContent = stats.totalPayrolls || '0';
-        document.getElementById('totalUsers').textContent = stats.totalUsers || '0';
-    } catch (error) {
-        console.error('Error:', error);
-        showToast('Error al cargar estadísticas del dashboard');
+        new Chart(document.getElementById('clientsPercentageChart'), {
+            type: 'pie',
+            data: {
+                labels: clientLabels,
+                datasets: [{
+                    data: clientData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Porcentaje de Clientes por Tipo'
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
     }
 }
 
-function renderClientsChart(clients) {
-    const ctx = document.getElementById('clientsChart').getContext('2d');
-    const clientsData = clients.reduce((acc, client) => {
-        const status = client.status || 'Desconocido';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-    }, {});
-
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(clientsData),
-            datasets: [{
-                label: 'Clientes',
-                data: Object.values(clientsData),
-                backgroundColor: ['#42b72a', '#f7b731', '#e74c3c', '#3498db']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: 'Distribución de Clientes por Estado'
-                }
+// Search client by ID
+async function searchClient() {
+    const clientId = document.getElementById('clientId').value.trim();
+    
+    if (!clientId) {
+        showAlert('warning', 'Por favor ingrese un número de identificación');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/dashboard/client/${clientId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
             }
+        });
+        
+        const resultElement = document.getElementById('clientResult');
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                resultElement.innerHTML = `<div class="alert alert-warning">No se encontró cliente con identificación ${clientId}</div>`;
+            } else {
+                throw new Error('Error al buscar cliente');
+            }
+            return;
         }
-    });
+        
+        const client = await response.json();
+        
+        resultElement.innerHTML = `
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <strong>${client.name} ${client.lastName}</strong>
+                </div>
+                <div class="card-body">
+                    <p><strong>Identificación:</strong> ${client.idNumber}</p>
+                    <p><strong>Tipo:</strong> ${client.clientType || 'No especificado'}</p>
+                    <p><strong>Email:</strong> ${client.email || 'No especificado'}</p>
+                    <p><strong>Teléfono:</strong> ${client.phone || 'No especificado'}</p>
+                    <a href="/clientes.html?id=${client.id}" class="btn btn-primary btn-sm">Ver detalles</a>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Error al buscar cliente:', error);
+        showAlert('danger', `Error al buscar cliente: ${error.message}`);
+    }
 }
 
-function renderClientsPercentageChart(clients) {
-    const ctx = document.getElementById('clientsPercentageChart').getContext('2d');
-    const clientsData = clients.reduce((acc, client) => {
-        const estadoFinanciero = client.estado_financiero || 'Desconocido';
-        acc[estadoFinanciero] = (acc[estadoFinanciero] || 0) + 1;
-        return acc;
-    }, {});
-
-    const totalClients = clients.length;
-    const clientsPercentageData = Object.keys(clientsData).reduce((acc, key) => {
-        acc[key] = ((clientsData[key] / totalClients) * 100).toFixed(2);
-        return acc;
-    }, {});
-
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(clientsPercentageData),
-            datasets: [{
-                label: 'Porcentaje de Clientes',
-                data: Object.values(clientsPercentageData),
-                backgroundColor: ['#42b72a', '#f7b731', '#e74c3c', '#3498db']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: 'Porcentaje de Clientes por Estado Financiero'
-                }
+// Export dashboard report
+function exportDashboardReport() {
+    try {
+        fetch('/api/dashboard/export', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
             }
-        }
-    });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al exportar reporte');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `dashboard_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    } catch (error) {
+        console.error('Error al exportar reporte:', error);
+        showAlert('danger', `Error al exportar reporte: ${error.message}`);
+    }
 }
 
-function logout() {
-    localStorage.removeItem("token");
-    window.location.href = "login.html";
+// Utility function to show alerts
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Append to some container
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.classList.remove('show');
+        setTimeout(() => alertDiv.remove(), 150);
+    }, 5000);
 }
