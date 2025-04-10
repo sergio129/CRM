@@ -893,13 +893,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Configuración de event listeners
     function setupEventListeners() {
-        // Event listeners para los botones principales
-        document.getElementById('btnNuevoEgreso').addEventListener('click', mostrarModalNuevoEgreso);
-        document.getElementById('btnCategorias').addEventListener('click', mostrarModalCategorias);
-        document.getElementById('btnProveedores').addEventListener('click', mostrarModalProveedores);
-        document.getElementById('btnReportes').addEventListener('click', generarReporteEgresos);
-        document.getElementById('btnExportar').addEventListener('click', exportarEgresos);
-
+        // Event listeners para los botones de la barra de acción (no necesitan event listeners adicionales ya que usan onclick)
+        // Los botones ya usan onclick="mostrarModalNuevoEgreso()" directamente en el HTML
+        
         // Event listeners para filtros
         document.getElementById('btnBuscar').addEventListener('click', aplicarFiltros);
         document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
@@ -923,13 +919,52 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Event listeners para guardar formularios
-        document.getElementById('btnGuardarEgreso').addEventListener('click', guardarEgreso);
+        // Event listeners para guardar formularios - Arreglo aquí
+        const btnGuardarEgreso = document.getElementById('btnGuardarEgreso');
+        if (btnGuardarEgreso) {
+            btnGuardarEgreso.addEventListener('click', guardarEgreso);
+            console.log('Event listener de guardar egreso configurado correctamente');
+        } else {
+            console.error('Botón de guardar egreso no encontrado en el DOM');
+        }
+        
         document.getElementById('btnGuardarCategoria').addEventListener('click', guardarCategoria);
+
+        // Botón para nueva categoría
+        const btnNuevaCategoria = document.getElementById('btnNuevaCategoria');
+        if (btnNuevaCategoria) {
+            btnNuevaCategoria.addEventListener('click', function() {
+                document.getElementById('categoriaId').value = '';
+                document.getElementById('categoriaModalTitle').textContent = 'Nueva Categoría';
+                document.getElementById('categoriaNombre').value = '';
+                document.getElementById('categoriaDescripcion').value = '';
+                document.getElementById('categoriaActiva').checked = true;
+                
+                const modal = new bootstrap.Modal(document.getElementById('categoriaFormModal'));
+                modal.show();
+            });
+        }
+        
+        // Botón para nuevo proveedor
+        const btnNuevoProveedor = document.getElementById('btnNuevoProveedor');
+        if (btnNuevoProveedor) {
+            btnNuevoProveedor.addEventListener('click', function() {
+                document.getElementById('proveedorId').value = '';
+                document.getElementById('proveedorModalTitle').textContent = 'Nuevo Proveedor';
+                document.getElementById('proveedorForm').reset();
+                document.getElementById('proveedorActivo').checked = true;
+                
+                const modal = new bootstrap.Modal(document.getElementById('proveedorFormModal'));
+                modal.show();
+            });
+        }
 
         // Event listener para editar desde detalles
         document.getElementById('btnEditarDesdeDetalle').addEventListener('click', function() {
-            $('#detalleEgresoModal').modal('hide');
+            const detalleModal = bootstrap.Modal.getInstance(document.getElementById('detalleEgresoModal'));
+            if (detalleModal) {
+                detalleModal.hide();
+            }
             editarEgreso(currentEgresoId);
         });
     }
