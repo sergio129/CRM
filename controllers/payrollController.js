@@ -1,6 +1,7 @@
 const Payroll = require('../models/Payroll');
 const PayrollDetail = require('../models/PayrollDetail');
 const Employee = require('../models/Employee');
+const { Op } = require('sequelize');
 const { validationResult } = require('express-validator');
 const PDFDocument = require('pdfkit');
 
@@ -793,6 +794,70 @@ exports.markPayrollAsPaid = async (req, res) => {
         console.error("Error al marcar la nómina como pagada:", error);
         res.status(500).json({ 
             message: "Error al marcar la nómina como pagada", 
+            error: error.message 
+        });
+    }
+};
+
+// Obtener resumen de nóminas para el dashboard
+exports.getPayrollSummary = async (req, res) => {
+    try {
+        const { sequelize } = require('../config/database');
+        
+        // Obtener total pagado en nóminas
+        const totalPagadoResult = await Payroll.findOne({
+            attributes: [
+                [sequelize.fn('SUM', sequelize.col('neto_pagar')), 'totalPagado']
+            ],
+            where: {
+                status: 'Pagado'
+            }
+        });
+        
+        // Obtener total pendiente en nóminas
+        const totalPendienteResult = await Payroll.findOne({
+            attributes: [
+                [sequelize.fn('SUM', sequelize.col('neto_pagar')), 'totalPendiente']
+            ],
+            where: {
+                status: 'Pendiente'
+            }
+        });
+        
+        // Obtener cantidad de empleados con nómina activa
+        const empleadosActivosCount = await Payroll.count({
+            distinct: true,
+            col: 'employee_id',
+            where: {
+                status: {
+                    [Op.in]: ['Pagado', 'Pendiente']
+                }
+            }
+        });
+        
+        // Calcular monto promedio de nómina por empleado
+        let promedioNomina = 0;
+        if (empleadosActivosCount > 0) {
+            const totalNomina = parseFloat(totalPagadoResult.get('totalPagado') || 0) + 
+                              parseFloat(totalPendienteResult.get('totalPendiente') || 0);
+            promedioNomina = totalNomina / empleadosActivosCount;
+        }
+        
+        // Armar respuesta
+        const totalPagado = parseFloat(totalPagadoResult.get('totalPagado')) || 0;
+        const totalPendiente = parseFloat(totalPendienteResult.get('totalPendiente')) || 0;
+        
+        res.json({
+            totalPagado,
+            totalPendiente,
+            totalNomina: totalPagado + totalPendiente,
+            empleadosActivos: empleadosActivosCount,
+            promedioNomina
+        });
+    } catch (error) {
+        console.error("Error al obtener resumen de nóminas:", error);
+        res.status(500).json({ 
+            message: "Error al obtener resumen de nóminas", 
             error: error.message 
         });
     }

@@ -28,11 +28,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalEgresosElement = document.getElementById('totalEgresos');
     const totalPagadoElement = document.getElementById('totalPagado');
     const totalPendienteElement = document.getElementById('totalPendiente');
+    const totalNominaElement = document.getElementById('totalNomina');
 
     // Inicialización
     initDatePicker();
     cargarCategorias();
     cargarEgresos();
+    cargarTotalNomina();
     setupEventListeners();
 
     // Inicializar Date Picker
@@ -187,6 +189,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Obtener el rol del usuario del token para determinar permisos
+        const userRole = getUserRoleFromToken();
+        const isAdmin = userRole === 'Administrador';
+
         let filas = '';
         
         egresos.forEach(egreso => {
@@ -238,6 +244,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     metodoPago = metodoPagoValor || 'No especificado';
             }
             
+            // Determinar si el botón de editar debe estar deshabilitado (egresos pagados no se pueden editar)
+            const editarDisabled = egreso.estado === 'pagado' ? 'disabled' : '';
+            const editarClass = egreso.estado === 'pagado' ? 'btn-secondary' : 'btn-primary';
+            
+            // Determinar si el botón de eliminar debe estar visible (solo administradores pueden eliminar)
+            const eliminarButton = isAdmin ? 
+                `<button onclick="eliminarEgreso(${egreso.id})" class="btn btn-sm btn-danger" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>` : '';
+            
             filas += `
             <tr>
                 <td>${egreso.numero_comprobante || egreso.comprobante || '-'}</td>
@@ -251,17 +267,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button onclick="verDetalle(${egreso.id})" class="btn btn-sm btn-info" title="Ver detalle">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button onclick="editarEgreso(${egreso.id})" class="btn btn-sm btn-primary" title="Editar">
+                    <button onclick="editarEgreso(${egreso.id})" class="btn btn-sm ${editarClass}" ${editarDisabled} title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="eliminarEgreso(${egreso.id})" class="btn btn-sm btn-danger" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    ${eliminarButton}
                 </td>
             </tr>`;
         });
         
         tablaCuerpo.innerHTML = filas;
+    }
+    
+    // Función para obtener el rol del usuario desde el token JWT
+    function getUserRoleFromToken() {
+        const token = localStorage.getItem('token');
+        if (!token) return null;
+        
+        try {
+            // Decodificar el token JWT (formato: header.payload.signature)
+            const payload = token.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payload));
+            return decodedPayload.role || null;
+        } catch (error) {
+            console.error('Error al decodificar el token:', error);
+            return null;
+        }
     }
 
     // Actualiza la paginación
@@ -649,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function() {
             currentEgresoId = egreso.id;
             
             // Llenar los detalles básicos
-            document.getElementById('detalleComprobante').textContent = egreso.comprobante || '-';
+            document.getElementById('detalleComprobante').textContent = egreso.numero_comprobante || egreso.comprobante || '-';
             document.getElementById('detalleFecha').textContent = new Date(egreso.fecha).toLocaleDateString('es-ES');
             document.getElementById('detalleCategoria').textContent = egreso.categoria?.nombre || '-';
             document.getElementById('detalleConcepto').textContent = egreso.concepto;
@@ -674,8 +704,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.getElementById('detalleEstado').innerHTML = estadoHTML;
             
+            // Formatear el método de pago - Corregido
+            const metodoPagoValor = egreso.metodo_pago || egreso.metodoPago;
             let metodoHTML = '';
-            switch (egreso.metodoPago) {
+            switch (metodoPagoValor) {
                 case 'efectivo':
                     metodoHTML = '<i class="fas fa-money-bill-wave text-success me-1"></i> Efectivo';
                     break;
@@ -689,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     metodoHTML = '<i class="far fa-credit-card text-secondary me-1"></i> Tarjeta';
                     break;
                 default:
-                    metodoHTML = egreso.metodoPago;
+                    metodoHTML = metodoPagoValor ? metodoPagoValor : 'No especificado';
             }
             document.getElementById('detalleMetodo').innerHTML = metodoHTML;
             
@@ -1138,6 +1170,32 @@ document.addEventListener('DOMContentLoaded', function() {
         // Eliminar el toast del DOM cuando se oculte
         toastElement.addEventListener('hidden.bs.toast', function () {
             toastContainer.removeChild(toastElement);
+        });
+    }
+
+    // Cargar total de egresos de nómina
+    function cargarTotalNomina() {
+        fetch('/api/payroll/summary', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar resumen de nómina');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.totalPagado !== undefined) {
+                totalNominaElement.textContent = formatearMoneda(data.totalPagado || 0);
+            } else {
+                totalNominaElement.textContent = formatearMoneda(0);
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar total de nómina:', error);
+            totalNominaElement.textContent = formatearMoneda(0);
         });
     }
 

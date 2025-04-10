@@ -6,7 +6,8 @@ const {
     updatePayroll, 
     deletePayroll,
     generatePayrollPDF,
-    markPayrollAsPaid
+    markPayrollAsPaid,
+    getPayrollSummary
 } = require('../controllers/payrollController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const Payroll = require('../models/Payroll');
@@ -44,6 +45,10 @@ router.get('/', authenticate, async (req, res) => {
         });
     }
 });
+
+// Añadir ruta para obtener el resumen de nóminas para el dashboard
+// Esta ruta debe ir ANTES de las rutas con parámetros
+router.get('/summary', authenticate, getPayrollSummary);
 
 router.get('/:id', authenticate, authorize(['Administrador']), getPayrollById);
 router.post('/', authenticate, authorize(['Administrador']), createPayroll);
