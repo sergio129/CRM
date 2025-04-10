@@ -689,6 +689,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('detalleMonto').textContent = formatearMoneda(egreso.monto);
             
             let estadoHTML = '';
+            const estadoPagado = egreso.estado === 'pagado';
             switch (egreso.estado) {
                 case 'pagado':
                     estadoHTML = '<span class="badge bg-success">Pagado</span>';
@@ -770,6 +771,22 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 detalleArchivos.innerHTML = '<p>No hay archivos adjuntos.</p>';
                 archivosContainer.style.display = 'block';
+            }
+            
+            // Configurar el botón de editar según el estado
+            const btnEditar = document.getElementById('btnEditarDesdeDetalle');
+            if (estadoPagado) {
+                // Si está pagado, deshabilitamos el botón y cambiamos su apariencia
+                btnEditar.classList.remove('btn-primary');
+                btnEditar.classList.add('btn-secondary');
+                btnEditar.disabled = true;
+                btnEditar.title = 'No se puede editar un egreso pagado';
+            } else {
+                // Si no está pagado (pendiente o anulado), habilitamos el botón
+                btnEditar.classList.remove('btn-secondary');
+                btnEditar.classList.add('btn-primary');
+                btnEditar.disabled = false;
+                btnEditar.title = 'Editar este egreso';
             }
             
             // Mostrar modal
@@ -1175,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cargar total de egresos de nómina
     function cargarTotalNomina() {
-        fetch('/api/payroll/summary', {
+        fetch('/api/payrolls/summary', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }

@@ -802,7 +802,7 @@ exports.markPayrollAsPaid = async (req, res) => {
 // Obtener resumen de nóminas para el dashboard
 exports.getPayrollSummary = async (req, res) => {
     try {
-        const { sequelize } = require('../config/database');
+        const sequelize = require('sequelize');
         
         // Obtener total pagado en nóminas
         const totalPagadoResult = await Payroll.findOne({
