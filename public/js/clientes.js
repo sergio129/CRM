@@ -275,9 +275,9 @@ async function saveClient() {
             ultimo_pago: document.getElementById('ultimo_pago').value,
             telefono_movil: document.getElementById('telefonoMovil').value,
             ciudad: document.getElementById('ciudad').value,
+            full_name: document.getElementById('fullName').value, // Asegurar que se recoge el valor del nombre
 
             // Resto de campos
-            full_name: document.getElementById('fullName').value,
             tipo_documento: document.getElementById('tipoDocumento').value,
             fecha_nacimiento: document.getElementById('fechaNacimiento').value || null,
             genero: document.getElementById('genero').value,
@@ -301,10 +301,29 @@ async function saveClient() {
         };
 
         // Validar campos requeridos
-        const requiredFields = ['phone', 'address', 'identification', 'ultimo_pago'];
+        const requiredFields = ['phone', 'address', 'identification', 'ultimo_pago', 'full_name'];
         for (const field of requiredFields) {
             if (!clientData[field]) {
-                throw new Error(`El campo ${field} es obligatorio`);
+                const fieldLabels = {
+                    'phone': 'Teléfono móvil',
+                    'address': 'Dirección',
+                    'identification': 'Número de documento',
+                    'ultimo_pago': 'Último pago',
+                    'full_name': 'Nombre completo'
+                };
+                const fieldName = fieldLabels[field] || field;
+                
+                // Resaltar el campo correspondiente
+                const fieldMapping = {
+                    'full_name': 'fullName',
+                    'phone': 'telefonoMovil',
+                    'address': 'ciudad',
+                    'identification': 'idNumber',
+                    'ultimo_pago': 'ultimo_pago'
+                };
+                
+                highlightInvalidField(fieldMapping[field] || field);
+                throw new Error(`El campo "${fieldName}" es obligatorio`);
             }
         }
 
