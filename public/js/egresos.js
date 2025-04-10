@@ -1,18 +1,439 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificación de autenticación
+// Variables globales para permitir acceso desde el HTML
+let currentPage = 1;
+let pageSize = 10;
+let totalPages = 0;
+let currentEgresoId = null;
+let egresos = [];
+let filtros = {
+    fechaDesde: null,
+    fechaHasta: null,
+    categoria: '',
+    estado: '',
+    metodoPago: '',
+    busqueda: ''
+};
+
+// Funciones globales para los onclick del HTML
+function mostrarModalNuevoEgreso() {
+    const modalTitle = document.getElementById('egresoModalTitle');
+    const form = document.getElementById('egresoForm');
+    
+    modalTitle.textContent = 'Nuevo Egreso';
+    form.reset();
+    document.getElementById('egresoId').value = '';
+    document.getElementById('seccionRecurrencia').style.display = 'none';
+    document.getElementById('archivosActualesContainer').style.display = 'none';
+    document.getElementById('fecha').valueAsDate = new Date();
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('egresoModal'));
+    modal.show();
+}
+
+function verDetalle(id) {
     const token = localStorage.getItem('token');
     if (!token) {
         window.location.href = 'login.html';
         return;
     }
 
-    // Variables globales
-    let currentPage = 1;
-    let pageSize = 10;
-    let totalPages = 0;
-    let currentEgresoId = null;
-    let egresos = [];
-    let filtros = {
+    fetch(`/api/egresos/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos del egreso');
+        }
+        return response.json();
+    })
+    .then(egreso => {
+        currentEgresoId = egreso.id;
+        
+        // Llenar los detalles básicos
+        document.getElementById('detalleComprobante').textContent = egreso.numero_comprobante || egreso.comprobante || '-';
+        document.getElementById('detalleFecha').textContent = new Date(egreso.fecha).toLocaleDateString('es-ES');
+        document.getElementById('detalleCategoria').textContent = egreso.categoria?.nombre || '-';
+        document.getElementById('detalleConcepto').textContent = egreso.concepto;
+        document.getElementById('detalleDescripcion').textContent = egreso.descripcion || '-';
+        
+        // Información de pago
+        document.getElementById('detalleMonto').textContent = formatearMoneda(egreso.monto);
+        
+        let estadoHTML = '';
+        const estadoPagado = egreso.estado === 'pagado';
+        switch (egreso.estado) {
+            case 'pagado':
+                estadoHTML = '<span class="badge bg-success">Pagado</span>';
+                break;
+            case 'pendiente':
+                estadoHTML = '<span class="badge bg-warning">Pendiente</span>';
+                break;
+            case 'anulado':
+                estadoHTML = '<span class="badge bg-danger">Anulado</span>';
+                break;
+            default:
+                estadoHTML = `<span class="badge bg-secondary">${egreso.estado}</span>`;
+        }
+        document.getElementById('detalleEstado').innerHTML = estadoHTML;
+        
+        // Formatear el método de pago - Corregido
+        const metodoPagoValor = egreso.metodo_pago || egreso.metodoPago;
+        let metodoHTML = '';
+        switch (metodoPagoValor) {
+            case 'efectivo':
+                metodoHTML = '<i class="fas fa-money-bill-wave text-success me-1"></i> Efectivo';
+                break;
+            case 'transferencia':
+                metodoHTML = '<i class="fas fa-exchange-alt text-primary me-1"></i> Transferencia';
+                break;
+            case 'cheque':
+                metodoHTML = '<i class="fas fa-money-check text-info me-1"></i> Cheque';
+                break;
+            case 'tarjeta':
+                metodoHTML = '<i class="far fa-credit-card text-secondary me-1"></i> Tarjeta';
+                break;
+            default:
+                metodoHTML = metodoPagoValor ? metodoPagoValor : 'No especificado';
+        }
+        document.getElementById('detalleMetodo').innerHTML = metodoHTML;
+        
+        document.getElementById('detalleBeneficiario').textContent = egreso.beneficiario || '-';
+        
+        // Información de recurrencia si existe
+        const recurrenciaContainer = document.getElementById('detalleRecurrenciaContainer');
+        if (egreso.recurrencia) {
+            document.getElementById('detalleRecurrenciaFrecuencia').textContent = capitalizarPrimeraLetra(egreso.recurrencia.frecuencia);
+            document.getElementById('detalleRecurrenciaInicio').textContent = new Date(egreso.recurrencia.fechaInicio).toLocaleDateString('es-ES');
+            
+            const fechaFin = egreso.recurrencia.fechaFin 
+                ? new Date(egreso.recurrencia.fechaFin).toLocaleDateString('es-ES')
+                : 'Sin fecha límite';
+            document.getElementById('detalleRecurrenciaFin').textContent = fechaFin;
+            
+            // Calcular próximo pago
+            const proximoPago = calcularProximoPago(egreso.recurrencia);
+            document.getElementById('detalleProximoPago').textContent = proximoPago 
+                ? proximoPago.toLocaleDateString('es-ES')
+                : 'No hay pagos pendientes';
+            
+            recurrenciaContainer.style.display = 'block';
+        } else {
+            recurrenciaContainer.style.display = 'none';
+        }
+        
+        // Mostrar archivos adjuntos
+        const archivosContainer = document.getElementById('detalleArchivosContainer');
+        const detalleArchivos = document.getElementById('detalleArchivos');
+        
+        if (egreso.archivos && egreso.archivos.length > 0) {
+            let html = '<ul class="list-group">';
+            egreso.archivos.forEach(archivo => {
+                html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${archivo.nombreOriginal || archivo.ruta.split('/').pop()}</span>
+                    <button onclick="descargarArchivo(${archivo.id})" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-download"></i> Descargar
+                    </button>
+                </li>`;
+            });
+            html += '</ul>';
+            detalleArchivos.innerHTML = html;
+            archivosContainer.style.display = 'block';
+        } else {
+            detalleArchivos.innerHTML = '<p>No hay archivos adjuntos.</p>';
+            archivosContainer.style.display = 'block';
+        }
+        
+        // Configurar el botón de editar según el estado
+        const btnEditar = document.getElementById('btnEditarDesdeDetalle');
+        if (estadoPagado) {
+            // Si está pagado, deshabilitamos el botón y cambiamos su apariencia
+            btnEditar.classList.remove('btn-primary');
+            btnEditar.classList.add('btn-secondary');
+            btnEditar.disabled = true;
+            btnEditar.title = 'No se puede editar un egreso pagado';
+        } else {
+            // Si no está pagado (pendiente o anulado), habilitamos el botón
+            btnEditar.classList.remove('btn-secondary');
+            btnEditar.classList.add('btn-primary');
+            btnEditar.disabled = false;
+            btnEditar.title = 'Editar este egreso';
+        }
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('detalleEgresoModal'));
+        modal.show();
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+function editarEgreso(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    fetch(`/api/egresos/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos del egreso');
+        }
+        return response.json();
+    })
+    .then(egreso => {
+        // Llenar el formulario con los datos obtenidos
+        document.getElementById('egresoId').value = egreso.id;
+        document.getElementById('egresoModalTitle').textContent = 'Editar Egreso';
+        document.getElementById('fecha').value = egreso.fecha.substring(0, 10);
+        document.getElementById('categoria').value = egreso.categoria_id || ''; // Cambiado de categoriaId a categoria_id
+        document.getElementById('concepto').value = egreso.concepto;
+        document.getElementById('monto').value = egreso.monto;
+        document.getElementById('estado').value = egreso.estado;
+        
+        // Establecer correctamente el método de pago usando el campo del backend (metodo_pago)
+        const metodoPago = egreso.metodo_pago || egreso.metodoPago;
+        document.getElementById('metodoPago').value = metodoPago || 'efectivo';
+        
+        document.getElementById('beneficiario').value = egreso.beneficiario || '';
+        document.getElementById('referenciaPago').value = egreso.referencia_pago || egreso.referenciaPago || '';
+        document.getElementById('descripcion').value = egreso.descripcion || '';
+        
+        // Configurar recurrencia si existe
+        const esRecurrente = !!egreso.recurrencia;
+        document.getElementById('esRecurrente').checked = esRecurrente;
+        document.getElementById('seccionRecurrencia').style.display = esRecurrente ? 'block' : 'none';
+        
+        if (esRecurrente && egreso.recurrencia) {
+            document.getElementById('fechaInicio').value = egreso.recurrencia.fechaInicio.substring(0, 10);
+            if (egreso.recurrencia.fechaFin) {
+                document.getElementById('fechaFin').value = egreso.recurrencia.fechaFin.substring(0, 10);
+            } else {
+                document.getElementById('fechaFin').value = '';
+            }
+            document.getElementById('frecuencia').value = egreso.recurrencia.frecuencia;
+            document.getElementById('cantidadRepeticiones').value = egreso.recurrencia.cantidadRepeticiones || '';
+            
+            // Configurar visibilidad de campos según frecuencia
+            const frecuencia = egreso.recurrencia.frecuencia;
+            if (frecuencia === 'semanal' || frecuencia === 'quincenal') {
+                document.getElementById('diaSemanaContainer').style.display = 'block';
+                document.getElementById('diaMesContainer').style.display = 'none';
+                document.getElementById('diaSemana').value = egreso.recurrencia.diaSemana || '1';
+            } else {
+                document.getElementById('diaSemanaContainer').style.display = 'none';
+                document.getElementById('diaMesContainer').style.display = 'block';
+                document.getElementById('diaMes').value = egreso.recurrencia.diaMes || '1';
+            }
+        }
+        
+        // Mostrar archivos adjuntos si los hay
+        if (egreso.archivos && egreso.archivos.length > 0) {
+            mostrarArchivosActuales(egreso.archivos);
+            document.getElementById('archivosActualesContainer').style.display = 'block';
+        } else {
+            document.getElementById('archivosActualesContainer').style.display = 'none';
+        }
+        
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('egresoModal'));
+        modal.show();
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+function guardarEgreso() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    const egresoId = document.getElementById('egresoId').value;
+    const esNuevo = !egresoId;
+    
+    // Validar formulario
+    const form = document.getElementById('egresoForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Construir objeto con los datos del formulario
+    const formData = new FormData();
+    formData.append('fecha', document.getElementById('fecha').value);
+    formData.append('categoria_id', document.getElementById('categoria').value); // Cambiado de categoriaId a categoria_id
+    formData.append('concepto', document.getElementById('concepto').value);
+    formData.append('monto', document.getElementById('monto').value);
+    formData.append('estado', document.getElementById('estado').value);
+    formData.append('metodoPago', document.getElementById('metodoPago').value);
+    formData.append('beneficiario', document.getElementById('beneficiario').value);
+    formData.append('referenciaPago', document.getElementById('referenciaPago').value);
+    formData.append('descripcion', document.getElementById('descripcion').value);
+    
+    // Datos de recurrencia
+    const esRecurrente = document.getElementById('esRecurrente').checked;
+    formData.append('esRecurrente', esRecurrente);
+    
+    if (esRecurrente) {
+        formData.append('recurrencia[fechaInicio]', document.getElementById('fechaInicio').value);
+        formData.append('recurrencia[fechaFin]', document.getElementById('fechaFin').value || null);
+        formData.append('recurrencia[frecuencia]', document.getElementById('frecuencia').value);
+        formData.append('recurrencia[cantidadRepeticiones]', document.getElementById('cantidadRepeticiones').value || null);
+        
+        const frecuencia = document.getElementById('frecuencia').value;
+        if (frecuencia === 'semanal' || frecuencia === 'quincenal') {
+            formData.append('recurrencia[diaSemana]', document.getElementById('diaSemana').value);
+        } else {
+            formData.append('recurrencia[diaMes]', document.getElementById('diaMes').value);
+        }
+    }
+    
+    // Archivos adjuntos
+    const archivos = document.getElementById('archivosAdjuntos').files;
+    for (let i = 0; i < archivos.length; i++) {
+        formData.append('archivos', archivos[i]);
+    }
+
+    // Determinar URL y método HTTP
+    const url = esNuevo ? '/api/egresos' : `/api/egresos/${egresoId}`;
+    const method = esNuevo ? 'POST' : 'PUT';
+    
+    // Enviar datos a la API
+    fetch(url, {
+        method: method,
+        body: formData,
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Error al guardar el egreso');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        mostrarNotificacion('Éxito', `Egreso ${esNuevo ? 'creado' : 'actualizado'} correctamente`, 'success');
+        // Cerrar el modal
+        bootstrap.Modal.getInstance(document.getElementById('egresoModal')).hide();
+        // Recargar los egresos
+        cargarEgresos();
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+function eliminarEgreso(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Buscar el egreso en la lista actual
+    fetch(`/api/egresos/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos del egreso');
+        }
+        return response.json();
+    })
+    .then(egreso => {
+        // Llenar el modal con los datos del egreso
+        document.getElementById('eliminarFecha').textContent = new Date(egreso.fecha).toLocaleDateString('es-ES');
+        document.getElementById('eliminarConcepto').textContent = egreso.concepto;
+        document.getElementById('eliminarCategoria').textContent = egreso.categoria?.nombre || '-';
+        document.getElementById('eliminarMonto').textContent = formatearMoneda(egreso.monto);
+        
+        let estadoText;
+        switch (egreso.estado) {
+            case 'pagado': estadoText = 'Pagado'; break;
+            case 'pendiente': estadoText = 'Pendiente'; break;
+            case 'anulado': estadoText = 'Anulado'; break;
+            default: estadoText = egreso.estado;
+        }
+        document.getElementById('eliminarEstado').textContent = estadoText;
+        
+        // Mostrar el modal
+        const confirmarModal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+        confirmarModal.show();
+        
+        // Configurar el botón de confirmar
+        const btnConfirmar = document.getElementById('btnConfirmarEliminar');
+        
+        // Remover event listeners anteriores
+        const nuevoBtn = btnConfirmar.cloneNode(true);
+        btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
+        
+        // Añadir nuevo event listener
+        nuevoBtn.addEventListener('click', function() {
+            confirmarModal.hide();
+            
+            // Enviar la solicitud de eliminación
+            fetch(`/api/egresos/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al eliminar el egreso');
+                }
+                return response.json();
+            })
+            .then(data => {
+                mostrarNotificacion('Éxito', 'Egreso eliminado correctamente', 'success');
+                cargarEgresos();
+            })
+            .catch(error => {
+                mostrarNotificacion('Error', error.message, 'error');
+            });
+        });
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+function aplicarFiltros() {
+    filtros.categoria = document.getElementById('categoriaFiltro').value;
+    filtros.estado = document.getElementById('estadoFiltro').value;
+    filtros.metodoPago = document.getElementById('metodoFiltro').value;
+    filtros.busqueda = document.getElementById('busquedaTexto').value;
+    
+    // Fecha ya se actualiza en el event listener del datepicker
+    
+    currentPage = 1; // Volver a la primera página
+    cargarEgresos();
+}
+
+function limpiarFiltros() {
+    document.getElementById('fechaRango').value = '';
+    document.getElementById('categoriaFiltro').value = '';
+    document.getElementById('estadoFiltro').value = '';
+    document.getElementById('metodoFiltro').value = '';
+    document.getElementById('busquedaTexto').value = '';
+    
+    filtros = {
         fechaDesde: null,
         fechaHasta: null,
         categoria: '',
@@ -20,6 +441,135 @@ document.addEventListener('DOMContentLoaded', function() {
         metodoPago: '',
         busqueda: ''
     };
+    
+    currentPage = 1;
+    cargarEgresos();
+}
+
+// Helper functions
+function formatearMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0
+    }).format(valor);
+}
+
+function capitalizarPrimeraLetra(texto) {
+    if (!texto) return '';
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// Función para calcular próximo pago
+function calcularProximoPago(recurrencia) {
+    if (!recurrencia || !recurrencia.fechaInicio) {
+        return null;
+    }
+    
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    let fechaInicio = new Date(recurrencia.fechaInicio);
+    fechaInicio.setHours(0, 0, 0, 0);
+    
+    if (recurrencia.fechaFin) {
+        let fechaFin = new Date(recurrencia.fechaFin);
+        fechaFin.setHours(0, 0, 0, 0);
+        
+        if (fechaFin < hoy) {
+            return null; // Ya no hay pagos pendientes
+        }
+    }
+    
+    let proximaFecha = new Date(fechaInicio);
+    
+    switch (recurrencia.frecuencia) {
+        case 'semanal':
+            // Ajustar al día de la semana correcto
+            const diaSemana = parseInt(recurrencia.diaSemana) || 1;
+            proximaFecha.setDate(proximaFecha.getDate() + (diaSemana - proximaFecha.getDay() + 7) % 7);
+            
+            // Avanzar semanas hasta encontrar una fecha futura
+            while (proximaFecha < hoy) {
+                proximaFecha.setDate(proximaFecha.getDate() + 7);
+            }
+            break;
+            
+        case 'quincenal':
+            // Similar a semanal pero avanza de 14 en 14 días
+            const diaSemanaQuincenal = parseInt(recurrencia.diaSemana) || 1;
+            proximaFecha.setDate(proximaFecha.getDate() + (diaSemanaQuincenal - proximaFecha.getDay() + 7) % 7);
+            
+            while (proximaFecha < hoy) {
+                proximaFecha.setDate(proximaFecha.getDate() + 14);
+            }
+            break;
+            
+        case 'mensual':
+            // Ajustar al día del mes correcto
+            const diaMes = parseInt(recurrencia.diaMes) || 1;
+            proximaFecha.setDate(diaMes);
+            
+            // Avanzar meses hasta encontrar una fecha futura
+            while (proximaFecha < hoy) {
+                proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+            }
+            break;
+            
+        case 'trimestral':
+            // Ajustar al día del mes correcto
+            const diaMesTrimestral = parseInt(recurrencia.diaMes) || 1;
+            proximaFecha.setDate(diaMesTrimestral);
+            
+            // Avanzar trimestres hasta encontrar una fecha futura
+            while (proximaFecha < hoy) {
+                proximaFecha.setMonth(proximaFecha.getMonth() + 3);
+            }
+            break;
+            
+        case 'semestral':
+            // Ajustar al día del mes correcto
+            const diaMesSemestral = parseInt(recurrencia.diaMes) || 1;
+            proximaFecha.setDate(diaMesSemestral);
+            
+            // Avanzar semestres hasta encontrar una fecha futura
+            while (proximaFecha < hoy) {
+                proximaFecha.setMonth(proximaFecha.getMonth() + 6);
+            }
+            break;
+            
+        case 'anual':
+            // Ajustar al día del mes correcto
+            const diaMesAnual = parseInt(recurrencia.diaMes) || 1;
+            proximaFecha.setDate(diaMesAnual);
+            
+            // Avanzar años hasta encontrar una fecha futura
+            while (proximaFecha < hoy) {
+                proximaFecha.setFullYear(proximaFecha.getFullYear() + 1);
+            }
+            break;
+    }
+    
+    return proximaFecha;
+}
+
+function descargarArchivo(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    window.open(`/api/egresos/archivos/${id}/descargar?token=${token}`, '_blank');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificación de autenticación
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
 
     // Referencias a elementos del DOM
     const tablaCuerpo = document.getElementById('tablaEgresos');
@@ -357,839 +907,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Aplicar filtros de búsqueda
-    function aplicarFiltros() {
-        filtros.categoria = document.getElementById('categoriaFiltro').value;
-        filtros.estado = document.getElementById('estadoFiltro').value;
-        filtros.metodoPago = document.getElementById('metodoFiltro').value;
-        filtros.busqueda = document.getElementById('busquedaTexto').value;
-        
-        // Fecha ya se actualiza en el event listener del datepicker
-        
-        currentPage = 1; // Volver a la primera página
-        cargarEgresos();
-    }
-
-    // Limpiar filtros
-    function limpiarFiltros() {
-        document.getElementById('fechaRango').value = '';
-        document.getElementById('categoriaFiltro').value = '';
-        document.getElementById('estadoFiltro').value = '';
-        document.getElementById('metodoFiltro').value = '';
-        document.getElementById('busquedaTexto').value = '';
-        
-        filtros = {
-            fechaDesde: null,
-            fechaHasta: null,
-            categoria: '',
-            estado: '',
-            metodoPago: '',
-            busqueda: ''
-        };
-        
-        currentPage = 1;
-        cargarEgresos();
-    }
-
-    // Mostrar modal para nuevo egreso
-    function mostrarModalNuevoEgreso() {
-        const modalTitle = document.getElementById('egresoModalTitle');
-        const form = document.getElementById('egresoForm');
-        
-        modalTitle.textContent = 'Nuevo Egreso';
-        form.reset();
-        document.getElementById('egresoId').value = '';
-        document.getElementById('seccionRecurrencia').style.display = 'none';
-        document.getElementById('archivosActualesContainer').style.display = 'none';
-        document.getElementById('fecha').valueAsDate = new Date();
-        
-        // Mostrar el modal
-        const modal = new bootstrap.Modal(document.getElementById('egresoModal'));
-        modal.show();
-    }
-
-    // Guardar egreso (nuevo o actualización)
-    function guardarEgreso() {
-        const egresoId = document.getElementById('egresoId').value;
-        const esNuevo = !egresoId;
-        
-        // Validar formulario
-        const form = document.getElementById('egresoForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-        
-        // Construir objeto con los datos del formulario
-        const formData = new FormData();
-        formData.append('fecha', document.getElementById('fecha').value);
-        formData.append('categoria_id', document.getElementById('categoria').value); // Cambiado de categoriaId a categoria_id
-        formData.append('concepto', document.getElementById('concepto').value);
-        formData.append('monto', document.getElementById('monto').value);
-        formData.append('estado', document.getElementById('estado').value);
-        formData.append('metodoPago', document.getElementById('metodoPago').value);
-        formData.append('beneficiario', document.getElementById('beneficiario').value);
-        formData.append('referenciaPago', document.getElementById('referenciaPago').value);
-        formData.append('descripcion', document.getElementById('descripcion').value);
-        
-        // Datos de recurrencia
-        const esRecurrente = document.getElementById('esRecurrente').checked;
-        formData.append('esRecurrente', esRecurrente);
-        
-        if (esRecurrente) {
-            formData.append('recurrencia[fechaInicio]', document.getElementById('fechaInicio').value);
-            formData.append('recurrencia[fechaFin]', document.getElementById('fechaFin').value || null);
-            formData.append('recurrencia[frecuencia]', document.getElementById('frecuencia').value);
-            formData.append('recurrencia[cantidadRepeticiones]', document.getElementById('cantidadRepeticiones').value || null);
-            
-            const frecuencia = document.getElementById('frecuencia').value;
-            if (frecuencia === 'semanal' || frecuencia === 'quincenal') {
-                formData.append('recurrencia[diaSemana]', document.getElementById('diaSemana').value);
-            } else {
-                formData.append('recurrencia[diaMes]', document.getElementById('diaMes').value);
-            }
-        }
-        
-        // Archivos adjuntos
-        const archivos = document.getElementById('archivosAdjuntos').files;
-        for (let i = 0; i < archivos.length; i++) {
-            formData.append('archivos', archivos[i]);
-        }
-
-        // Determinar URL y método HTTP
-        const url = esNuevo ? '/api/egresos' : `/api/egresos/${egresoId}`;
-        const method = esNuevo ? 'POST' : 'PUT';
-        
-        // Enviar datos a la API
-        fetch(url, {
-            method: method,
-            body: formData,
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    throw new Error(err.message || 'Error al guardar el egreso');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            mostrarNotificacion('Éxito', `Egreso ${esNuevo ? 'creado' : 'actualizado'} correctamente`, 'success');
-            // Cerrar el modal
-            bootstrap.Modal.getInstance(document.getElementById('egresoModal')).hide();
-            // Recargar los egresos
-            cargarEgresos();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    }
-
-    // Editar un egreso existente
-    function editarEgreso(id) {
-        fetch(`/api/egresos/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al obtener los datos del egreso');
-            }
-            return response.json();
-        })
-        .then(egreso => {
-            // Llenar el formulario con los datos obtenidos
-            document.getElementById('egresoId').value = egreso.id;
-            document.getElementById('egresoModalTitle').textContent = 'Editar Egreso';
-            document.getElementById('fecha').value = egreso.fecha.substring(0, 10);
-            document.getElementById('categoria').value = egreso.categoria_id || ''; // Cambiado de categoriaId a categoria_id
-            document.getElementById('concepto').value = egreso.concepto;
-            document.getElementById('monto').value = egreso.monto;
-            document.getElementById('estado').value = egreso.estado;
-            
-            // Establecer correctamente el método de pago usando el campo del backend (metodo_pago)
-            const metodoPago = egreso.metodo_pago || egreso.metodoPago;
-            document.getElementById('metodoPago').value = metodoPago || 'efectivo';
-            
-            document.getElementById('beneficiario').value = egreso.beneficiario || '';
-            document.getElementById('referenciaPago').value = egreso.referencia_pago || egreso.referenciaPago || '';
-            document.getElementById('descripcion').value = egreso.descripcion || '';
-            
-            // Configurar recurrencia si existe
-            const esRecurrente = !!egreso.recurrencia;
-            document.getElementById('esRecurrente').checked = esRecurrente;
-            document.getElementById('seccionRecurrencia').style.display = esRecurrente ? 'block' : 'none';
-            
-            if (esRecurrente && egreso.recurrencia) {
-                document.getElementById('fechaInicio').value = egreso.recurrencia.fechaInicio.substring(0, 10);
-                if (egreso.recurrencia.fechaFin) {
-                    document.getElementById('fechaFin').value = egreso.recurrencia.fechaFin.substring(0, 10);
-                } else {
-                    document.getElementById('fechaFin').value = '';
-                }
-                document.getElementById('frecuencia').value = egreso.recurrencia.frecuencia;
-                document.getElementById('cantidadRepeticiones').value = egreso.recurrencia.cantidadRepeticiones || '';
-                
-                // Configurar visibilidad de campos según frecuencia
-                const frecuencia = egreso.recurrencia.frecuencia;
-                if (frecuencia === 'semanal' || frecuencia === 'quincenal') {
-                    document.getElementById('diaSemanaContainer').style.display = 'block';
-                    document.getElementById('diaMesContainer').style.display = 'none';
-                    document.getElementById('diaSemana').value = egreso.recurrencia.diaSemana || '1';
-                } else {
-                    document.getElementById('diaSemanaContainer').style.display = 'none';
-                    document.getElementById('diaMesContainer').style.display = 'block';
-                    document.getElementById('diaMes').value = egreso.recurrencia.diaMes || '1';
-                }
-            }
-            
-            // Mostrar archivos adjuntos si los hay
-            if (egreso.archivos && egreso.archivos.length > 0) {
-                mostrarArchivosActuales(egreso.archivos);
-                document.getElementById('archivosActualesContainer').style.display = 'block';
-            } else {
-                document.getElementById('archivosActualesContainer').style.display = 'none';
-            }
-            
-            // Mostrar el modal
-            const modal = new bootstrap.Modal(document.getElementById('egresoModal'));
-            modal.show();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    }
-
-    // Mostrar archivos actuales en el formulario de edición
-    function mostrarArchivosActuales(archivos) {
-        const listaArchivos = document.getElementById('listaArchivosActuales');
-        listaArchivos.innerHTML = '';
-        
-        archivos.forEach(archivo => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            
-            const nombreArchivo = document.createElement('span');
-            nombreArchivo.textContent = archivo.nombreOriginal || archivo.ruta.split('/').pop();
-            
-            const botonesAccion = document.createElement('div');
-            
-            const btnDescargar = document.createElement('button');
-            btnDescargar.className = 'btn btn-sm btn-outline-primary me-2';
-            btnDescargar.innerHTML = '<i class="fas fa-download"></i>';
-            btnDescargar.title = 'Descargar';
-            btnDescargar.onclick = () => descargarArchivo(archivo.id);
-            
-            const btnEliminar = document.createElement('button');
-            btnEliminar.className = 'btn btn-sm btn-outline-danger';
-            btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
-            btnEliminar.title = 'Eliminar';
-            btnEliminar.onclick = () => eliminarArchivo(archivo.id);
-            
-            botonesAccion.appendChild(btnDescargar);
-            botonesAccion.appendChild(btnEliminar);
-            
-            li.appendChild(nombreArchivo);
-            li.appendChild(botonesAccion);
-            
-            listaArchivos.appendChild(li);
-        });
-    }
-
-    // Eliminar un egreso - Modificado para usar modal de confirmación
-    function eliminarEgreso(id) {
-        // Buscar el egreso en la lista actual
-        const egreso = egresos.find(e => e.id === id);
-        if (!egreso) {
-            mostrarNotificacion('Error', 'No se encontró el egreso a eliminar', 'error');
-            return;
-        }
-        
-        // Llenar el modal con los datos del egreso
-        document.getElementById('eliminarFecha').textContent = new Date(egreso.fecha).toLocaleDateString('es-ES');
-        document.getElementById('eliminarConcepto').textContent = egreso.concepto;
-        document.getElementById('eliminarCategoria').textContent = egreso.categoria?.nombre || '-';
-        document.getElementById('eliminarMonto').textContent = formatearMoneda(egreso.monto);
-        
-        let estadoText;
-        switch (egreso.estado) {
-            case 'pagado': estadoText = 'Pagado'; break;
-            case 'pendiente': estadoText = 'Pendiente'; break;
-            case 'anulado': estadoText = 'Anulado'; break;
-            default: estadoText = egreso.estado;
-        }
-        document.getElementById('eliminarEstado').textContent = estadoText;
-        
-        // Mostrar el modal
-        const confirmarModal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
-        confirmarModal.show();
-        
-        // Configurar el botón de confirmar
-        const btnConfirmar = document.getElementById('btnConfirmarEliminar');
-        
-        // Remover event listeners anteriores
-        const nuevoBtn = btnConfirmar.cloneNode(true);
-        btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
-        
-        // Añadir nuevo event listener
-        nuevoBtn.addEventListener('click', function() {
-            confirmarModal.hide();
-            
-            // Enviar la solicitud de eliminación
-            fetch(`/api/egresos/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error al eliminar el egreso');
-                }
-                return response.json();
-            })
-            .then(data => {
-                mostrarNotificacion('Éxito', 'Egreso eliminado correctamente', 'success');
-                cargarEgresos();
-            })
-            .catch(error => {
-                mostrarNotificacion('Error', error.message, 'error');
-            });
-        });
-    }
-
-    // Ver detalle de un egreso
-    function verDetalle(id) {
-        fetch(`/api/egresos/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al obtener los datos del egreso');
-            }
-            return response.json();
-        })
-        .then(egreso => {
-            currentEgresoId = egreso.id;
-            
-            // Llenar los detalles básicos
-            document.getElementById('detalleComprobante').textContent = egreso.numero_comprobante || egreso.comprobante || '-';
-            document.getElementById('detalleFecha').textContent = new Date(egreso.fecha).toLocaleDateString('es-ES');
-            document.getElementById('detalleCategoria').textContent = egreso.categoria?.nombre || '-';
-            document.getElementById('detalleConcepto').textContent = egreso.concepto;
-            document.getElementById('detalleDescripcion').textContent = egreso.descripcion || '-';
-            
-            // Información de pago
-            document.getElementById('detalleMonto').textContent = formatearMoneda(egreso.monto);
-            
-            let estadoHTML = '';
-            const estadoPagado = egreso.estado === 'pagado';
-            switch (egreso.estado) {
-                case 'pagado':
-                    estadoHTML = '<span class="badge bg-success">Pagado</span>';
-                    break;
-                case 'pendiente':
-                    estadoHTML = '<span class="badge bg-warning">Pendiente</span>';
-                    break;
-                case 'anulado':
-                    estadoHTML = '<span class="badge bg-danger">Anulado</span>';
-                    break;
-                default:
-                    estadoHTML = `<span class="badge bg-secondary">${egreso.estado}</span>`;
-            }
-            document.getElementById('detalleEstado').innerHTML = estadoHTML;
-            
-            // Formatear el método de pago - Corregido
-            const metodoPagoValor = egreso.metodo_pago || egreso.metodoPago;
-            let metodoHTML = '';
-            switch (metodoPagoValor) {
-                case 'efectivo':
-                    metodoHTML = '<i class="fas fa-money-bill-wave text-success me-1"></i> Efectivo';
-                    break;
-                case 'transferencia':
-                    metodoHTML = '<i class="fas fa-exchange-alt text-primary me-1"></i> Transferencia';
-                    break;
-                case 'cheque':
-                    metodoHTML = '<i class="fas fa-money-check text-info me-1"></i> Cheque';
-                    break;
-                case 'tarjeta':
-                    metodoHTML = '<i class="far fa-credit-card text-secondary me-1"></i> Tarjeta';
-                    break;
-                default:
-                    metodoHTML = metodoPagoValor ? metodoPagoValor : 'No especificado';
-            }
-            document.getElementById('detalleMetodo').innerHTML = metodoHTML;
-            
-            document.getElementById('detalleBeneficiario').textContent = egreso.beneficiario || '-';
-            
-            // Información de recurrencia si existe
-            const recurrenciaContainer = document.getElementById('detalleRecurrenciaContainer');
-            if (egreso.recurrencia) {
-                document.getElementById('detalleRecurrenciaFrecuencia').textContent = capitalizarPrimeraLetra(egreso.recurrencia.frecuencia);
-                document.getElementById('detalleRecurrenciaInicio').textContent = new Date(egreso.recurrencia.fechaInicio).toLocaleDateString('es-ES');
-                
-                const fechaFin = egreso.recurrencia.fechaFin 
-                    ? new Date(egreso.recurrencia.fechaFin).toLocaleDateString('es-ES')
-                    : 'Sin fecha límite';
-                document.getElementById('detalleRecurrenciaFin').textContent = fechaFin;
-                
-                // Calcular próximo pago
-                const proximoPago = calcularProximoPago(egreso.recurrencia);
-                document.getElementById('detalleProximoPago').textContent = proximoPago 
-                    ? proximoPago.toLocaleDateString('es-ES')
-                    : 'No hay pagos pendientes';
-                
-                recurrenciaContainer.style.display = 'block';
-            } else {
-                recurrenciaContainer.style.display = 'none';
-            }
-            
-            // Mostrar archivos adjuntos
-            const archivosContainer = document.getElementById('detalleArchivosContainer');
-            const detalleArchivos = document.getElementById('detalleArchivos');
-            
-            if (egreso.archivos && egreso.archivos.length > 0) {
-                let html = '<ul class="list-group">';
-                egreso.archivos.forEach(archivo => {
-                    html += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>${archivo.nombreOriginal || archivo.ruta.split('/').pop()}</span>
-                        <button onclick="descargarArchivo(${archivo.id})" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-download"></i> Descargar
-                        </button>
-                    </li>`;
-                });
-                html += '</ul>';
-                detalleArchivos.innerHTML = html;
-                archivosContainer.style.display = 'block';
-            } else {
-                detalleArchivos.innerHTML = '<p>No hay archivos adjuntos.</p>';
-                archivosContainer.style.display = 'block';
-            }
-            
-            // Configurar el botón de editar según el estado
-            const btnEditar = document.getElementById('btnEditarDesdeDetalle');
-            if (estadoPagado) {
-                // Si está pagado, deshabilitamos el botón y cambiamos su apariencia
-                btnEditar.classList.remove('btn-primary');
-                btnEditar.classList.add('btn-secondary');
-                btnEditar.disabled = true;
-                btnEditar.title = 'No se puede editar un egreso pagado';
-            } else {
-                // Si no está pagado (pendiente o anulado), habilitamos el botón
-                btnEditar.classList.remove('btn-secondary');
-                btnEditar.classList.add('btn-primary');
-                btnEditar.disabled = false;
-                btnEditar.title = 'Editar este egreso';
-            }
-            
-            // Mostrar modal
-            const modal = new bootstrap.Modal(document.getElementById('detalleEgresoModal'));
-            modal.show();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    }
-
-    // Calcular próximo pago para recurrencia
-    function calcularProximoPago(recurrencia) {
-        if (!recurrencia.fechaInicio) {
-            return null;
-        }
-        
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        
-        let fechaInicio = new Date(recurrencia.fechaInicio);
-        fechaInicio.setHours(0, 0, 0, 0);
-        
-        if (recurrencia.fechaFin) {
-            let fechaFin = new Date(recurrencia.fechaFin);
-            fechaFin.setHours(0, 0, 0, 0);
-            
-            if (fechaFin < hoy) {
-                return null; // Ya no hay pagos pendientes
-            }
-        }
-        
-        let proximaFecha = new Date(fechaInicio);
-        
-        switch (recurrencia.frecuencia) {
-            case 'semanal':
-                // Ajustar al día de la semana correcto
-                const diaSemana = parseInt(recurrencia.diaSemana) || 1;
-                proximaFecha.setDate(proximaFecha.getDate() + (diaSemana - proximaFecha.getDay() + 7) % 7);
-                
-                // Avanzar semanas hasta encontrar una fecha futura
-                while (proximaFecha < hoy) {
-                    proximaFecha.setDate(proximaFecha.getDate() + 7);
-                }
-                break;
-                
-            case 'quincenal':
-                // Similar a semanal pero avanza de 14 en 14 días
-                const diaSemanaQuincenal = parseInt(recurrencia.diaSemana) || 1;
-                proximaFecha.setDate(proximaFecha.getDate() + (diaSemanaQuincenal - proximaFecha.getDay() + 7) % 7);
-                
-                while (proximaFecha < hoy) {
-                    proximaFecha.setDate(proximaFecha.getDate() + 14);
-                }
-                break;
-                
-            case 'mensual':
-                // Ajustar al día del mes correcto
-                const diaMes = parseInt(recurrencia.diaMes) || 1;
-                proximaFecha.setDate(diaMes);
-                
-                // Avanzar meses hasta encontrar una fecha futura
-                while (proximaFecha < hoy) {
-                    proximaFecha.setMonth(proximaFecha.getMonth() + 1);
-                }
-                break;
-                
-            case 'trimestral':
-                const diaMesTrimestral = parseInt(recurrencia.diaMes) || 1;
-                proximaFecha.setDate(diaMesTrimestral);
-                
-                while (proximaFecha < hoy) {
-                    proximaFecha.setMonth(proximaFecha.getMonth() + 3);
-                }
-                break;
-                
-            case 'anual':
-                const diaMesAnual = parseInt(recurrencia.diaMes) || 1;
-                proximaFecha.setDate(diaMesAnual);
-                
-                while (proximaFecha < hoy) {
-                    proximaFecha.setFullYear(proximaFecha.getFullYear() + 1);
-                }
-                break;
-        }
-        
-        return proximaFecha;
-    }
-
-    // Mostrar modal de categorías
-    function mostrarModalCategorias() {
-        cargarCategoriasTodas();
-        const modal = new bootstrap.Modal(document.getElementById('categoriasModal'));
-        modal.show();
-    }
-
-    // Cargar todas las categorías para la gestión
-    function cargarCategoriasTodas() {
-        fetch('/api/categorias-egreso', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al cargar las categorías');
-            }
-            return response.json();
-        })
-        .then(categorias => {
-            const tablaCategorias = document.getElementById('tablaCategorias');
-            
-            if (categorias.length === 0) {
-                tablaCategorias.innerHTML = '<tr><td colspan="4" class="text-center">No hay categorías registradas</td></tr>';
-                return;
-            }
-            
-            let html = '';
-            categorias.forEach(categoria => {
-                const estadoClass = categoria.activa ? 'success' : 'danger';
-                const estadoText = categoria.activa ? 'Activa' : 'Inactiva';
-                
-                html += `
-                <tr>
-                    <td>${categoria.nombre}</td>
-                    <td>${categoria.descripcion || '-'}</td>
-                    <td><span class="badge bg-${estadoClass}">${estadoText}</span></td>
-                    <td>
-                        <button onclick="editarCategoria(${categoria.id})" class="btn btn-sm btn-primary">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="eliminarCategoria(${categoria.id})" class="btn btn-sm btn-danger">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </td>
-                </tr>`;
-            });
-            
-            tablaCategorias.innerHTML = html;
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-            document.getElementById('tablaCategorias').innerHTML = 
-                `<tr><td colspan="4" class="text-center">Error al cargar los datos: ${error.message}</td></tr>`;
-        });
-    }
-
-    // Mostrar modal para nueva categoría
-    document.getElementById('btnNuevaCategoria').addEventListener('click', function() {
-        document.getElementById('categoriaModalTitle').textContent = 'Nueva Categoría';
-        document.getElementById('categoriaForm').reset();
-        document.getElementById('categoriaId').value = '';
-        document.getElementById('categoriaActiva').checked = true;
-        
-        const modal = new bootstrap.Modal(document.getElementById('categoriaFormModal'));
-        modal.show();
-    });
-
-    // Editar categoría
-    window.editarCategoria = function(id) {
-        fetch(`/api/categorias-egreso/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al obtener los datos de la categoría');
-            }
-            return response.json();
-        })
-        .then(categoria => {
-            document.getElementById('categoriaModalTitle').textContent = 'Editar Categoría';
-            document.getElementById('categoriaId').value = categoria.id;
-            document.getElementById('categoriaNombre').value = categoria.nombre;
-            document.getElementById('categoriaDescripcion').value = categoria.descripcion || '';
-            document.getElementById('categoriaActiva').checked = categoria.activa;
-            
-            const modal = new bootstrap.Modal(document.getElementById('categoriaFormModal'));
-            modal.show();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    };
-
-    // Guardar categoría
-    function guardarCategoria() {
-        const categoriaId = document.getElementById('categoriaId').value;
-        const esNueva = !categoriaId;
-        
-        // Validar formulario
-        const form = document.getElementById('categoriaForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-        
-        // Construir objeto con los datos
-        const datosCategoria = {
-            nombre: document.getElementById('categoriaNombre').value,
-            descripcion: document.getElementById('categoriaDescripcion').value,
-            activa: document.getElementById('categoriaActiva').checked
-        };
-        
-        // Determinar URL y método HTTP
-        const url = esNueva ? '/api/categorias-egreso' : `/api/categorias-egreso/${categoriaId}`;
-        const method = esNueva ? 'POST' : 'PUT';
-        
-        // Enviar datos a la API
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(datosCategoria)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    throw new Error(err.message || 'Error al guardar la categoría');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            mostrarNotificacion('Éxito', `Categoría ${esNueva ? 'creada' : 'actualizada'} correctamente`, 'success');
-            // Cerrar el modal
-            bootstrap.Modal.getInstance(document.getElementById('categoriaFormModal')).hide();
-            // Recargar categorías
-            cargarCategoriasTodas();
-            cargarCategorias();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    }
-
-    // Eliminar categoría
-    window.eliminarCategoria = function(id) {
-        if (!confirm('¿Está seguro de eliminar esta categoría? Esta acción podría afectar a los egresos asociados.')) {
-            return;
-        }
-        
-        fetch(`/api/categorias-egreso/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al eliminar la categoría');
-            }
-            return response.json();
-        })
-        .then(data => {
-            mostrarNotificacion('Éxito', 'Categoría eliminada correctamente', 'success');
-            cargarCategoriasTodas();
-            cargarCategorias();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    };
-
-    // Mostrar modal de proveedores
-    function mostrarModalProveedores() {
-        // TODO: Implementar gestión de proveedores
-        mostrarNotificacion('Información', 'La gestión de proveedores se implementará próximamente', 'info');
-    }
-
-    // Mostrar reportes
-    function mostrarReportes() {
-        // TODO: Implementar reportes
-        mostrarNotificacion('Información', 'Los reportes se implementarán próximamente', 'info');
-    }
-
-    // Exportar egresos
-    function exportarEgresos() {
-        // Construir la URL con los filtros actuales
-        const queryParams = new URLSearchParams({
-            ...filtros
-        });
-        
-        // Abrir en nueva ventana la descarga
-        window.open(`/api/egresos/export?${queryParams}`, '_blank');
-    }
-
-    // Descargar archivo adjunto
-    window.descargarArchivo = function(id) {
-        window.open(`/api/egresos/archivos/${id}/download`, '_blank');
-    };
-
-    // Eliminar archivo adjunto
-    window.eliminarArchivo = function(id) {
-        if (!confirm('¿Está seguro de eliminar este archivo? Esta acción no se puede deshacer.')) {
-            return;
-        }
-        
-        fetch(`/api/egresos/archivos/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al eliminar el archivo');
-            }
-            return response.json();
-        })
-        .then(data => {
-            mostrarNotificacion('Éxito', 'Archivo eliminado correctamente', 'success');
-            // Actualizar la lista de archivos
-            const egresoId = document.getElementById('egresoId').value;
-            if (egresoId) {
-                // Recargar los detalles del egreso para actualizar la lista de archivos
-                fetch(`/api/egresos/${egresoId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-                .then(response => response.json())
-                .then(egreso => {
-                    if (egreso.archivos && egreso.archivos.length > 0) {
-                        mostrarArchivosActuales(egreso.archivos);
-                    } else {
-                        document.getElementById('archivosActualesContainer').style.display = 'none';
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
-        });
-    };
-
-    // Funciones auxiliares
-    function formatearMoneda(valor) {
-        return parseFloat(valor).toLocaleString('es-CO', {
-            style: 'currency',
-            currency: 'COP',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
-    }
-
-    function capitalizarPrimeraLetra(texto) {
-        return texto.charAt(0).toUpperCase() + texto.slice(1);
-    }
-
-    // Mostrar notificación
-    function mostrarNotificacion(titulo, mensaje, tipo) {
-        const toastContainer = document.getElementById('toastContainer');
-        
-        // Crear elemento toast
-        const toastElement = document.createElement('div');
-        toastElement.className = `toast align-items-center border-0 bg-${tipo === 'error' ? 'danger' : tipo}`;
-        toastElement.setAttribute('role', 'alert');
-        toastElement.setAttribute('aria-live', 'assertive');
-        toastElement.setAttribute('aria-atomic', 'true');
-        
-        const toastHeader = document.createElement('div');
-        toastHeader.className = 'toast-header';
-        
-        let iconClass;
-        switch (tipo) {
-            case 'success': iconClass = 'fas fa-check-circle text-success'; break;
-            case 'error': iconClass = 'fas fa-exclamation-circle text-danger'; break;
-            case 'warning': iconClass = 'fas fa-exclamation-triangle text-warning'; break;
-            default: iconClass = 'fas fa-info-circle text-info';
-        }
-        
-        toastHeader.innerHTML = `
-            <i class="${iconClass} me-2"></i>
-            <strong class="me-auto">${titulo}</strong>
-            <small>ahora</small>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-        `;
-        
-        const toastBody = document.createElement('div');
-        toastBody.className = 'toast-body';
-        toastBody.textContent = mensaje;
-        
-        toastElement.appendChild(toastHeader);
-        toastElement.appendChild(toastBody);
-        toastContainer.appendChild(toastElement);
-        
-        // Inicializar toast
-        const toast = new bootstrap.Toast(toastElement, {
-            delay: 5000,
-            autohide: true
-        });
-        toast.show();
-        
-        // Eliminar el toast del DOM cuando se oculte
-        toastElement.addEventListener('hidden.bs.toast', function () {
-            toastContainer.removeChild(toastElement);
-        });
-    }
-
     // Cargar total de egresos de nómina
     function cargarTotalNomina() {
         fetch('/api/payrolls/summary', {
@@ -1215,9 +932,4 @@ document.addEventListener('DOMContentLoaded', function() {
             totalNominaElement.textContent = formatearMoneda(0);
         });
     }
-
-    // Exportar funciones al contexto global para acceder desde los onclick en HTML
-    window.verDetalle = verDetalle;
-    window.editarEgreso = editarEgreso;
-    window.eliminarEgreso = eliminarEgreso;
 });

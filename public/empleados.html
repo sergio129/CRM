@@ -3,74 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Empleados</title>
+    <title>Gestión de Empleados - GESCOOP</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/general.css">
     <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/usuarios.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="wrapper">
-        <!-- Sidebar -->
-        <nav id="sidebar">
-            <div class="sidebar-header">
-                <h3>GESCOOP</h3>
-            </div>
-
-            <ul class="list-unstyled components">
-                <li>
-                    <div class="sidebar-action">
-                        <button id="createEmployeeButton" class="btn btn-primary w-100">
-                            <i class="fas fa-plus"></i> Nuevo Empleado
-                        </button>
-                    </div>
-                </li>
-            </ul>
-
-            <div class="sidebar-footer">
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
-                    <i class="fas fa-chart-line"></i> Dashboard
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/nomina.html'">
-                    <i class="fas fa-file-invoice-dollar"></i> Nómina
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/clientes.html'">
-                    <i class="fas fa-handshake"></i> Clientes
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/loans.html'">
-                    <i class="fas fa-hand-holding-usd"></i> Préstamos
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/usuarios.html'">
-                    <i class="fas fa-user"></i> Usuarios
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/roles.html'">
-                    <i class="fas fa-user-tag"></i> Roles
-                </button>
-                <button class="btn btn-danger w-100" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </div>
-        </nav>
+        <!-- El sidebar compartido se cargará aquí -->
+        <div id="sidebar-container"></div>
 
         <!-- Page Content -->
         <div id="content">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <nav class="navbar navbar-expand-lg navbar-light">
                 <div class="container-fluid">
                     <button type="button" id="sidebarCollapse" class="btn btn-info">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <h2 class="ml-3">Gestión de Empleados</h2>
+                    <h2 class="ml-3 mb-0">Gestión de Empleados</h2>
                 </div>
             </nav>
 
             <div class="content-body">
                 <div class="container mt-4">
-                    <!-- Barra de búsqueda -->
-                    <div class="search-container mb-3">
-                        <div class="input-group">
-                            <input type="text" id="tableSearch" class="form-control search-input" placeholder="Buscar empleado...">
-                            <button class="btn btn-outline-secondary search-btn" type="button" onclick="filterTable()">
-                                <i class="fas fa-search"></i>
+                    <!-- Barra de búsqueda y botón nuevo empleado -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input type="text" id="tableSearch" class="form-control search-input" placeholder="Buscar empleado...">
+                                <button class="btn btn-outline-secondary search-btn" type="button" onclick="filterTable()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button id="createEmployeeButton" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> Nuevo Empleado
                             </button>
                         </div>
                     </div>
@@ -390,12 +359,11 @@
     <div id="toastContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Agregar el script del sidebar compartido -->
+    <script src="js/sidebar-handler.js"></script>
     <script src="js/empleados.js"></script>
-    <script>
-        function logout() {
-            localStorage.clear();
-            window.location.href = '/login.html';
-        }
-    </script>
 </body>
 </html>

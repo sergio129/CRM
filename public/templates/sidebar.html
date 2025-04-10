@@ -1,0 +1,89 @@
+<!-- Sidebar mejorado con nuevo estilo y organización -->
+<nav id="sidebar" class="sidebar-v2">
+    <div class="sidebar-header">
+        <div class="logo-container">
+            <h3>GESCOOP</h3>
+        </div>
+        <button id="sidebarCollapseSmall" class="d-md-none btn-collapse-sidebar">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="sidebar-content">
+        <!-- Acciones principales del módulo actual -->
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">ACCIONES</h6>
+            <div class="action-group">
+                <!-- Estas acciones se reemplazarán dinámicamente según el módulo -->
+                <div id="module-actions">
+                    <!-- Las acciones específicas de cada módulo se insertarán aquí mediante JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navegación principal -->
+        <div class="sidebar-section mt-4">
+            <h6 class="sidebar-section-title">NAVEGACIÓN</h6>
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a href="/dashboard.html" class="nav-link" id="nav-dashboard">
+                        <i class="fas fa-chart-line nav-icon"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/empleados.html" class="nav-link" id="nav-empleados">
+                        <i class="fas fa-users nav-icon"></i>
+                        <span class="nav-text">Empleados</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/clientes.html" class="nav-link" id="nav-clientes">
+                        <i class="fas fa-handshake nav-icon"></i>
+                        <span class="nav-text">Clientes</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/egresos.html" class="nav-link" id="nav-egresos">
+                        <i class="fas fa-money-bill-wave nav-icon"></i>
+                        <span class="nav-text">Egresos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/nomina.html" class="nav-link" id="nav-nomina">
+                        <i class="fas fa-file-invoice-dollar nav-icon"></i>
+                        <span class="nav-text">Nómina</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/loans.html" class="nav-link" id="nav-loans">
+                        <i class="fas fa-hand-holding-usd nav-icon"></i>
+                        <span class="nav-text">Préstamos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/roles.html" class="nav-link" id="nav-roles">
+                        <i class="fas fa-user-shield nav-icon"></i>
+                        <span class="nav-text">Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/usuarios.html" class="nav-link" id="nav-usuarios">
+                        <i class="fas fa-user-cog nav-icon"></i>
+                        <span class="nav-text">Usuarios</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <button class="btn btn-danger btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt me-2"></i>
+            <span>Cerrar Sesión</span>
+        </button>
+        <div class="user-info mt-2">
+            <small class="text-muted user-name" id="currentUserName">Usuario</small>
+        </div>
+    </div>
+</nav>

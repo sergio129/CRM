@@ -3,54 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Usuarios</title>
+    <title>Gestión de Usuarios - GESCOOP</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/general.css">
+    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="wrapper">
-        <!-- Sidebar -->
-        <nav id="sidebar">
-            <div class="sidebar-header">
-                <h3 class="text-gradient">GESCOOP</h3>
-            </div>
-
-            <ul class="list-unstyled components">
-                <li>
-                    <div class="sidebar-action">
-                        <button id="sidebarCreateUserButton" class="btn btn-primary w-100 btn-animate">
-                            <i class="fas fa-plus"></i> Nuevo Usuario
-                        </button>
-                    </div>
-                </li>
-                <!-- Removed search user section from sidebar -->
-            </ul>
-
-            <div class="sidebar-footer">
-                <!-- Enlaces de navegación común -->
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/nomina.html'">
-                    <i class="fas fa-file-invoice-dollar"></i> Nómina
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/empleados.html'">
-                    <i class="fas fa-users"></i> Empleados
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/dashboard.html'">
-                    <i class="fas fa-chart-line"></i> Dashboard
-                </button>
-                <button class="btn btn-info w-100 mb-2" onclick="window.location.href='/loans.html'">
-                    <i class="fas fa-hand-holding-usd"></i> Préstamos
-                </button>
-                <button class="btn btn-info w-100" onclick="window.location.href='/roles.html'">
-                    <i class="fas fa-user-tag"></i> Roles
-                </button>
-                <button class="btn btn-danger w-100 mt-3" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </div>
-        </nav>
+        <!-- El sidebar compartido se cargará aquí -->
+        <div id="sidebar-container"></div>
 
         <!-- Page Content -->
         <div id="content">
@@ -59,7 +21,7 @@
                     <button type="button" id="sidebarCollapse" class="btn btn-info">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <h2>Gestión de Usuarios</h2>
+                    <h2 class="ml-3 mb-0">Gestión de Usuarios</h2>
                 </div>
             </nav>
 
@@ -233,6 +195,10 @@
     <div id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <!-- Agregar el script del sidebar compartido -->
+    <script src="js/sidebar-handler.js"></script>
     <script src="js/usuarios.js"></script>
     <script>
         function logout() {
