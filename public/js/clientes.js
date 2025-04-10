@@ -308,25 +308,31 @@ async function saveClient() {
             }
         }
 
-        // Primero verificar si el cliente ya existe
+        // Verificar si estamos en modo edición (la modal tiene title "Editar Cliente")
+        const isEditMode = document.getElementById('clientModalLabel').textContent === 'Editar Cliente';
         const identification = clientData.identification;
-        let method = 'POST';
-        let url = '/api/clients';
-
-        // Buscar si existe el cliente con esa identificación
-        const checkResponse = await fetch(`/api/clients/by-identification/${identification}`, {
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`,
-                "Content-Type": "application/json"
+        
+        if (!isEditMode) {
+            // En modo de creación, verificamos si el cliente ya existe
+            const checkResponse = await fetch(`/api/clients/by-identification/${identification}`, {
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            
+            // Si el cliente ya existe, mostramos error
+            if (checkResponse.ok) {
+                // El cliente existe, resaltar el campo y mostrar error
+                highlightInvalidField('identification');
+                throw new Error('Este número de documento ya está registrado. No se puede crear un cliente con un documento existente.');
             }
-        });
-
-        if (checkResponse.ok) {
-            // Si el cliente existe, cambiamos a método PUT
-            const existingClient = await checkResponse.json();
-            method = 'PUT';
-            url = `/api/clients/${existingClient.identification}`;
         }
+        
+        // En modo de edición, continuamos con la actualización
+        // O en modo de creación si el cliente no existe
+        let method = isEditMode ? 'PUT' : 'POST';
+        let url = isEditMode ? `/api/clients/${identification}` : '/api/clients';
 
         const response = await fetch(url, {
             method: method,
@@ -348,7 +354,7 @@ async function saveClient() {
             throw new Error(responseData.message || 'Error al guardar cliente');
         }
 
-        showToast('Cliente guardado exitosamente', 'success');
+        showToast(isEditMode ? 'Cliente actualizado exitosamente' : 'Cliente creado exitosamente', 'success');
         await loadClients();
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('clientModal'));
@@ -359,64 +365,6 @@ async function saveClient() {
     } catch (error) {
         console.error("Error:", error);
         showToast(error.message || "Error al guardar cliente", "danger");
-    }
-}
-
-// Función para resaltar campos inválidos
-function highlightInvalidField(fieldName) {
-    const fieldMapping = {
-        'email': 'email',
-        'identification': 'idNumber',
-        'phone': 'telefonoMovil',
-        'numero_cuenta': 'numeroCuenta'
-    };
-    
-    const elementId = fieldMapping[fieldName] || fieldName;
-    const element = document.getElementById(elementId);
-    
-    if (element) {
-        // Resaltar el campo
-        element.classList.add('is-invalid');
-        
-        // Añadir mensaje de error debajo del campo
-        let feedbackElement = element.nextElementSibling;
-        if (!feedbackElement || !feedbackElement.classList.contains('invalid-feedback')) {
-            feedbackElement = document.createElement('div');
-            feedbackElement.className = 'invalid-feedback';
-            element.parentNode.insertBefore(feedbackElement, element.nextSibling);
-        }
-        
-        // Establecer mensaje según el campo
-        let errorMessage = '';
-        switch (fieldName) {
-            case 'email':
-                errorMessage = 'Este correo electrónico ya está registrado';
-                break;
-            case 'identification':
-                errorMessage = 'Este número de documento ya está registrado';
-                break;
-            case 'phone':
-                errorMessage = 'Este número de teléfono ya está registrado';
-                break;
-            case 'numero_cuenta':
-                errorMessage = 'Este número de cuenta ya está registrado';
-                break;
-            default:
-                errorMessage = 'Campo inválido';
-        }
-        
-        feedbackElement.textContent = errorMessage;
-        
-        // Enfocar el campo con error
-        element.focus();
-        
-        // Limpiar el resaltado después de un tiempo o cuando se edite el campo
-        element.addEventListener('input', function() {
-            this.classList.remove('is-invalid');
-            if (feedbackElement) {
-                feedbackElement.textContent = '';
-            }
-        }, { once: true });
     }
 }
 
@@ -537,5 +485,63 @@ async function openClientDetailsModal(clientId) {
     } catch (error) {
         console.error("Error al abrir la modal de detalles del cliente:", error);
         alert("Error al abrir los detalles del cliente.");
+    }
+}
+
+// Función para resaltar campos inválidos
+function highlightInvalidField(fieldName) {
+    const fieldMapping = {
+        'email': 'email',
+        'identification': 'idNumber',
+        'phone': 'telefonoMovil',
+        'numero_cuenta': 'numeroCuenta'
+    };
+    
+    const elementId = fieldMapping[fieldName] || fieldName;
+    const element = document.getElementById(elementId);
+    
+    if (element) {
+        // Resaltar el campo
+        element.classList.add('is-invalid');
+        
+        // Añadir mensaje de error debajo del campo
+        let feedbackElement = element.nextElementSibling;
+        if (!feedbackElement || !feedbackElement.classList.contains('invalid-feedback')) {
+            feedbackElement = document.createElement('div');
+            feedbackElement.className = 'invalid-feedback';
+            element.parentNode.insertBefore(feedbackElement, element.nextSibling);
+        }
+        
+        // Establecer mensaje según el campo
+        let errorMessage = '';
+        switch (fieldName) {
+            case 'email':
+                errorMessage = 'Este correo electrónico ya está registrado';
+                break;
+            case 'identification':
+                errorMessage = 'Este número de documento ya está registrado';
+                break;
+            case 'phone':
+                errorMessage = 'Este número de teléfono ya está registrado';
+                break;
+            case 'numero_cuenta':
+                errorMessage = 'Este número de cuenta ya está registrado';
+                break;
+            default:
+                errorMessage = 'Campo inválido';
+        }
+        
+        feedbackElement.textContent = errorMessage;
+        
+        // Enfocar el campo con error
+        element.focus();
+        
+        // Limpiar el resaltado después de un tiempo o cuando se edite el campo
+        element.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            if (feedbackElement) {
+                feedbackElement.textContent = '';
+            }
+        }, { once: true });
     }
 }
