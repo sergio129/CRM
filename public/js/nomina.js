@@ -151,7 +151,12 @@ let currentFilters = {
 };
 
 // Función para aplicar filtros
-function applyFilters() {
+function applyFilters(event) {
+    // Si viene de un evento, prevenir el comportamiento por defecto
+    if (event) {
+        event.preventDefault();
+    }
+    
     // Obtener valores de los filtros
     const filterMonth = document.getElementById('filterMonth').value;
     const filterEmployee = document.getElementById('filterEmployee').value;
