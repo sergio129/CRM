@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadUsers();
+    loadRoles(); // Nueva función para cargar roles
 
     // Cambiar este event listener
     document.getElementById("sidebarCreateUserButton").addEventListener("click", () => {
@@ -450,5 +451,41 @@ function filterTable() {
         }
         
         row.style.display = found ? "" : "none";
+    }
+}
+
+// Nueva función para cargar los roles disponibles
+async function loadRoles() {
+    try {
+        const response = await fetch('/api/roles', {
+            method: "GET",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Error al obtener roles.");
+        }
+
+        const roles = await response.json();
+        
+        // Limpiar y actualizar el selector de roles
+        const roleSelect = document.getElementById("role");
+        roleSelect.innerHTML = ""; // Limpiar opciones existentes
+        
+        // Agregar cada rol como opción
+        roles.forEach(role => {
+            const option = document.createElement("option");
+            option.value = role.role_name;
+            option.textContent = role.role_name;
+            roleSelect.appendChild(option);
+        });
+        
+        console.log(`Cargados ${roles.length} roles desde el servidor.`);
+    } catch (error) {
+        console.error("Error al cargar roles:", error);
+        showToast("Error al cargar los roles disponibles.", "danger");
     }
 }

@@ -14,9 +14,13 @@ const loanRoutes = require('./routes/loanRoutes'); // Importa las rutas de prés
 const paymentHistoryRoutes = require('./routes/paymentHistoryRoutes'); // Importa las rutas del historial de pagos
 const permissionRoutes = require('./routes/permissionRoutes'); // Importa las rutas de permisos
 const dashboardRoutes = require('./routes/dashboardRoutes'); // Importa las rutas del dashboard
+const categoriaEgresoRoutes = require('./routes/categoriaEgresoRoutes'); // Importa las rutas de categorías de egresos
+const egresoRoutes = require('./routes/egresoRoutes'); // Importa las rutas de egresos
+const proveedorRoutes = require('./routes/proveedorRoutes'); // Importa las rutas de proveedores
 const errorHandler = require('./middleware/errorHandler');
 const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
+const fileUpload = require('express-fileupload'); // Para subir archivos adjuntos
 
 // Cargar el archivo .env correcto según el entorno
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
@@ -45,6 +49,12 @@ app.use(
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.static('public'));
+app.use(fileUpload({
+  createParentPath: true,
+  limits: { 
+    fileSize: 10 * 1024 * 1024 // 10MB max file size
+  },
+}));
 
 // IMPORTANTE: Importar los modelos y sus relaciones antes de las rutas
 require('./models/index');
@@ -63,6 +73,9 @@ app.use('/api/loans', loanRoutes); // Añade las rutas de préstamos
 app.use('/api/payment-history', paymentHistoryRoutes); // Añade las rutas del historial de pagos
 app.use('/api/permissions', permissionRoutes); // Añade las rutas de permisos
 app.use('/api/dashboard', dashboardRoutes); // Añade las rutas del dashboard
+app.use('/api/categorias-egreso', categoriaEgresoRoutes); // Añade las rutas de categorías de egresos
+app.use('/api/egresos', egresoRoutes); // Añade las rutas de egresos
+app.use('/api/proveedores', proveedorRoutes); // Añade las rutas de proveedores
 
 // Middleware de errores
 app.use(errorHandler);

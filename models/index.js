@@ -10,6 +10,10 @@ const Client = require('./Client');
 const Loan = require('./Loan');
 const Role = require('./Role'); // Importar el modelo Role
 const Permission = require('./Permission'); // Importar el modelo Permission
+const CategoriaEgreso = require('./CategoriaEgreso'); // Importar modelo de Categoría de Egresos
+const Egreso = require('./Egreso'); // Importar modelo de Egresos
+const EgresoRecurrente = require('./EgresoRecurrente'); // Importar modelo de Egresos Recurrentes
+const Proveedor = require('./Proveedor'); // Importar modelo de Proveedores
 
 // Establecer relaciones
 Payroll.belongsTo(Employee, { 
@@ -64,15 +68,14 @@ Employee.belongsTo(Role, {
     as: 'Role' // Relación inversa entre Employee y Role
 });
 
-
 Role.associate({ Permission });
 Permission.associate({ Role });
-
-
 
 // Registrar asociaciones
 Client.associate({ Loan });
 Loan.associate({ Client });
+Egreso.associate({ CategoriaEgreso, EgresoRecurrente, User: require('./User') });
+EgresoRecurrente.associate({ Egreso });
 
 module.exports = {
     sequelize,
@@ -83,5 +86,9 @@ module.exports = {
     Client,
     Loan,
     Role, // Exportar el modelo Role
-    Permission // Exportar el modelo Permission
+    Permission, // Exportar el modelo Permission
+    CategoriaEgreso, // Exportar el modelo de Categoría de Egresos
+    Egreso, // Exportar el modelo de Egresos
+    EgresoRecurrente, // Exportar el modelo de Egresos Recurrentes
+    Proveedor // Exportar el modelo de Proveedores
 };
