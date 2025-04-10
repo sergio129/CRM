@@ -1,18 +1,36 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+// Log database connection parameters for debugging
+console.log('Database connection parameters:');
+console.log(`DB_HOST: ${process.env.DB_HOST}`);
+console.log(`DB_PORT: ${process.env.DB_PORT}`);
+console.log(`DB_NAME: ${process.env.DB_NAME}`);
+console.log(`DB_USER: ${process.env.DB_USER}`);
+
+// Use environment variables with fallbacks
+const host = process.env.DB_HOST || 'db';
+const port = process.env.DB_PORT || 3306;
+const database = process.env.DB_NAME || 'gescoop_db';
+const username = process.env.DB_USER || 'gescoop_user';
+const password = process.env.DB_PASSWORD || 'gescoop_password';
+
 const sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
+    database,
+    username,
+    password,
     {
-        host: process.env.DB_HOST,
+        host: host,
+        port: port,
         dialect: 'mysql',
-        port: process.env.DB_PORT,
         logging: false,
         dialectOptions: {
             dateStrings: true,
-            typeCast: true
+            typeCast: true,
+            // Add authentication plugin settings for MySQL 8
+            authPlugins: {
+                mysql_native_password: () => () => Buffer.from(password + "\0")
+            }
         },
         timezone: '-05:00'
     }

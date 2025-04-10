@@ -1,0 +1,39 @@
+FROM node:16
+
+# Instalar dependencias del sistema necesarias
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3 \
+    make \
+    gcc \
+    g++ \
+    && npm install -g node-pre-gyp
+
+# Crear directorio de la aplicación
+WORKDIR /usr/src/app
+
+# Copiar package.json y package-lock.json (si existe)
+COPY package*.json ./
+
+# Instalar dependencias con una reconstrucción limpia para entornos nativos
+RUN npm ci --unsafe-perm || npm install --unsafe-perm
+# Reconstruir bcrypt específicamente para este entorno
+RUN npm rebuild bcrypt --build-from-source
+
+# Copiar código fuente de la aplicación
+COPY . .
+
+# Crear directorio de logs si no existe
+RUN mkdir -p /usr/src/app/logs
+
+# Establecer permisos adecuados
+RUN chmod -R 755 /usr/src/app
+
+# Exposición de puertos
+EXPOSE 5000
+
+# Usar la configuración de Docker
+ENV NODE_ENV=production
+
+# Comando para iniciar la aplicación
+CMD ["node", "app.js"]

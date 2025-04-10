@@ -4,8 +4,7 @@
     "password": "Sheyo_0129",
     "database": "crm_system",
     "host": "localhost",
-    "dialect": "mysql",
-    "port": 3307
+    "dialect": "mysql"
   },
   "test": {
     "username": "root",
