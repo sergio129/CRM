@@ -261,6 +261,11 @@ exports.updateEgreso = async (req, res) => {
     req.body.categoria_id = req.body.categoriaId;
   }
   
+  // Mapear metodoPago a metodo_pago si existe
+  if (req.body.metodoPago && !req.body.metodo_pago) {
+    req.body.metodo_pago = req.body.metodoPago;
+  }
+  
   // Validar los datos de entrada
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -296,6 +301,8 @@ exports.updateEgreso = async (req, res) => {
       datos_recurrencia,
       archivos_adjuntos
     } = req.body;
+    
+    console.log('Método de pago recibido:', metodo_pago || 'No especificado'); // Log para depuración
     
     // Actualizar el egreso
     await egreso.update({

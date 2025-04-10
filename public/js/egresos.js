@@ -213,11 +213,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     estadoText = egreso.estado;
             }
             
-            // Formatear el monto
-            const monto = parseFloat(egreso.monto).toLocaleString('es-ES', {
-                style: 'currency',
-                currency: 'USD'
-            });
+            // Formatear el monto usando pesos colombianos
+            const monto = formatearMoneda(egreso.monto);
             
             // Formatear el método de pago
             // Usar metodo_pago (del backend) o metodoPago (transformado en frontend)
@@ -483,9 +480,13 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('concepto').value = egreso.concepto;
             document.getElementById('monto').value = egreso.monto;
             document.getElementById('estado').value = egreso.estado;
-            document.getElementById('metodoPago').value = egreso.metodoPago;
+            
+            // Establecer correctamente el método de pago usando el campo del backend (metodo_pago)
+            const metodoPago = egreso.metodo_pago || egreso.metodoPago;
+            document.getElementById('metodoPago').value = metodoPago || 'efectivo';
+            
             document.getElementById('beneficiario').value = egreso.beneficiario || '';
-            document.getElementById('referenciaPago').value = egreso.referenciaPago || '';
+            document.getElementById('referenciaPago').value = egreso.referencia_pago || egreso.referenciaPago || '';
             document.getElementById('descripcion').value = egreso.descripcion || '';
             
             // Configurar recurrencia si existe
@@ -1078,9 +1079,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funciones auxiliares
     function formatearMoneda(valor) {
-        return parseFloat(valor).toLocaleString('es-ES', {
+        return parseFloat(valor).toLocaleString('es-CO', {
             style: 'currency',
-            currency: 'USD'
+            currency: 'COP',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
         });
     }
 
