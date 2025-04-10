@@ -8,7 +8,8 @@ const {
   cancelarEgreso,
   getEstadisticasEgresos,
   uploadArchivoAdjunto,
-  deleteArchivoAdjunto
+  deleteArchivoAdjunto,
+  deleteEgreso
 } = require('../controllers/egresoController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 
@@ -30,6 +31,7 @@ router.get('/:id', authenticate, getEgresoById);
 router.post('/', authenticate, authorize(['Administrador', 'Contador']), egresoValidator, createEgreso);
 router.put('/:id', authenticate, authorize(['Administrador', 'Contador']), egresoValidator, updateEgreso);
 router.patch('/:id/cancelar', authenticate, authorize(['Administrador']), cancelarEgreso);
+router.delete('/:id', authenticate, authorize(['Administrador']), deleteEgreso);
 
 // Rutas para archivos adjuntos
 router.post('/:id/archivos', authenticate, uploadArchivoAdjunto);

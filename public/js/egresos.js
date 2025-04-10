@@ -220,8 +220,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             // Formatear el método de pago
+            // Usar metodo_pago (del backend) o metodoPago (transformado en frontend)
+            const metodoPagoValor = egreso.metodo_pago || egreso.metodoPago;
+            
             let metodoPago;
-            switch (egreso.metodoPago) {
+            switch (metodoPagoValor) {
                 case 'efectivo':
                     metodoPago = '<i class="fas fa-money-bill-wave text-success"></i> Efectivo';
                     break;
@@ -235,12 +238,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     metodoPago = '<i class="far fa-credit-card text-secondary"></i> Tarjeta';
                     break;
                 default:
-                    metodoPago = egreso.metodoPago;
+                    metodoPago = metodoPagoValor || 'No especificado';
             }
             
             filas += `
             <tr>
-                <td>${egreso.comprobante || '-'}</td>
+                <td>${egreso.numero_comprobante || egreso.comprobante || '-'}</td>
                 <td>${fecha}</td>
                 <td>${egreso.categoria?.nombre || '-'}</td>
                 <td>${egreso.concepto}</td>
@@ -393,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Construir objeto con los datos del formulario
         const formData = new FormData();
         formData.append('fecha', document.getElementById('fecha').value);
-        formData.append('categoriaId', document.getElementById('categoria').value);
+        formData.append('categoria_id', document.getElementById('categoria').value); // Cambiado de categoriaId a categoria_id
         formData.append('concepto', document.getElementById('concepto').value);
         formData.append('monto', document.getElementById('monto').value);
         formData.append('estado', document.getElementById('estado').value);
@@ -476,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('egresoId').value = egreso.id;
             document.getElementById('egresoModalTitle').textContent = 'Editar Egreso';
             document.getElementById('fecha').value = egreso.fecha.substring(0, 10);
-            document.getElementById('categoria').value = egreso.categoriaId || '';
+            document.getElementById('categoria').value = egreso.categoria_id || ''; // Cambiado de categoriaId a categoria_id
             document.getElementById('concepto').value = egreso.concepto;
             document.getElementById('monto').value = egreso.monto;
             document.getElementById('estado').value = egreso.estado;
@@ -566,30 +569,65 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Eliminar un egreso
+    // Eliminar un egreso - Modificado para usar modal de confirmación
     function eliminarEgreso(id) {
-        if (!confirm('¿Está seguro de eliminar este egreso? Esta acción no se puede deshacer.')) {
+        // Buscar el egreso en la lista actual
+        const egreso = egresos.find(e => e.id === id);
+        if (!egreso) {
+            mostrarNotificacion('Error', 'No se encontró el egreso a eliminar', 'error');
             return;
         }
         
-        fetch(`/api/egresos/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error al eliminar el egreso');
-            }
-            return response.json();
-        })
-        .then(data => {
-            mostrarNotificacion('Éxito', 'Egreso eliminado correctamente', 'success');
-            cargarEgresos();
-        })
-        .catch(error => {
-            mostrarNotificacion('Error', error.message, 'error');
+        // Llenar el modal con los datos del egreso
+        document.getElementById('eliminarFecha').textContent = new Date(egreso.fecha).toLocaleDateString('es-ES');
+        document.getElementById('eliminarConcepto').textContent = egreso.concepto;
+        document.getElementById('eliminarCategoria').textContent = egreso.categoria?.nombre || '-';
+        document.getElementById('eliminarMonto').textContent = formatearMoneda(egreso.monto);
+        
+        let estadoText;
+        switch (egreso.estado) {
+            case 'pagado': estadoText = 'Pagado'; break;
+            case 'pendiente': estadoText = 'Pendiente'; break;
+            case 'anulado': estadoText = 'Anulado'; break;
+            default: estadoText = egreso.estado;
+        }
+        document.getElementById('eliminarEstado').textContent = estadoText;
+        
+        // Mostrar el modal
+        const confirmarModal = new bootstrap.Modal(document.getElementById('confirmarEliminarModal'));
+        confirmarModal.show();
+        
+        // Configurar el botón de confirmar
+        const btnConfirmar = document.getElementById('btnConfirmarEliminar');
+        
+        // Remover event listeners anteriores
+        const nuevoBtn = btnConfirmar.cloneNode(true);
+        btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
+        
+        // Añadir nuevo event listener
+        nuevoBtn.addEventListener('click', function() {
+            confirmarModal.hide();
+            
+            // Enviar la solicitud de eliminación
+            fetch(`/api/egresos/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al eliminar el egreso');
+                }
+                return response.json();
+            })
+            .then(data => {
+                mostrarNotificacion('Éxito', 'Egreso eliminado correctamente', 'success');
+                cargarEgresos();
+            })
+            .catch(error => {
+                mostrarNotificacion('Error', error.message, 'error');
+            });
         });
     }
 

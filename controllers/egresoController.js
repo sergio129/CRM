@@ -85,13 +85,38 @@ exports.getEgresos = async (req, res) => {
     // Calcular el total de páginas
     const totalPages = Math.ceil(count / limit);
     
+    // Calcular estadísticas
+    const totalEgresos = await Egreso.sum('monto', { 
+      where: { 
+        ...where,
+        estado: { [Op.in]: ['pagado', 'pendiente'] }
+      } 
+    });
+    
+    const totalPagado = await Egreso.sum('monto', { 
+      where: { 
+        ...where,
+        estado: 'pagado'
+      } 
+    });
+    
+    const totalPendiente = await Egreso.sum('monto', { 
+      where: { 
+        ...where,
+        estado: 'pendiente'
+      } 
+    });
+    
     res.json({
       egresos: rows,
-      meta: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages
+      totalItems: count,
+      currentPage: parseInt(page),
+      pageSize: parseInt(limit),
+      totalPages,
+      stats: {
+        totalEgresos: totalEgresos || 0,
+        totalPagado: totalPagado || 0,
+        totalPendiente: totalPendiente || 0
       }
     });
   } catch (error) {
@@ -129,6 +154,11 @@ exports.getEgresoById = async (req, res) => {
 
 // Crear un nuevo egreso
 exports.createEgreso = async (req, res) => {
+  // Mapear categoriaId a categoria_id si existe
+  if (req.body.categoriaId && !req.body.categoria_id) {
+    req.body.categoria_id = req.body.categoriaId;
+  }
+  
   // Validar los datos de entrada
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -226,6 +256,11 @@ exports.createEgreso = async (req, res) => {
 
 // Actualizar un egreso
 exports.updateEgreso = async (req, res) => {
+  // Mapear categoriaId a categoria_id si existe
+  if (req.body.categoriaId && !req.body.categoria_id) {
+    req.body.categoria_id = req.body.categoriaId;
+  }
+  
   // Validar los datos de entrada
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -589,6 +624,46 @@ exports.deleteArchivoAdjunto = async (req, res) => {
     console.error('Error al eliminar archivo:', error);
     res.status(500).json({ 
       message: 'Error al eliminar archivo',
+      error: error.message 
+    });
+  }
+};
+
+// Eliminar un egreso
+exports.deleteEgreso = async (req, res) => {
+  let transaction;
+
+  try {
+    transaction = await sequelize.transaction();
+    
+    const egresoId = req.params.id;
+    const egreso = await Egreso.findByPk(egresoId, {
+      include: [{ model: EgresoRecurrente, as: 'recurrencia' }]
+    });
+    
+    if (!egreso) {
+      return res.status(404).json({ message: 'Egreso no encontrado' });
+    }
+    
+    // Si tiene recurrencia, eliminarla primero
+    if (egreso.recurrencia) {
+      await egreso.recurrencia.destroy({ transaction });
+    }
+    
+    // Eliminar el egreso
+    await egreso.destroy({ transaction });
+    
+    await transaction.commit();
+    
+    res.json({
+      message: 'Egreso eliminado exitosamente'
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    
+    console.error('Error al eliminar egreso:', error);
+    res.status(500).json({ 
+      message: 'Error al eliminar egreso',
       error: error.message 
     });
   }

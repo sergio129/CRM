@@ -46,7 +46,7 @@ exports.createCategoria = async (req, res) => {
   }
   
   try {
-    const { nombre, descripcion, es_activo } = req.body;
+    const { nombre, descripcion, es_activo, activa } = req.body;
     
     // Verificar si ya existe una categoría con el mismo nombre
     const categoriaExistente = await CategoriaEgreso.findOne({ 
@@ -57,10 +57,14 @@ exports.createCategoria = async (req, res) => {
       return res.status(400).json({ message: 'Ya existe una categoría con este nombre' });
     }
     
+    // Convertir explícitamente es_activo a booleano, aceptando tanto 'es_activo' como 'activa'
+    const esActivoBoolean = (es_activo === true || es_activo === 'true' || es_activo === '1' || 
+                              activa === true || activa === 'true' || activa === '1') ? true : false;
+    
     const nuevaCategoria = await CategoriaEgreso.create({
       nombre,
       descripcion,
-      es_activo: es_activo !== undefined ? es_activo : true
+      es_activo: esActivoBoolean
     });
     
     res.status(201).json({
@@ -85,7 +89,7 @@ exports.updateCategoria = async (req, res) => {
   }
   
   try {
-    const { nombre, descripcion, es_activo } = req.body;
+    const { nombre, descripcion, es_activo, activa } = req.body;
     const categoriaId = req.params.id;
     
     const categoria = await CategoriaEgreso.findByPk(categoriaId);
@@ -105,11 +109,18 @@ exports.updateCategoria = async (req, res) => {
       }
     }
     
+    // Convertir explícitamente es_activo a booleano si se proporciona, aceptando tanto 'es_activo' como 'activa'
+    let esActivoBoolean = categoria.es_activo;
+    if (es_activo !== undefined || activa !== undefined) {
+      esActivoBoolean = (es_activo === true || es_activo === 'true' || es_activo === '1' || 
+                          activa === true || activa === 'true' || activa === '1') ? true : false;
+    }
+    
     // Actualizar la categoría
     await categoria.update({
       nombre: nombre || categoria.nombre,
       descripcion: descripcion !== undefined ? descripcion : categoria.descripcion,
-      es_activo: es_activo !== undefined ? es_activo : categoria.es_activo
+      es_activo: esActivoBoolean
     });
     
     res.json({

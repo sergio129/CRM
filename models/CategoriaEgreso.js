@@ -1,7 +1,15 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-class CategoriaEgreso extends Model {}
+class CategoriaEgreso extends Model {
+  // Método para personalizar la serialización a JSON
+  toJSON() {
+    const values = { ...this.get() };
+    // Agregamos la propiedad 'activa' basada en 'es_activo'
+    values.activa = values.es_activo;
+    return values;
+  }
+}
 
 CategoriaEgreso.init({
   id: {

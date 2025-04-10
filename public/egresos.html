@@ -635,6 +635,58 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmación para Eliminar -->
+    <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-labelledby="confirmarEliminarModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="confirmarEliminarModalLabel">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de eliminar este egreso? Esta acción no se puede deshacer.</p>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Esta operación eliminará permanentemente el egreso.
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">Resumen del egreso:</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="fw-bold">Fecha:</td>
+                                    <td id="eliminarFecha">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Concepto:</td>
+                                    <td id="eliminarConcepto">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Categoría:</td>
+                                    <td id="eliminarCategoria">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Monto:</td>
+                                    <td id="eliminarMonto" class="text-danger">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Estado:</td>
+                                    <td id="eliminarEstado">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container">
         <!-- Los toasts se generan dinámicamente -->
