@@ -76,6 +76,325 @@ function setupEventListeners() {
     document.querySelector('button[onclick="exportPayrollReport()"]').onclick = exportPayrollReport;
 }
 
+// Almacenar la lista completa de empleados para búsqueda local
+let allEmployees = [];
+
+// Función para cargar empleados específicamente para el filtro
+async function loadEmployeesForFilter() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('Token no encontrado');
+        }
+
+        // Mostrar mensaje de carga
+        const searchResultsContainer = document.getElementById('employeeSearchResults');
+        if (!searchResultsContainer) {
+            throw new Error('Elemento employeeSearchResults no encontrado');
+        }
+        
+        // Indicador visual de carga
+        searchResultsContainer.innerHTML = `
+            <div class="loading">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                Cargando empleados...
+            </div>
+        `;
+        
+        // Mostrar el dropdown durante la carga
+        searchResultsContainer.classList.add('show');
+
+        console.log('Solicitando empleados al servidor...');
+        const response = await fetch('/api/employees', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Error en la respuesta: ${response.status} - ${errorData.message || 'Error desconocido'}`);
+        }
+
+        const data = await response.json();
+        console.log('Datos recibidos del servidor:', data);
+        
+        // Determinar la estructura de los datos
+        let employees = data;
+        if (Array.isArray(data.employees)) {
+            employees = data.employees; // Si los empleados vienen dentro de un objeto {employees: [...]}
+        } else if (!Array.isArray(data) && data.data && Array.isArray(data.data)) {
+            employees = data.data; // Otra estructura posible {data: [...]}
+        }
+        
+        // Guardar la lista completa para búsqueda local
+        allEmployees = employees || [];
+        
+        console.log(`Se encontraron ${allEmployees.length} empleados`);
+        
+        // Resetear y volver a llenar el dropdown
+        searchResultsContainer.innerHTML = '<button class="dropdown-item" value="">Todos</button>';
+        
+        // Inicialmente ocultar el dropdown hasta que el usuario haga clic en el input
+        searchResultsContainer.classList.remove('show');
+        
+        // Configurar el campo de búsqueda
+        setupEmployeeSearchField();
+
+    } catch (error) {
+        console.error('Error al cargar empleados para filtro:', error);
+        
+        // Mostrar el error en el dropdown
+        const searchResultsContainer = document.getElementById('employeeSearchResults');
+        if (searchResultsContainer) {
+            searchResultsContainer.innerHTML = `
+                <div class="no-results text-danger">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    Error al cargar empleados: ${error.message}
+                </div>
+            `;
+            searchResultsContainer.classList.add('show');
+        }
+        
+        showToast(`Error al cargar la lista de empleados: ${error.message}`, 'danger');
+    }
+}
+
+// Configurar campo de búsqueda predictiva
+function setupEmployeeSearchField() {
+    const searchInput = document.getElementById('employeeSearchInput');
+    const searchResultsContainer = document.getElementById('employeeSearchResults');
+    const hiddenFilterInput = document.getElementById('filterEmployee');
+    
+    if (!searchInput || !searchResultsContainer || !hiddenFilterInput) {
+        console.error('No se encontraron los elementos necesarios para la búsqueda de empleados');
+        return;
+    }
+    
+    // Mostrar/ocultar el dropdown al hacer clic en el input
+    searchInput.addEventListener('click', function() {
+        if (allEmployees.length === 0) {
+            searchResultsContainer.innerHTML = `
+                <div class="no-results">
+                    No hay empleados disponibles
+                </div>
+            `;
+        } else {
+            // Al hacer clic, mostrar todos los empleados si no hay texto
+            if (!this.value.trim()) {
+                populateEmployeeResults(allEmployees);
+            }
+        }
+        searchResultsContainer.classList.add('show');
+    });
+    
+    // Cerrar el dropdown cuando se hace clic fuera
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResultsContainer.contains(e.target)) {
+            searchResultsContainer.classList.remove('show');
+        }
+    });
+    
+    // Manejar evento de entrada para búsqueda en tiempo real
+    let typingTimer;
+    const doneTypingInterval = 300; // Tiempo en ms
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(typingTimer);
+        
+        // Mostrar indicador de carga
+        if (this.value.trim().length > 0) {
+            searchResultsContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    Buscando...
+                </div>
+            `;
+            searchResultsContainer.classList.add('show');
+            
+            typingTimer = setTimeout(() => {
+                const query = this.value.trim().toLowerCase();
+                performEmployeeSearch(query);
+            }, doneTypingInterval);
+        } else {
+            // Si el campo está vacío, mostrar todos los empleados
+            populateEmployeeResults(allEmployees);
+            searchResultsContainer.classList.add('show');
+            
+            // Resetear el valor del filtro cuando está vacío
+            hiddenFilterInput.value = '';
+        }
+    });
+    
+    // Manejar selección con teclado
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusNextItem(-1); // Empezar desde el primer elemento
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusPreviousItem();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            selectFocusedItem();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            searchResultsContainer.classList.remove('show');
+        }
+    });
+    
+    // Agregar evento de clic a la opción "Todos"
+    document.querySelector('#employeeSearchResults .dropdown-item[value=""]').addEventListener('click', function() {
+        selectEmployee('', 'Todos');
+    });
+}
+
+// Función para buscar empleados basado en la entrada
+function performEmployeeSearch(query) {
+    const searchResultsContainer = document.getElementById('employeeSearchResults');
+    
+    if (query === '') {
+        // Si no hay query, mostrar todos los empleados
+        populateEmployeeResults(allEmployees);
+        return;
+    }
+    
+    // Filtrar empleados localmente
+    const filteredEmployees = allEmployees.filter(employee => {
+        // Obtener propiedades relevantes con manejo de diferentes estructuras de datos
+        const name = (employee.full_name || employee.nombre || employee.fullName || employee.name || '').toLowerCase();
+        const document = (employee.id_number || employee.numero_identificacion || employee.documento || employee.document || '').toLowerCase();
+        
+        return name.includes(query) || document.includes(query);
+    });
+    
+    if (filteredEmployees.length === 0) {
+        searchResultsContainer.innerHTML = `
+            <div class="no-results">
+                No se encontraron empleados para "${query}"
+            </div>
+        `;
+    } else {
+        populateEmployeeResults(filteredEmployees, query);
+    }
+}
+
+// Función para llenar el dropdown con resultados de búsqueda
+function populateEmployeeResults(employees, highlightText = '') {
+    const searchResultsContainer = document.getElementById('employeeSearchResults');
+    
+    // Empezar con la opción "Todos"
+    let html = '<button class="dropdown-item" value="">Todos</button>';
+    
+    employees.forEach(employee => {
+        // Determinar qué campos usar según la estructura del objeto
+        const id = employee.id || employee._id || '';
+        const name = employee.full_name || employee.nombre || employee.fullName || employee.name || 'Nombre no disponible';
+        const document = employee.id_number || employee.numero_identificacion || employee.documento || employee.document || '';
+        
+        let displayName = name;
+        let displayDocument = document;
+        
+        // Resaltar texto si hay una búsqueda
+        if (highlightText && highlightText.length > 0) {
+            const regex = new RegExp(`(${escapeRegExp(highlightText)})`, 'gi');
+            displayName = name.replace(regex, '<span class="highlight-text">$1</span>');
+            displayDocument = document.replace(regex, '<span class="highlight-text">$1</span>');
+        }
+        
+        html += `
+            <button class="dropdown-item" value="${id}" data-name="${name}">
+                <span class="employee-name">${displayName}</span>
+                ${document ? `<span class="employee-doc">(${displayDocument})</span>` : ''}
+            </button>
+        `;
+    });
+    
+    searchResultsContainer.innerHTML = html;
+    
+    // Agregar eventos clic para cada elemento
+    const items = searchResultsContainer.querySelectorAll('.dropdown-item');
+    items.forEach(item => {
+        item.addEventListener('click', function() {
+            selectEmployee(this.value, this.dataset.name || 'Todos');
+        });
+    });
+}
+
+// Función para seleccionar un empleado
+function selectEmployee(id, name) {
+    const searchInput = document.getElementById('employeeSearchInput');
+    const hiddenFilterInput = document.getElementById('filterEmployee');
+    const searchResultsContainer = document.getElementById('employeeSearchResults');
+    
+    hiddenFilterInput.value = id;
+    searchInput.value = id ? name : '';
+    
+    // Si se seleccionó "Todos", dejar el input vacío pero con placeholder
+    if (!id) {
+        searchInput.placeholder = 'Todos los empleados';
+        searchInput.value = '';
+    }
+    
+    // Ocultar dropdown
+    searchResultsContainer.classList.remove('show');
+}
+
+// Función para escapar caracteres especiales en expresiones regulares
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Funciones para navegación por teclado
+function focusNextItem(currentIndex) {
+    const items = document.querySelectorAll('#employeeSearchResults .dropdown-item');
+    if (items.length === 0) return;
+    
+    // Quitar clase active del ítem actual
+    items.forEach(item => item.classList.remove('active'));
+    
+    // Establecer el nuevo índice
+    let newIndex = currentIndex + 1;
+    if (newIndex >= items.length) newIndex = 0;
+    
+    // Activar el nuevo ítem
+    items[newIndex].classList.add('active');
+    items[newIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function focusPreviousItem() {
+    const items = document.querySelectorAll('#employeeSearchResults .dropdown-item');
+    if (items.length === 0) return;
+    
+    // Encontrar el índice actual
+    let currentIndex = -1;
+    items.forEach((item, index) => {
+        if (item.classList.contains('active')) {
+            currentIndex = index;
+        }
+    });
+    
+    // Quitar clase active del ítem actual
+    items.forEach(item => item.classList.remove('active'));
+    
+    // Establecer el nuevo índice
+    let newIndex = currentIndex - 1;
+    if (newIndex < 0) newIndex = items.length - 1;
+    
+    // Activar el nuevo ítem
+    items[newIndex].classList.add('active');
+    items[newIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function selectFocusedItem() {
+    const activeItem = document.querySelector('#employeeSearchResults .dropdown-item.active');
+    if (activeItem) {
+        activeItem.click();
+    }
+}
+
 // Función para cargar el resumen de nóminas (actualizar contadores)
 async function loadPayrollSummary() {
     try {
@@ -104,91 +423,6 @@ async function loadPayrollSummary() {
     } catch (error) {
         console.error('Error al cargar el resumen de nómina:', error);
         throw error;
-    }
-}
-
-// Función para cargar empleados específicamente para el filtro
-async function loadEmployeesForFilter() {
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('Token no encontrado');
-        }
-
-        // Mostrar mensaje de carga
-        const filterEmployeeSelect = document.getElementById('filterEmployee');
-        if (!filterEmployeeSelect) {
-            throw new Error('Elemento filterEmployee no encontrado');
-        }
-        
-        // Indicador visual de carga
-        filterEmployeeSelect.innerHTML = '<option value="">Cargando empleados...</option>';
-
-        console.log('Solicitando empleados al servidor...');
-        const response = await fetch('/api/employees', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Error en la respuesta: ${response.status} - ${errorData.message || 'Error desconocido'}`);
-        }
-
-        const data = await response.json();
-        console.log('Datos recibidos del servidor:', data);
-        
-        // Determinar la estructura de los datos
-        let employees = data;
-        if (Array.isArray(data.employees)) {
-            employees = data.employees; // Si los empleados vienen dentro de un objeto {employees: [...]}
-        } else if (!Array.isArray(data) && data.data && Array.isArray(data.data)) {
-            employees = data.data; // Otra estructura posible {data: [...]}
-        }
-        
-        console.log(`Se encontraron ${employees ? employees.length : 0} empleados`);
-        
-        // Resetear el selector
-        filterEmployeeSelect.innerHTML = '<option value="">Todos</option>';
-        
-        if (employees && employees.length > 0) {
-            employees.forEach(employee => {
-                // Añadir al filtro - verificar los nombres de propiedades
-                const employeeName = employee.full_name || employee.nombre || employee.fullName || employee.name || 'Nombre no disponible';
-                const employeeId = employee.id || employee._id || '';
-                const employeeDocument = employee.id_number || employee.numero_identificacion || employee.document || '';
-                
-                const filterOption = document.createElement('option');
-                filterOption.value = employeeId;
-                filterOption.textContent = `${employeeName} (${employeeDocument || 'Sin documento'})`;
-                filterEmployeeSelect.appendChild(filterOption);
-                
-                console.log(`Empleado añadido al selector: ${employeeName} (${employeeDocument})`);
-            });
-            console.log('Selector de empleados actualizado correctamente');
-        } else {
-            console.warn('No se encontraron empleados o el formato de respuesta es incorrecto');
-            // Añadir una opción indicando que no hay empleados
-            const noDataOption = document.createElement('option');
-            noDataOption.value = "";
-            noDataOption.textContent = "No hay empleados disponibles";
-            noDataOption.disabled = true;
-            filterEmployeeSelect.appendChild(noDataOption);
-        }
-
-    } catch (error) {
-        console.error('Error al cargar empleados para filtro:', error);
-        
-        // Mostrar el error en el selector
-        const filterEmployeeSelect = document.getElementById('filterEmployee');
-        if (filterEmployeeSelect) {
-            filterEmployeeSelect.innerHTML = '<option value="">Error al cargar empleados</option>';
-        }
-        
-        showToast(`Error al cargar la lista de empleados: ${error.message}`, 'danger');
     }
 }
 

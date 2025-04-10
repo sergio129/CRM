@@ -346,6 +346,74 @@
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+        
+        /* Estilos para el selector de empleado con búsqueda predictiva */
+        .employee-search {
+            position: relative;
+        }
+        
+        .employee-search .dropdown-menu {
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.175);
+        }
+        
+        .employee-search .dropdown-menu.show {
+            display: block;
+            margin-top: -1px;
+            border-top: none;
+        }
+        
+        .employee-search .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .employee-search .dropdown-item:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .employee-search .dropdown-item.active {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: #2c3e50;
+        }
+        
+        .employee-search .dropdown-item.highlight-text {
+            font-weight: bold;
+        }
+        
+        .employee-search .dropdown-item .employee-name {
+            font-weight: 500;
+        }
+        
+        .employee-search .dropdown-item .employee-doc {
+            color: #6c757d;
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+        
+        .employee-search .no-results {
+            padding: 10px 15px;
+            color: #6c757d;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        /* Indicador de carga */
+        .employee-search .loading {
+            padding: 10px 15px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .employee-search .loading .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -491,9 +559,14 @@
                             </div>
                             <div class="col-md-3">
                                 <label for="filterEmployee" class="form-label">Filtrar por Empleado</label>
-                                <select class="form-select" id="filterEmployee">
-                                    <option value="">Todos</option>
-                                </select>
+                                <div class="employee-search position-relative">
+                                    <input type="text" class="form-control" id="employeeSearchInput" placeholder="Buscar por nombre o documento...">
+                                    <input type="hidden" id="filterEmployee" value="">
+                                    <div class="dropdown-menu w-100" id="employeeSearchResults" style="max-height: 250px; overflow-y: auto;">
+                                        <!-- Los resultados de búsqueda se cargarán aquí -->
+                                        <button class="dropdown-item" value="">Todos</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label for="filterStatus" class="form-label">Filtrar por Estado</label>
