@@ -36,7 +36,7 @@ ECHO =======================================================
 ECHO     OPCIONES DISPONIBLES
 ECHO =======================================================
 ECHO.
-ECHO 1. Reiniciar servicios con limpieza completa
+ECHO 1. Reiniciar servicios (preservando datos)
 ECHO 2. Salir
 ECHO.
 choice /C 12 /M "Seleccione una opcion: "
@@ -46,17 +46,18 @@ if errorlevel 1 goto restart
 
 :restart
 ECHO.
-ECHO [INFO] Realizando limpieza completa y reiniciando servicios...
+ECHO [INFO] Reiniciando servicios (manteniendo los datos de la base de datos)...
 ECHO.
 
 ECHO [INFO] Eliminando contenedores...
-docker rm -f gescoop_app gescoop_db 2>nul
+docker rm -f gescoop_app 2>nul
 
 ECHO [INFO] Eliminando imagenes...
 docker rmi -f modeloweb-app 2>nul
 
-ECHO [INFO] Limpiando volumenes...
-docker volume rm modeloweb_gescoop_db_data 2>nul
+REM Línea comentada para preservar los datos de la base de datos
+REM ECHO [INFO] Limpiando volumenes...
+REM docker volume rm modeloweb_gescoop_db_data 2>nul
 
 ECHO [INFO] Limpiando cache...
 docker builder prune -f

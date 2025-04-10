@@ -19,7 +19,8 @@ exports.login = async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        // Modificado: Comparación directa en lugar de usar bcrypt
+        const isPasswordValid = (password === user.password_hash);
 
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Contraseña incorrecta' });

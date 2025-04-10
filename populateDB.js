@@ -13,7 +13,9 @@ const seedUsers = async () => {
         ];
 
         for (let user of users) {
-            const passwordHash = await bcrypt.hash(user.password, 10); // 🔹 Hash de la contraseña
+            // Modificado: guardando contraseña en texto plano
+            const passwordHash = user.password;
+            
             await User.create({
                 full_name: user.full_name,
                 email: user.email,

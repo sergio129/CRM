@@ -10,10 +10,14 @@ console.log(`DB_USER: ${process.env.DB_USER}`);
 
 // Use environment variables with fallbacks
 const host = process.env.DB_HOST || 'db';
-const port = process.env.DB_PORT || 3306;
+// Forzar puerto 3306 para conexiones dentro de Docker
+const port = process.env.NODE_ENV === 'production' ? 3306 : (process.env.DB_PORT || 3307);
 const database = process.env.DB_NAME || 'gescoop_db';
 const username = process.env.DB_USER || 'gescoop_user';
 const password = process.env.DB_PASSWORD || 'gescoop_password';
+
+console.log(`Usando puerto: ${port} para conectarse a la base de datos`);
+console.log(`Entorno: ${process.env.NODE_ENV}`);
 
 const sequelize = new Sequelize(
     database,

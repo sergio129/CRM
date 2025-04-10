@@ -13,7 +13,9 @@ exports.createUser = async (req, res) => {
     const { full_name, email, username, password, role } = req.body;
 
     try {
-        const passwordHash = await bcrypt.hash(password, 10);
+        // Modificado: guardando contraseña en texto plano
+        const passwordHash = password;
+        
         const newUser = await User.create({ full_name, email, username, password_hash: passwordHash, role });
 
         res.status(201).json({ message: 'Usuario creado exitosamente', user: newUser });
@@ -57,7 +59,10 @@ exports.createUser = async (req, res) => {
 
     try {
         const { full_name, email, username, password, role, status } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Modificado: guardando contraseña en texto plano
+        const hashedPassword = password;
+        
         if (!full_name || !email || !username || !password || !role || !status) {
             return res.status(400).json({ message: "Todos los campos son obligatorios" });
         }

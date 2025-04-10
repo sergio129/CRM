@@ -1,0 +1,30 @@
+FROM node:14
+
+# Instalar dependencias del sistema necesarias
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python \
+    make \
+    gcc \
+    g++ \
+    && npm install -g node-gyp nodemon
+
+WORKDIR /usr/src/app
+
+# Copiar package.json y package-lock.json
+COPY package*.json ./
+
+# Instalar todas las dependencias incluyendo las de desarrollo
+RUN npm install
+
+# Copiar configuración de la aplicación
+COPY .env* ./
+
+# Exponer puerto de la aplicación
+EXPOSE 5000
+
+# Configurar entorno de desarrollo
+ENV NODE_ENV=development
+
+# Usar nodemon para hot-reload
+CMD ["nodemon", "--watch", ".", "app.js"]

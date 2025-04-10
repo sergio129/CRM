@@ -19,10 +19,12 @@ services:
       - JWT_SECRET=your_jwt_secret_key
       - PORT=5000
     volumes:
-      # Mount only specific directories, not the entire project
-      - ./public:/usr/src/app/public
-      - ./uploads:/usr/src/app/uploads
-      - ./.env:/usr/src/app/.env
+      # Montar el código fuente completo para desarrollo
+      - ./:/usr/src/app
+      # Excluir los node_modules del host para usar los del contenedor
+      - /usr/src/app/node_modules
+      # Configurar el directorio de logs para persistencia
+      - ./logs:/usr/src/app/logs
     depends_on:
       - db
     networks:

@@ -273,8 +273,8 @@ async function saveClient() {
             address: document.getElementById('ciudad').value,
             identification: document.getElementById('idNumber').value,
             ultimo_pago: document.getElementById('ultimo_pago').value,
-            telefono_movil: document.getElementById('telefonoMovil').value, // Añadir este campo
-            ciudad: document.getElementById('ciudad').value, // Añadir este campo
+            telefono_movil: document.getElementById('telefonoMovil').value,
+            ciudad: document.getElementById('ciudad').value,
 
             // Resto de campos
             full_name: document.getElementById('fullName').value,
@@ -295,7 +295,7 @@ async function saveClient() {
             empresa: document.getElementById('empresa').value,
             sector_economico: document.getElementById('sectorEconomico').value,
             ingresos_mensuales: document.getElementById('ingresosMensuales').value || 0,
-            deuda_total: document.getElementById('deudaTotal').value || 0,
+            deuda_total: document.getElementById('deudasActuales').value || 0,
             estado_financiero: document.getElementById('estadoFinanciero').value || 'Al día',
             status: document.getElementById('status').value || 'Activo'
         };
@@ -337,9 +337,15 @@ async function saveClient() {
             body: JSON.stringify(clientData)
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Error al guardar cliente');
+            // Si hay un error específico de campo duplicado
+            if (responseData.field) {
+                highlightInvalidField(responseData.field);
+                throw new Error(responseData.error);
+            }
+            throw new Error(responseData.message || 'Error al guardar cliente');
         }
 
         showToast('Cliente guardado exitosamente', 'success');
@@ -353,6 +359,64 @@ async function saveClient() {
     } catch (error) {
         console.error("Error:", error);
         showToast(error.message || "Error al guardar cliente", "danger");
+    }
+}
+
+// Función para resaltar campos inválidos
+function highlightInvalidField(fieldName) {
+    const fieldMapping = {
+        'email': 'email',
+        'identification': 'idNumber',
+        'phone': 'telefonoMovil',
+        'numero_cuenta': 'numeroCuenta'
+    };
+    
+    const elementId = fieldMapping[fieldName] || fieldName;
+    const element = document.getElementById(elementId);
+    
+    if (element) {
+        // Resaltar el campo
+        element.classList.add('is-invalid');
+        
+        // Añadir mensaje de error debajo del campo
+        let feedbackElement = element.nextElementSibling;
+        if (!feedbackElement || !feedbackElement.classList.contains('invalid-feedback')) {
+            feedbackElement = document.createElement('div');
+            feedbackElement.className = 'invalid-feedback';
+            element.parentNode.insertBefore(feedbackElement, element.nextSibling);
+        }
+        
+        // Establecer mensaje según el campo
+        let errorMessage = '';
+        switch (fieldName) {
+            case 'email':
+                errorMessage = 'Este correo electrónico ya está registrado';
+                break;
+            case 'identification':
+                errorMessage = 'Este número de documento ya está registrado';
+                break;
+            case 'phone':
+                errorMessage = 'Este número de teléfono ya está registrado';
+                break;
+            case 'numero_cuenta':
+                errorMessage = 'Este número de cuenta ya está registrado';
+                break;
+            default:
+                errorMessage = 'Campo inválido';
+        }
+        
+        feedbackElement.textContent = errorMessage;
+        
+        // Enfocar el campo con error
+        element.focus();
+        
+        // Limpiar el resaltado después de un tiempo o cuando se edite el campo
+        element.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            if (feedbackElement) {
+                feedbackElement.textContent = '';
+            }
+        }, { once: true });
     }
 }
 
@@ -465,7 +529,7 @@ async function openClientDetailsModal(clientId) {
         document.getElementById("status").value = client.status || "Activo";
 
         // Mostrar `deudas_actuales` en lugar de `deuda_total`
-        document.getElementById("deudaTotal").value = client.deudas_actuales || 0;
+        document.getElementById("deudasActuales").value = client.deudas_actuales || 0;
 
         // Abrir la modal
         const clientModal = new bootstrap.Modal(document.getElementById("clientModal"));
