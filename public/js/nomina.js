@@ -111,35 +111,84 @@ async function loadPayrollSummary() {
 async function loadEmployeesForFilter() {
     try {
         const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('Token no encontrado');
+        }
+
+        // Mostrar mensaje de carga
+        const filterEmployeeSelect = document.getElementById('filterEmployee');
+        if (!filterEmployeeSelect) {
+            throw new Error('Elemento filterEmployee no encontrado');
+        }
+        
+        // Indicador visual de carga
+        filterEmployeeSelect.innerHTML = '<option value="">Cargando empleados...</option>';
+
+        console.log('Solicitando empleados al servidor...');
         const response = await fetch('/api/employees', {
+            method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
-            throw new Error('Error al cargar la lista de empleados');
+            const errorData = await response.json();
+            throw new Error(`Error en la respuesta: ${response.status} - ${errorData.message || 'Error desconocido'}`);
         }
 
-        const employees = await response.json();
+        const data = await response.json();
+        console.log('Datos recibidos del servidor:', data);
         
-        // Llenar el selector de filtro de empleados
-        const filterEmployeeSelect = document.getElementById('filterEmployee');
+        // Determinar la estructura de los datos
+        let employees = data;
+        if (Array.isArray(data.employees)) {
+            employees = data.employees; // Si los empleados vienen dentro de un objeto {employees: [...]}
+        } else if (!Array.isArray(data) && data.data && Array.isArray(data.data)) {
+            employees = data.data; // Otra estructura posible {data: [...]}
+        }
+        
+        console.log(`Se encontraron ${employees ? employees.length : 0} empleados`);
+        
+        // Resetear el selector
         filterEmployeeSelect.innerHTML = '<option value="">Todos</option>';
         
         if (employees && employees.length > 0) {
             employees.forEach(employee => {
-                // Añadir al filtro
+                // Añadir al filtro - verificar los nombres de propiedades
+                const employeeName = employee.full_name || employee.nombre || employee.fullName || employee.name || 'Nombre no disponible';
+                const employeeId = employee.id || employee._id || '';
+                const employeeDocument = employee.id_number || employee.numero_identificacion || employee.document || '';
+                
                 const filterOption = document.createElement('option');
-                filterOption.value = employee.id;
-                filterOption.textContent = `${employee.full_name} (${employee.id_number || ''})`;
+                filterOption.value = employeeId;
+                filterOption.textContent = `${employeeName} (${employeeDocument || 'Sin documento'})`;
                 filterEmployeeSelect.appendChild(filterOption);
+                
+                console.log(`Empleado añadido al selector: ${employeeName} (${employeeDocument})`);
             });
+            console.log('Selector de empleados actualizado correctamente');
+        } else {
+            console.warn('No se encontraron empleados o el formato de respuesta es incorrecto');
+            // Añadir una opción indicando que no hay empleados
+            const noDataOption = document.createElement('option');
+            noDataOption.value = "";
+            noDataOption.textContent = "No hay empleados disponibles";
+            noDataOption.disabled = true;
+            filterEmployeeSelect.appendChild(noDataOption);
         }
 
     } catch (error) {
         console.error('Error al cargar empleados para filtro:', error);
-        throw error;
+        
+        // Mostrar el error en el selector
+        const filterEmployeeSelect = document.getElementById('filterEmployee');
+        if (filterEmployeeSelect) {
+            filterEmployeeSelect.innerHTML = '<option value="">Error al cargar empleados</option>';
+        }
+        
+        showToast(`Error al cargar la lista de empleados: ${error.message}`, 'danger');
     }
 }
 
