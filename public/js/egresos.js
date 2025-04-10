@@ -30,6 +30,280 @@ function mostrarModalNuevoEgreso() {
     modal.show();
 }
 
+// Función para mostrar la modal de categorías
+function mostrarModalCategorias() {
+    // Cargar las categorías antes de mostrar la modal
+    cargarCategoriasPorTabla();
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('categoriasModal'));
+    modal.show();
+}
+
+// Función para mostrar la modal de proveedores
+function mostrarModalProveedores() {
+    // Cargar los proveedores antes de mostrar la modal
+    cargarProveedores();
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('proveedoresModal'));
+    modal.show();
+}
+
+// Función para exportar egresos
+function exportarEgresos() {
+    mostrarNotificacion('Información', 'Exportando datos...', 'info');
+    // Implementar la lógica de exportación
+    // ...
+}
+
+// Función para generar reporte de egresos
+function generarReporteEgresos() {
+    mostrarNotificacion('Información', 'Generando reporte...', 'info');
+    // Implementar la lógica de generación de reportes
+    // ...
+}
+
+// Función para cargar categorías en la tabla de categorías
+function cargarCategoriasPorTabla() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    fetch('/api/categorias-egreso?incluirInactivas=true', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al cargar las categorías');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Llenar la tabla de categorías
+        const tablaCuerpo = document.getElementById('tablaCategorias');
+        
+        if (data.length === 0) {
+            tablaCuerpo.innerHTML = '<tr><td colspan="4" class="text-center">No hay categorías registradas</td></tr>';
+            return;
+        }
+        
+        let filas = '';
+        data.forEach(categoria => {
+            const estadoClass = categoria.activa ? 'success' : 'danger';
+            const estadoTexto = categoria.activa ? 'Activa' : 'Inactiva';
+            
+            filas += `
+            <tr>
+                <td>${categoria.nombre}</td>
+                <td>${categoria.descripcion || '-'}</td>
+                <td><span class="badge bg-${estadoClass}">${estadoTexto}</span></td>
+                <td class="action-buttons">
+                    <button onclick="editarCategoria(${categoria.id})" class="btn btn-sm btn-primary" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="eliminarCategoria(${categoria.id})" class="btn btn-sm btn-danger" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>`;
+        });
+        
+        tablaCuerpo.innerHTML = filas;
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+        document.getElementById('tablaCategorias').innerHTML = `<tr><td colspan="4" class="text-center">Error al cargar datos: ${error.message}</td></tr>`;
+    });
+}
+
+// Función para cargar proveedores en la tabla de proveedores
+function cargarProveedores() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    fetch('/api/proveedores', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al cargar los proveedores');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Llenar la tabla de proveedores
+        const tablaCuerpo = document.getElementById('tablaProveedores');
+        
+        if (data.length === 0) {
+            tablaCuerpo.innerHTML = '<tr><td colspan="5" class="text-center">No hay proveedores registrados</td></tr>';
+            return;
+        }
+        
+        let filas = '';
+        data.forEach(proveedor => {
+            const estadoClass = proveedor.activo ? 'success' : 'danger';
+            const estadoTexto = proveedor.activo ? 'Activo' : 'Inactivo';
+            
+            filas += `
+            <tr>
+                <td>${proveedor.nombre}</td>
+                <td>${proveedor.identificacion || '-'}</td>
+                <td>${proveedor.contacto || '-'}</td>
+                <td><span class="badge bg-${estadoClass}">${estadoTexto}</span></td>
+                <td class="action-buttons">
+                    <button onclick="editarProveedor(${proveedor.id})" class="btn btn-sm btn-primary" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="eliminarProveedor(${proveedor.id})" class="btn btn-sm btn-danger" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>`;
+        });
+        
+        tablaCuerpo.innerHTML = filas;
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+        document.getElementById('tablaProveedores').innerHTML = `<tr><td colspan="5" class="text-center">Error al cargar datos: ${error.message}</td></tr>`;
+    });
+}
+
+// Función para editar categoría
+function editarCategoria(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    fetch(`/api/categorias-egreso/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos de la categoría');
+        }
+        return response.json();
+    })
+    .then(categoria => {
+        document.getElementById('categoriaId').value = categoria.id;
+        document.getElementById('categoriaModalTitle').textContent = 'Editar Categoría';
+        document.getElementById('categoriaNombre').value = categoria.nombre;
+        document.getElementById('categoriaDescripcion').value = categoria.descripcion || '';
+        document.getElementById('categoriaActiva').checked = categoria.activa;
+        
+        // Mostrar el modal de formulario de categoría
+        const modal = new bootstrap.Modal(document.getElementById('categoriaFormModal'));
+        modal.show();
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+// Función para guardar categoría
+function guardarCategoria() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    const categoriaId = document.getElementById('categoriaId').value;
+    const esNueva = !categoriaId;
+    
+    // Validar formulario
+    const form = document.getElementById('categoriaForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Construir objeto con los datos del formulario
+    const data = {
+        nombre: document.getElementById('categoriaNombre').value,
+        descripcion: document.getElementById('categoriaDescripcion').value,
+        activa: document.getElementById('categoriaActiva').checked
+    };
+    
+    // Determinar URL y método HTTP
+    const url = esNueva ? '/api/categorias-egreso' : `/api/categorias-egreso/${categoriaId}`;
+    const method = esNueva ? 'POST' : 'PUT';
+    
+    // Enviar datos a la API
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Error al guardar la categoría');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        mostrarNotificacion('Éxito', `Categoría ${esNueva ? 'creada' : 'actualizada'} correctamente`, 'success');
+        // Cerrar el modal
+        bootstrap.Modal.getInstance(document.getElementById('categoriaFormModal')).hide();
+        // Recargar las categorías
+        cargarCategoriasPorTabla();
+        cargarCategorias(); // Para actualizar los selectores
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(titulo, mensaje, tipo) {
+    const toastContainer = document.getElementById('toastContainer');
+    const toastId = 'toast-' + Date.now();
+    
+    const toastHTML = `
+    <div id="${toastId}" class="toast align-items-center text-white bg-${tipo}" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <strong>${titulo}:</strong> ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>`;
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: 5000
+    });
+    
+    toast.show();
+    
+    // Eliminar el toast del DOM después de ocultarse
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
 function verDetalle(id) {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -623,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('btnNuevoEgreso').addEventListener('click', mostrarModalNuevoEgreso);
         document.getElementById('btnCategorias').addEventListener('click', mostrarModalCategorias);
         document.getElementById('btnProveedores').addEventListener('click', mostrarModalProveedores);
-        document.getElementById('btnReportes').addEventListener('click', mostrarReportes);
+        document.getElementById('btnReportes').addEventListener('click', generarReporteEgresos);
         document.getElementById('btnExportar').addEventListener('click', exportarEgresos);
 
         // Event listeners para filtros
