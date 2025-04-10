@@ -67,6 +67,76 @@
     border-radius: 0 0 15px 15px;
 }
 
+/* Estilos para los campos del modal de cliente - Mejora de visibilidad */
+#clientModalTabsContent .form-label {
+    color: #000000;
+    font-weight: 600;
+}
+
+#clientModalTabsContent .form-control,
+#clientModalTabsContent .form-select {
+    color: #000000;
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+}
+
+#clientModalTabsContent .form-control:focus,
+#clientModalTabsContent .form-select:focus {
+    border-color: #3f51b5;
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25);
+}
+
+#clientModalTabsContent .form-control[readonly],
+#clientModalTabsContent .form-select[disabled] {
+    background-color: #f8f9fa;
+    color: #212529;
+    opacity: 1;
+}
+
+/* Asegurar que el campo de fecha de último pago tenga texto negro */
+#ultimo_pago {
+    color: #000000 !important;
+    background-color: #ffffff;
+}
+
+/* Mejora para todos los textos de entrada en el modal */
+#clientModalTabsContent input,
+#clientModalTabsContent select,
+#clientModalTabsContent textarea {
+    color: #000000 !important;
+}
+
+/* Estilos para la etiqueta required */
+#clientModalTabsContent .required:after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Mejor contraste para small text-muted */
+#clientModalTabsContent .text-muted {
+    color: #545454 !important;
+    font-size: 0.85rem;
+}
+
+/* Estilos para las pestañas mejoradas */
+#clientModalTabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+#clientModalTabs .nav-link.active {
+    color: #000000;
+    font-weight: 600;
+    border-bottom: 2px solid #3f51b5;
+}
+
+/* Estilo específico para input de fecha */
+input[type="date"] {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000;
+}
+
 /* Estilos para secciones del formulario */
 .section-title {
     grid-column: span 2; /* Hacer que el título ocupe todo el ancho */
