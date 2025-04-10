@@ -28,6 +28,28 @@ exports.getRoles = async (req, res) => {
     }
 };
 
+// Obtener los permisos de un rol específico
+exports.getRolePermissions = async (req, res) => {
+    try {
+        const role = await Role.findByPk(req.params.id, {
+            include: [{
+                model: Permission,
+                as: 'permissions',
+                attributes: ['id', 'permission_name', 'description']
+            }]
+        });
+
+        if (!role) {
+            return res.status(404).json({ message: "Rol no encontrado" });
+        }
+
+        res.json(role.permissions);
+    } catch (error) {
+        console.error("Error al obtener permisos del rol:", error);
+        res.status(500).json({ message: "Error al obtener permisos del rol", error });
+    }
+};
+
 // Obtener un rol por ID
 exports.getRoleById = async (req, res) => {
     try {
