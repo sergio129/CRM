@@ -80,7 +80,7 @@ function setupEventListeners() {
 async function loadPayrollSummary() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/dashboard', {
+        const response = await fetch('/api/payrolls/summary', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -93,10 +93,11 @@ async function loadPayrollSummary() {
         const data = await response.json();
         
         // Actualizar los contadores
-        document.getElementById('activePayrollsCount').textContent = data.activePayrolls || 0;
-        document.getElementById('totalPaidAmount').textContent = formatMoney(data.totalPaid || 0);
-        document.getElementById('pendingPayrollsCount').textContent = data.pendingPayrolls || 0;
-        document.getElementById('totalEmployeesCount').textContent = data.employeeCount || 0;
+        document.getElementById('activePayrollsCount').textContent = data.empleadosActivos || 0;
+        document.getElementById('totalPaidAmount').textContent = formatMoney(data.totalPagado || 0);
+        document.getElementById('pendingPayrollsCount').textContent = data.totalPendiente ? 
+            Math.round(data.totalPendiente / (data.promedioNomina || 1)) : 0;
+        document.getElementById('totalEmployeesCount').textContent = data.empleadosActivos || 0;
 
         console.log("Contadores actualizados con datos:", data);
 
