@@ -35,36 +35,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
                 welcomeModal.show();
 
-                // Actualizar porcentaje de carga y barra de progreso
-                let percentage = 0;
+                // Mensajes de carga para mostrar en diferentes etapas
+                const loadingMessages = [
+                    "Iniciando sistema...",
+                    "Cargando módulos...",
+                    "Preparando datos...",
+                    "Configurando interfaz...",
+                    "Sincronizando información...",
+                    "¡Todo listo!"
+                ];
+
+                // Implementar una animación de carga más fluida
                 const loadingPercentage = document.getElementById('loadingPercentage');
                 const progressBar = document.getElementById('progressBar');
-                const interval = setInterval(() => {
-                    percentage += 20;
-                    loadingPercentage.textContent = `Cargando... ${percentage}%`;
+                const loadingMessageEl = document.getElementById('loadingMessage');
+                let percentage = 0;
+                
+                // Usar requestAnimationFrame para animación más suave
+                let lastUpdate = Date.now();
+                let messageIndex = 0;
+                loadingMessageEl.textContent = loadingMessages[0];
+                
+                const updateProgress = () => {
+                    const now = Date.now();
+                    const deltaTime = now - lastUpdate;
+                    
+                    // Avanza más rápido al principio y más lento hacia el final
+                    let increment = deltaTime / 100;
+                    if (percentage > 80) {
+                        increment = increment * 0.5; // Más lento al final
+                    } else if (percentage < 30) {
+                        increment = increment * 1.2; // Más rápido al principio
+                    }
+                    
+                    percentage = Math.min(percentage + increment, 100);
+                    lastUpdate = now;
+                    
+                    // Actualizar el porcentaje mostrado y la barra de progreso
+                    const displayPercentage = Math.floor(percentage);
+                    loadingPercentage.textContent = `${displayPercentage}%`;
                     progressBar.style.width = `${percentage}%`;
-                    progressBar.setAttribute('aria-valuenow', percentage);
-
-                    // Cambiar color de la barra de progreso
-                    if (percentage <= 40) {
-                        progressBar.classList.add('bg-danger');
-                        progressBar.classList.remove('bg-warning', 'bg-success');
-                    } else if (percentage <= 80) {
-                        progressBar.classList.add('bg-warning');
-                        progressBar.classList.remove('bg-danger', 'bg-success');
-                    } else {
-                        progressBar.classList.add('bg-success');
-                        progressBar.classList.remove('bg-danger', 'bg-warning');
-                    }
-
-                    if (percentage >= 100) {
-                        clearInterval(interval);
-                        welcomeModal.hide();
+                    progressBar.setAttribute('aria-valuenow', displayPercentage);
+                    
+                    // Actualizar mensaje de carga según el porcentaje
+                    const newMessageIndex = Math.min(Math.floor(percentage / 20), loadingMessages.length - 1);
+                    if (newMessageIndex > messageIndex) {
+                        messageIndex = newMessageIndex;
                         
-                        // Redirigir al dashboard sin incluir el token en la URL
-                        window.location.href = '/dashboard';
+                        // Animar el cambio de mensaje con desvanecimiento
+                        loadingMessageEl.style.opacity = '0';
+                        setTimeout(() => {
+                            loadingMessageEl.textContent = loadingMessages[messageIndex];
+                            loadingMessageEl.style.opacity = '1';
+                        }, 200);
                     }
-                }, 1000);
+                    
+                    // Continuar la animación o terminar
+                    if (percentage < 100) {
+                        requestAnimationFrame(updateProgress);
+                    } else {
+                        // Al finalizar la carga, mostramos un efecto final
+                        loadingMessageEl.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> ¡Todo listo!</span>';
+                        loadingPercentage.className = 'badge bg-success mb-2';
+                        progressBar.classList.remove('progress-bar-animated');
+                        
+                        // Después de un breve momento, ocultamos el modal y redirigimos
+                        setTimeout(() => {
+                            welcomeModal.hide();
+                            window.location.href = '/dashboard';
+                        }, 800);
+                    }
+                };
+                
+                // Iniciar la animación
+                requestAnimationFrame(updateProgress);
             } else {
                 // Mostrar el mensaje de error del servidor
                 const errorMessage = data.message || 'Usuario o contraseña incorrectos';
