@@ -1597,60 +1597,87 @@ function imprimirDetalleEgreso() {
 function descargarPDFEgreso() {
     mostrarNotificacion('Información', 'Generando PDF...', 'info');
     
-    // Utilizamos jsPDF para generar el PDF
-    const { jsPDF } = window.jspdf;
+    // Creamos el contenido del PDF con el formato elegante
+    const contenidoHTML = prepararContenidoEgreso();
     
-    // Creamos un elemento temporal para renderizar el contenido
-    const elementoTemp = document.createElement('div');
-    elementoTemp.innerHTML = prepararContenidoEgreso();
-    elementoTemp.style.width = '700px';
-    elementoTemp.style.padding = '20px';
-    elementoTemp.style.position = 'absolute';
-    elementoTemp.style.left = '-9999px';
-    document.body.appendChild(elementoTemp);
+    // Crear un div visible para renderizar correctamente
+    const contenedorPDF = document.createElement('div');
+    contenedorPDF.innerHTML = contenidoHTML;
+    contenedorPDF.className = 'pdf-container';
+    contenedorPDF.style.width = '800px';
+    contenedorPDF.style.backgroundColor = 'white';
+    contenedorPDF.style.padding = '20px';
+    contenedorPDF.style.position = 'fixed';
+    contenedorPDF.style.top = '0';
+    contenedorPDF.style.left = '-9999px';
+    contenedorPDF.style.zIndex = '-9999';
+    document.body.appendChild(contenedorPDF);
     
-    // Renderizamos el HTML con html2canvas
-    html2canvas(elementoTemp, {
-        scale: 2,
-        useCORS: true,
-        logging: false
-    }).then(canvas => {
-        // Removemos el elemento temporal
-        document.body.removeChild(elementoTemp);
-        
-        // Obtenemos los datos de la imagen
-        const imgData = canvas.toDataURL('image/png');
-        
-        // Creamos el documento PDF (A4)
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-        const imgX = (pdfWidth - imgWidth * ratio) / 2;
-        const imgY = 20;
-        
-        // Añadimos la imagen al PDF
-        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-        
-        // Añadimos un pie de página
-        const footer = `Generado desde GESCOOP el ${new Date().toLocaleString()}`;
-        pdf.setFontSize(10);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(footer, pdfWidth/2, pdfHeight - 10, { align: 'center' });
-        
-        // Obtenemos el número del comprobante
-        const comprobante = document.getElementById('detalleComprobante').textContent || 'egreso';
-        
-        // Guardamos el PDF
-        pdf.save(`Detalle_Egreso_${comprobante}.pdf`);
-        
-        mostrarNotificacion('Éxito', 'PDF generado correctamente', 'success');
-    }).catch(error => {
-        console.error('Error al generar el PDF:', error);
-        mostrarNotificacion('Error', 'Error al generar el PDF. Intente nuevamente.', 'error');
-    });
+    // Obtener el número del comprobante para nombrar el archivo
+    const comprobante = document.getElementById('detalleComprobante').textContent.trim() || 'egreso';
+    const nombreArchivo = `Detalle_Egreso_${comprobante.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    
+    // Esperamos a que todo se renderice correctamente
+    setTimeout(() => {
+        // Usamos html2canvas con opciones mejoradas
+        html2canvas(contenedorPDF, {
+            scale: 1.5, // Mayor escala para mejor calidad
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff', // Fondo blanco explícito
+            logging: true, // Activar logs para depuración
+            onclone: function(clonedDoc) {
+                // Asegurarse que el clon es visible
+                const clonedElement = clonedDoc.querySelector('.pdf-container');
+                if (clonedElement) {
+                    clonedElement.style.position = 'static';
+                    clonedElement.style.display = 'block';
+                    clonedElement.style.width = '800px';
+                    clonedElement.style.margin = '0 auto';
+                }
+            }
+        }).then(canvas => {
+            // Crear el PDF con jsPDF
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            // Calcular dimensiones para que se ajuste a la página A4
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            // Calcular la escala para ajustar el contenido a la página
+            const ratio = Math.min((pdfWidth - 20) / canvasWidth, (pdfHeight - 40) / canvasHeight);
+            const imgWidth = canvasWidth * ratio;
+            const imgHeight = canvasHeight * ratio;
+            const imgX = (pdfWidth - imgWidth) / 2;
+            const imgY = 20;
+            
+            // Añadir la imagen al PDF
+            pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth, imgHeight);
+            
+            // Añadir pie de página
+            pdf.setFontSize(10);
+            pdf.setTextColor(100, 100, 100);
+            const footer = `Generado desde GESCOOP el ${new Date().toLocaleString()}`;
+            pdf.text(footer, pdfWidth/2, pdfHeight - 10, { align: 'center' });
+            
+            // Guardar el PDF
+            pdf.save(nombreArchivo);
+            
+            // Eliminar el contenedor temporal
+            document.body.removeChild(contenedorPDF);
+            
+            // Mostrar notificación de éxito
+            mostrarNotificacion('Éxito', 'PDF generado correctamente', 'success');
+        }).catch(error => {
+            console.error('Error al generar el PDF:', error);
+            document.body.removeChild(contenedorPDF);
+            mostrarNotificacion('Error', 'Error al generar el PDF. Verifique la consola para más detalles.', 'error');
+        });
+    }, 500); // Esperar 500ms para asegurar la renderización
 }
 
 // Función para preparar el contenido HTML del egreso para impresión/PDF
