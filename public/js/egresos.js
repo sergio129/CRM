@@ -117,8 +117,15 @@ function cargarCategoriasPorTabla() {
         
         let filas = '';
         data.forEach(categoria => {
-            const estadoClass = categoria.activa ? 'success' : 'danger';
-            const estadoTexto = categoria.activa ? 'Activa' : 'Inactiva';
+            // Usamos el campo es_activo de la base de datos pero también manejamos el legacy "activa"
+            const esActivo = categoria.es_activo !== undefined ? categoria.es_activo : categoria.activa;
+            const estadoClass = esActivo ? 'success' : 'danger';
+            const estadoTexto = esActivo ? 'Activa' : 'Inactiva';
+            
+            // Botón toggle con icono y clase que corresponde al estado actual
+            const toggleBtnClass = esActivo ? 'btn-outline-danger' : 'btn-outline-success';
+            const toggleBtnIcon = esActivo ? 'fa-toggle-off' : 'fa-toggle-on';
+            const toggleBtnTitle = esActivo ? 'Desactivar' : 'Activar';
             
             filas += `
             <tr>
@@ -129,8 +136,8 @@ function cargarCategoriasPorTabla() {
                     <button onclick="editarCategoria(${categoria.id})" class="btn btn-sm btn-primary" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="eliminarCategoria(${categoria.id})" class="btn btn-sm btn-danger" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
+                    <button onclick="toggleEstadoCategoria(${categoria.id}, ${esActivo})" class="btn btn-sm ${toggleBtnClass}" title="${toggleBtnTitle}">
+                        <i class="fas ${toggleBtnIcon}"></i>
                     </button>
                 </td>
             </tr>`;
@@ -141,6 +148,63 @@ function cargarCategoriasPorTabla() {
     .catch(error => {
         mostrarNotificacion('Error', error.message, 'error');
         document.getElementById('tablaCategorias').innerHTML = `<tr><td colspan="4" class="text-center">Error al cargar datos: ${error.message}</td></tr>`;
+    });
+}
+
+// Función para cargar categorías en los selectores
+function cargarCategorias() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    fetch('/api/categorias-egreso', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al cargar las categorías');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Llenar selectores de categorías
+        const categoriasSelect = document.getElementById('categoria');
+        const categoriasFiltro = document.getElementById('categoriaFiltro');
+        
+        // Limpiar opciones existentes
+        if (categoriasSelect) {
+            categoriasSelect.innerHTML = '<option value="">Seleccione una categoría</option>';
+        }
+        
+        if (categoriasFiltro) {
+            categoriasFiltro.innerHTML = '<option value="">Todas las categorías</option>';
+        }
+        
+        // Solo añadir categorías activas a los selectores
+        data.forEach(categoria => {
+            const esActivo = categoria.es_activo !== undefined ? categoria.es_activo : categoria.activa;
+            if (esActivo) {
+                const option = document.createElement('option');
+                option.value = categoria.id;
+                option.textContent = categoria.nombre;
+                
+                if (categoriasSelect) {
+                    categoriasSelect.appendChild(option.cloneNode(true));
+                }
+                
+                if (categoriasFiltro) {
+                    categoriasFiltro.appendChild(option.cloneNode(true));
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error al cargar categorías:', error);
+        mostrarNotificacion('Error', 'No se pudieron cargar las categorías', 'error');
     });
 }
 
@@ -269,63 +333,67 @@ function toggleEstadoProveedor(id, estadoActual) {
             // Ocultar modal
             modal.hide();
             
+            // Mostrar mensaje de carga
+            mostrarNotificacion('Procesando', `${proveedor.es_activo ? 'Desactivando' : 'Activando'} proveedor...`, 'info');
+            
             // Determinar la URL y método según la acción
-            let url = `/api/proveedores/${id}`;
-            let method = 'PUT';
+            let url, method, bodyData = null;
             
             if (proveedor.es_activo) {
-                // Si está activo, usamos DELETE para desactivar (siguiendo convención actual)
+                // Si está activo, usamos DELETE para desactivar
+                url = `/api/proveedores/${id}`;
                 method = 'DELETE';
-                
-                fetch(url, {
-                    method: method,
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Error al desactivar el proveedor');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    mostrarNotificacion('Éxito', 'Proveedor desactivado correctamente', 'success');
-                    cargarProveedores(); // Recargar la lista de proveedores
-                })
-                .catch(error => {
-                    mostrarNotificacion('Error', error.message, 'error');
-                });
             } else {
-                // Si está inactivo, usamos el endpoint específico de reactivar
+                // Si está inactivo, usamos el endpoint específico de reactivar con PATCH (no PUT)
                 url = `/api/proveedores/${id}/reactivar`;
-                method = 'PUT';
-                
-                fetch(url, {
-                    method: method,
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ es_activo: true })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Error al activar el proveedor');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    mostrarNotificacion('Éxito', 'Proveedor activado correctamente', 'success');
-                    cargarProveedores(); // Recargar la lista de proveedores
-                })
-                .catch(error => {
-                    mostrarNotificacion('Error', error.message, 'error');
-                });
+                method = 'PATCH';
+                bodyData = JSON.stringify({ es_activo: true });
             }
+            
+            // Opciones para fetch
+            const fetchOptions = {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            
+            // Añadir el cuerpo de la solicitud si es necesario
+            if (bodyData) {
+                fetchOptions.headers['Content-Type'] = 'application/json';
+                fetchOptions.body = bodyData;
+            }
+            
+            fetch(url, fetchOptions)
+            .then(response => {
+                // Verificar si la respuesta no es exitosa
+                if (!response.ok) {
+                    // Intentamos obtener detalles del error del servidor
+                    return response.json().then(errData => {
+                        // Lanzamos un error con detalles si existen
+                        throw new Error(errData.message || `Error al ${proveedor.es_activo ? 'desactivar' : 'activar'} el proveedor`);
+                    }).catch(err => {
+                        // Si no podemos analizar el JSON de error, lanzamos un error genérico
+                        if (err instanceof SyntaxError) {
+                            throw new Error(`Error al ${proveedor.es_activo ? 'desactivar' : 'activar'} el proveedor: ${response.status} ${response.statusText}`);
+                        }
+                        throw err; // Re-lanzamos el error original si no es un error de sintaxis
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                mostrarNotificacion('Éxito', `Proveedor ${proveedor.es_activo ? 'desactivado' : 'activado'} correctamente`, 'success');
+                cargarProveedores(); // Recargar la lista de proveedores
+            })
+            .catch(error => {
+                console.error('Error al cambiar estado del proveedor:', error);
+                mostrarNotificacion('Error', error.message, 'error');
+            });
         });
     })
     .catch(error => {
+        console.error('Error al obtener datos del proveedor:', error);
         mostrarNotificacion('Error', error.message, 'error');
     });
 }
@@ -420,6 +488,134 @@ function guardarCategoria() {
         cargarCategorias(); // Para actualizar los selectores
     })
     .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+// Función para eliminar categoría
+function eliminarCategoria(id) {
+    toggleEstadoCategoria(id, true); // Reutilizamos toggleEstadoCategoria para desactivar
+}
+
+// Función para activar/desactivar una categoría
+function toggleEstadoCategoria(id, estadoActual) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Primero obtenemos los datos de la categoría
+    fetch(`/api/categorias-egreso/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos de la categoría');
+        }
+        return response.json();
+    })
+    .then(categoria => {
+        // Configurar la modal con los datos de la categoría
+        document.getElementById('categoriaNombreConfirm').textContent = categoria.nombre || '-';
+        document.getElementById('categoriaDescripcionConfirm').textContent = categoria.descripcion || '-';
+        
+        // Configurar texto de confirmación según la acción a realizar
+        const esActivo = categoria.es_activo !== undefined ? categoria.es_activo : categoria.activa;
+        const accion = esActivo ? 'desactivar' : 'activar';
+        document.getElementById('confirmarActivarDesactivarCategoriaMensaje').textContent = 
+            `¿Está seguro de ${accion} esta categoría?`;
+        
+        // Advertencia específica según acción
+        let advertencia = '';
+        if (esActivo) {
+            advertencia = 'Al desactivar la categoría, no aparecerá en las listas de selección para nuevos egresos.';
+            document.getElementById('btnConfirmarActivarDesactivarCategoria').className = 'btn btn-danger';
+            document.getElementById('btnConfirmarActivarDesactivarCategoria').textContent = 'Desactivar';
+        } else {
+            advertencia = 'Al activar la categoría, volverá a aparecer en las listas de selección para nuevos egresos.';
+            document.getElementById('btnConfirmarActivarDesactivarCategoria').className = 'btn btn-success';
+            document.getElementById('btnConfirmarActivarDesactivarCategoria').textContent = 'Activar';
+        }
+        document.getElementById('activarDesactivarCategoriaAdvertencia').textContent = advertencia;
+        
+        // Mostrar modal de confirmación
+        const modal = new bootstrap.Modal(document.getElementById('confirmarActivarDesactivarCategoriaModal'));
+        modal.show();
+        
+        // Configurar acción del botón de confirmar
+        const btnConfirmar = document.getElementById('btnConfirmarActivarDesactivarCategoria');
+        const nuevoBtn = btnConfirmar.cloneNode(true);
+        btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
+        
+        nuevoBtn.addEventListener('click', function() {
+            // Ocultar modal
+            modal.hide();
+            
+            // Mostrar mensaje de carga
+            mostrarNotificacion('Procesando', `${esActivo ? 'Desactivando' : 'Activando'} categoría...`, 'info');
+            
+            // Determinar la URL y método según la acción
+            let url, method, bodyData = null;
+            
+            if (esActivo) {
+                // Si está activa, usamos DELETE para desactivar
+                url = `/api/categorias-egreso/${id}`;
+                method = 'DELETE';
+            } else {
+                // Si está inactiva, usamos el endpoint específico de reactivar con PATCH
+                url = `/api/categorias-egreso/${id}/reactivar`;
+                method = 'PATCH';
+                bodyData = JSON.stringify({ activa: true });
+            }
+            
+            // Opciones para fetch
+            const fetchOptions = {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            
+            // Añadir el cuerpo de la solicitud si es necesario
+            if (bodyData) {
+                fetchOptions.headers['Content-Type'] = 'application/json';
+                fetchOptions.body = bodyData;
+            }
+            
+            fetch(url, fetchOptions)
+            .then(response => {
+                // Verificar si la respuesta no es exitosa
+                if (!response.ok) {
+                    // Intentamos obtener detalles del error del servidor
+                    return response.json().then(errData => {
+                        // Lanzamos un error con detalles si existen
+                        throw new Error(errData.message || `Error al ${esActivo ? 'desactivar' : 'activar'} la categoría`);
+                    }).catch(err => {
+                        // Si no podemos analizar el JSON de error, lanzamos un error genérico
+                        if (err instanceof SyntaxError) {
+                            throw new Error(`Error al ${esActivo ? 'desactivar' : 'activar'} la categoría: ${response.status} ${response.statusText}`);
+                        }
+                        throw err; // Re-lanzamos el error original si no es un error de sintaxis
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                mostrarNotificacion('Éxito', `Categoría ${esActivo ? 'desactivada' : 'activada'} correctamente`, 'success');
+                cargarCategoriasPorTabla(); // Recargar la lista de categorías
+                cargarCategorias(); // Actualizar los selectores de categorías también
+            })
+            .catch(error => {
+                console.error('Error al cambiar estado de la categoría:', error);
+                mostrarNotificacion('Error', error.message, 'error');
+            });
+        });
+    })
+    .catch(error => {
+        console.error('Error al obtener datos de la categoría:', error);
         mostrarNotificacion('Error', error.message, 'error');
     });
 }

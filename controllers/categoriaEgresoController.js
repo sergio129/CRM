@@ -160,3 +160,29 @@ exports.deleteCategoria = async (req, res) => {
     });
   }
 };
+
+// Reactivar una categoría de egreso
+exports.reactivateCategoria = async (req, res) => {
+  try {
+    const categoriaId = req.params.id;
+    const categoria = await CategoriaEgreso.findByPk(categoriaId);
+    
+    if (!categoria) {
+      return res.status(404).json({ message: 'Categoría de egreso no encontrada' });
+    }
+    
+    // Reactivar la categoría
+    await categoria.update({ es_activo: true });
+    
+    res.json({
+      message: 'Categoría de egreso reactivada exitosamente',
+      categoria
+    });
+  } catch (error) {
+    console.error('Error al reactivar categoría de egreso:', error);
+    res.status(500).json({ 
+      message: 'Error al reactivar categoría de egreso',
+      error: error.message 
+    });
+  }
+};

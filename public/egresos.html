@@ -53,7 +53,12 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 1050;
+            z-index: 1080 !important; /* Mayor que cualquier modal */
+        }
+        
+        .toast {
+            z-index: 1080 !important; /* Asegura que los toasts siempre estén encima */
+            position: relative;
         }
         
         #seccionRecurrencia {
@@ -63,6 +68,19 @@
             padding: 15px;
             margin-top: 15px;
             border: 1px solid #dee2e6;
+        }
+        
+        /* Estilos para modal sobre modal */
+        .modal-backdrop + .modal-backdrop {
+            z-index: 1060;
+        }
+        
+        .higher-modal {
+            z-index: 1070 !important;
+        }
+        
+        .higher-modal .modal-dialog {
+            box-shadow: 0 5px 15px rgba(0,0,0,.5);
         }
     </style>
 </head>
@@ -620,6 +638,39 @@
         </div>
     </div>
 
+    <!-- Modal Confirmar Activar/Desactivar Categoría -->
+    <div class="modal fade higher-modal" id="confirmarActivarDesactivarCategoriaModal" tabindex="-1" aria-labelledby="confirmarActivarDesactivarCategoriaLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="confirmarActivarDesactivarCategoriaLabel">Confirmar acción</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmarActivarDesactivarCategoriaMensaje"></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="activarDesactivarCategoriaAdvertencia"></span>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Detalles de la categoría:</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Nombre:</dt>
+                            <dd class="col-sm-8" id="categoriaNombreConfirm"></dd>
+                            
+                            <dt class="col-sm-4">Descripción:</dt>
+                            <dd class="col-sm-8" id="categoriaDescripcionConfirm"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn" id="btnConfirmarActivarDesactivarCategoria">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Confirmación para Eliminar -->
     <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-labelledby="confirmarEliminarModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -673,7 +724,7 @@
     </div>
 
     <!-- Modal Confirmar Activar/Desactivar Proveedor -->
-    <div class="modal fade" id="confirmarActivarDesactivarModal" tabindex="-1" aria-labelledby="confirmarActivarDesactivarLabel" aria-hidden="true">
+    <div class="modal fade higher-modal" id="confirmarActivarDesactivarModal" tabindex="-1" aria-labelledby="confirmarActivarDesactivarLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-warning text-white">
