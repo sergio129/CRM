@@ -672,6 +672,42 @@
         </div>
     </div>
 
+    <!-- Modal Confirmar Activar/Desactivar Proveedor -->
+    <div class="modal fade" id="confirmarActivarDesactivarModal" tabindex="-1" aria-labelledby="confirmarActivarDesactivarLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="confirmarActivarDesactivarLabel">Confirmar acción</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmarActivarDesactivarMensaje"></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="activarDesactivarAdvertencia"></span>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Detalles del proveedor:</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Razón Social:</dt>
+                            <dd class="col-sm-8" id="proveedorRazonSocial"></dd>
+                            
+                            <dt class="col-sm-4">Identificación:</dt>
+                            <dd class="col-sm-8" id="proveedorIdentificacion"></dd>
+                            
+                            <dt class="col-sm-4">Contacto:</dt>
+                            <dd class="col-sm-8" id="proveedorContacto"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn" id="btnConfirmarActivarDesactivar">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Proveedores -->
     <div class="modal fade" id="proveedoresModal" tabindex="-1" aria-labelledby="proveedoresModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">

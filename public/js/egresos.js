@@ -174,17 +174,17 @@ function cargarProveedores() {
         
         let filas = '';
         data.forEach(proveedor => {
-            // Corregir: usar es_activo para determinar el estado
+            // Determinar estado y clases para el botón de activar/desactivar
             const estadoClass = proveedor.es_activo ? 'success' : 'danger';
             const estadoTexto = proveedor.es_activo ? 'Activo' : 'Inactivo';
             
-            // Corregir: usar razon_social como nombre principal
+            // Botón toggle con icono y clase que corresponde al estado actual
+            const toggleBtnClass = proveedor.es_activo ? 'btn-outline-danger' : 'btn-outline-success';
+            const toggleBtnIcon = proveedor.es_activo ? 'fa-toggle-off' : 'fa-toggle-on';
+            const toggleBtnTitle = proveedor.es_activo ? 'Desactivar' : 'Activar';
+            
             const nombreMostrar = proveedor.razon_social || '-';
-            
-            // Corregir: usar numero_documento para identificación
             const identificacion = proveedor.numero_documento || '-';
-            
-            // Corregir: usar persona_contacto para contacto
             const contacto = proveedor.persona_contacto || '-';
             
             filas += `
@@ -197,8 +197,8 @@ function cargarProveedores() {
                     <button onclick="editarProveedor(${proveedor.id})" class="btn btn-sm btn-primary" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="eliminarProveedor(${proveedor.id})" class="btn btn-sm btn-danger" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
+                    <button onclick="toggleEstadoProveedor(${proveedor.id}, ${proveedor.es_activo})" class="btn btn-sm ${toggleBtnClass}" title="${toggleBtnTitle}">
+                        <i class="fas ${toggleBtnIcon}"></i>
                     </button>
                 </td>
             </tr>`;
@@ -209,6 +209,124 @@ function cargarProveedores() {
     .catch(error => {
         mostrarNotificacion('Error', error.message, 'error');
         document.getElementById('tablaProveedores').innerHTML = `<tr><td colspan="5" class="text-center">Error al cargar datos: ${error.message}</td></tr>`;
+    });
+}
+
+// Función para activar/desactivar un proveedor
+function toggleEstadoProveedor(id, estadoActual) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Primero obtenemos los datos del proveedor
+    fetch(`/api/proveedores/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos del proveedor');
+        }
+        return response.json();
+    })
+    .then(proveedor => {
+        // Configurar la modal con los datos del proveedor
+        document.getElementById('proveedorRazonSocial').textContent = proveedor.razon_social || '-';
+        document.getElementById('proveedorIdentificacion').textContent = `${proveedor.tipo_documento || ''} ${proveedor.numero_documento || '-'}`;
+        document.getElementById('proveedorContacto').textContent = proveedor.persona_contacto || '-';
+        
+        // Configurar texto de confirmación según la acción a realizar
+        const accion = proveedor.es_activo ? 'desactivar' : 'activar';
+        document.getElementById('confirmarActivarDesactivarMensaje').textContent = 
+            `¿Está seguro de ${accion} este proveedor?`;
+        
+        // Advertencia específica según acción
+        let advertencia = '';
+        if (proveedor.es_activo) {
+            advertencia = 'Al desactivar el proveedor, no aparecerá en las listas de selección para nuevos egresos.';
+            document.getElementById('btnConfirmarActivarDesactivar').className = 'btn btn-danger';
+            document.getElementById('btnConfirmarActivarDesactivar').textContent = 'Desactivar';
+        } else {
+            advertencia = 'Al activar el proveedor, volverá a aparecer en las listas de selección para nuevos egresos.';
+            document.getElementById('btnConfirmarActivarDesactivar').className = 'btn btn-success';
+            document.getElementById('btnConfirmarActivarDesactivar').textContent = 'Activar';
+        }
+        document.getElementById('activarDesactivarAdvertencia').textContent = advertencia;
+        
+        // Mostrar modal de confirmación
+        const modal = new bootstrap.Modal(document.getElementById('confirmarActivarDesactivarModal'));
+        modal.show();
+        
+        // Configurar acción del botón de confirmar
+        const btnConfirmar = document.getElementById('btnConfirmarActivarDesactivar');
+        const nuevoBtn = btnConfirmar.cloneNode(true);
+        btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
+        
+        nuevoBtn.addEventListener('click', function() {
+            // Ocultar modal
+            modal.hide();
+            
+            // Determinar la URL y método según la acción
+            let url = `/api/proveedores/${id}`;
+            let method = 'PUT';
+            
+            if (proveedor.es_activo) {
+                // Si está activo, usamos DELETE para desactivar (siguiendo convención actual)
+                method = 'DELETE';
+                
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al desactivar el proveedor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    mostrarNotificacion('Éxito', 'Proveedor desactivado correctamente', 'success');
+                    cargarProveedores(); // Recargar la lista de proveedores
+                })
+                .catch(error => {
+                    mostrarNotificacion('Error', error.message, 'error');
+                });
+            } else {
+                // Si está inactivo, usamos el endpoint específico de reactivar
+                url = `/api/proveedores/${id}/reactivar`;
+                method = 'PUT';
+                
+                fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ es_activo: true })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al activar el proveedor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    mostrarNotificacion('Éxito', 'Proveedor activado correctamente', 'success');
+                    cargarProveedores(); // Recargar la lista de proveedores
+                })
+                .catch(error => {
+                    mostrarNotificacion('Error', error.message, 'error');
+                });
+            }
+        });
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
     });
 }
 
@@ -521,6 +639,8 @@ function editarProveedor(id) {
         return response.json();
     })
     .then(proveedor => {
+        console.log('Proveedor cargado:', proveedor); // Log para depuración
+        
         // Establecer el id del proveedor y cambiar título del modal
         document.getElementById('proveedorId').value = proveedor.id;
         document.getElementById('proveedorModalTitle').textContent = 'Editar Proveedor';
@@ -544,7 +664,21 @@ function editarProveedor(id) {
         
         // Información bancaria
         document.getElementById('banco').value = proveedor.banco || '';
-        document.getElementById('tipo_cuenta').value = proveedor.tipo_cuenta || '';
+        
+        // Para tipo_cuenta, necesitamos normalizar el valor para que coincida con las opciones del select
+        const tipoCuenta = proveedor.tipo_cuenta ? proveedor.tipo_cuenta.toLowerCase() : '';
+        
+        // Manejar diferentes formatos posibles del tipo de cuenta
+        let valorSeleccionado = '';
+        if (tipoCuenta.includes('ahorr')) {
+            valorSeleccionado = 'ahorro';
+        } else if (tipoCuenta.includes('corr')) {
+            valorSeleccionado = 'corriente';
+        } else if (tipoCuenta) {
+            valorSeleccionado = 'otro';
+        }
+        
+        document.getElementById('tipo_cuenta').value = valorSeleccionado;
         document.getElementById('numero_cuenta').value = proveedor.numero_cuenta || '';
         document.getElementById('observaciones').value = proveedor.observaciones || '';
         
