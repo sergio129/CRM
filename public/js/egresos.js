@@ -50,6 +50,29 @@ function mostrarModalProveedores() {
     modal.show();
 }
 
+// Función para mostrar la modal de nuevo proveedor
+function mostrarModalNuevoProveedor() {
+    // Limpiar el formulario y establecer valores por defecto
+    document.getElementById('proveedorId').value = '';
+    document.getElementById('proveedorModalTitle').textContent = 'Nuevo Proveedor';
+    
+    // Reset del formulario completo
+    document.getElementById('proveedorForm').reset();
+    
+    // Activar la primera pestaña
+    document.querySelector('#proveedorFormTabs .nav-link').click();
+    
+    // Establecer valores predeterminados
+    document.getElementById('es_activo').checked = true;
+    document.getElementById('pais').value = 'Colombia';
+    
+    // Mostrar el modal de proveedor
+    const modal = new bootstrap.Modal(document.getElementById('proveedorFormModal'));
+    modal.show();
+    
+    console.log('Modal de nuevo proveedor mostrada');
+}
+
 // Función para exportar egresos
 function exportarEgresos() {
     mostrarNotificacion('Información', 'Exportando datos...', 'info');
@@ -267,6 +290,112 @@ function guardarCategoria() {
         // Recargar las categorías
         cargarCategoriasPorTabla();
         cargarCategorias(); // Para actualizar los selectores
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+// Función para guardar proveedor
+function guardarProveedor() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    const proveedorId = document.getElementById('proveedorId').value;
+    const esNuevo = !proveedorId;
+    
+    // Validar formulario
+    const form = document.getElementById('proveedorForm');
+    if (!form.checkValidity()) {
+        // Activar la validación visual del navegador
+        form.reportValidity();
+        return;
+    }
+    
+    // Verificar campos específicos que requieren validación adicional
+    const numeroDocumento = document.getElementById('numero_documento').value;
+    if (numeroDocumento.length < 5 || numeroDocumento.length > 30) {
+        mostrarNotificacion('Error', 'El número de documento debe tener entre 5 y 30 caracteres', 'error');
+        document.getElementById('numero_documento').focus();
+        return;
+    }
+
+    const email = document.getElementById('email').value;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+        mostrarNotificacion('Error', 'El email debe tener un formato válido', 'error');
+        document.getElementById('email').focus();
+        return;
+    }
+    
+    // Construir objeto con los datos del formulario
+    const data = {
+        // Información básica
+        tipo_documento: document.getElementById('tipo_documento').value,
+        numero_documento: numeroDocumento,
+        razon_social: document.getElementById('razon_social').value,
+        nombre_comercial: document.getElementById('nombre_comercial').value,
+        es_activo: document.getElementById('es_activo').checked,
+        
+        // Información de contacto
+        persona_contacto: document.getElementById('persona_contacto').value,
+        telefono: document.getElementById('telefono').value,
+        celular: document.getElementById('celular').value,
+        email: document.getElementById('email').value,
+        direccion: document.getElementById('direccion').value,
+        ciudad: document.getElementById('ciudad').value,
+        departamento: document.getElementById('departamento').value,
+        pais: document.getElementById('pais').value || 'Colombia',
+        
+        // Información bancaria
+        banco: document.getElementById('banco').value,
+        tipo_cuenta: document.getElementById('tipo_cuenta').value,
+        numero_cuenta: document.getElementById('numero_cuenta').value,
+        observaciones: document.getElementById('observaciones').value
+    };
+    
+    // Determinar URL y método HTTP
+    const url = esNuevo ? '/api/proveedores' : `/api/proveedores/${proveedorId}`;
+    const method = esNuevo ? 'POST' : 'PUT';
+    
+    // Mostrar una notificación de carga
+    mostrarNotificacion('Información', 'Guardando proveedor...', 'info');
+    
+    // Enviar datos a la API
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                let mensajeError = 'Error al guardar el proveedor';
+                if (err.errors && err.errors.length > 0) {
+                    mensajeError = err.errors.map(e => e.msg).join('. ');
+                } else if (err.message) {
+                    mensajeError = err.message;
+                }
+                throw new Error(mensajeError);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        mostrarNotificacion('Éxito', `Proveedor ${esNuevo ? 'creado' : 'actualizado'} correctamente`, 'success');
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('proveedorFormModal'));
+        if (modal) {
+            modal.hide();
+        }
+        // Recargar los proveedores
+        cargarProveedores();
     })
     .catch(error => {
         mostrarNotificacion('Error', error.message, 'error');
@@ -929,6 +1058,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         document.getElementById('btnGuardarCategoria').addEventListener('click', guardarCategoria);
+
+        // Event listener para guardar proveedor - Añadir este evento
+        const btnGuardarProveedor = document.getElementById('btnGuardarProveedor');
+        if (btnGuardarProveedor) {
+            btnGuardarProveedor.addEventListener('click', guardarProveedor);
+            console.log('Event listener de guardar proveedor configurado correctamente');
+        } else {
+            console.error('Botón de guardar proveedor no encontrado en el DOM');
+        }
 
         // Botón para nueva categoría
         const btnNuevaCategoria = document.getElementById('btnNuevaCategoria');

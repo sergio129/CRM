@@ -681,7 +681,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <button id="btnNuevoProveedor" class="btn btn-success mb-3">
+                    <button id="btnNuevoProveedor" class="btn btn-success mb-3" onclick="mostrarModalNuevoProveedor()">
                         <i class="fas fa-plus"></i> Nuevo Proveedor
                     </button>
                     
@@ -713,7 +713,7 @@
 
     <!-- Modal para crear/editar proveedor -->
     <div class="modal fade" id="proveedorFormModal" tabindex="-1" aria-labelledby="proveedorFormModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="proveedorModalTitle">Nuevo Proveedor</h5>
@@ -722,39 +722,180 @@
                 <div class="modal-body">
                     <form id="proveedorForm">
                         <input type="hidden" id="proveedorId">
-                        <div class="mb-3">
-                            <label for="proveedorNombre" class="form-label">Nombre <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="proveedorNombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="proveedorIdentificacion" class="form-label">RUC/Identificación <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="proveedorIdentificacion" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="proveedorContacto" class="form-label">Contacto</label>
-                            <input type="text" class="form-control" id="proveedorContacto">
-                        </div>
-                        <div class="mb-3">
-                            <label for="proveedorTelefono" class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" id="proveedorTelefono">
-                        </div>
-                        <div class="mb-3">
-                            <label for="proveedorEmail" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="proveedorEmail">
-                        </div>
-                        <div class="mb-3">
-                            <label for="proveedorDireccion" class="form-label">Dirección</label>
-                            <textarea class="form-control" id="proveedorDireccion" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="proveedorActivo" checked>
-                            <label class="form-check-label" for="proveedorActivo">Activo</label>
+
+                        <!-- Nav tabs para organizar el formulario -->
+                        <ul class="nav nav-tabs mb-3" id="proveedorFormTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="info-basica-tab" data-bs-toggle="tab" data-bs-target="#info-basica" type="button" role="tab" aria-controls="info-basica" aria-selected="true">Información Básica</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="contacto-tab" data-bs-toggle="tab" data-bs-target="#contacto" type="button" role="tab" aria-controls="contacto" aria-selected="false">Contacto y Ubicación</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="bancarios-tab" data-bs-toggle="tab" data-bs-target="#bancarios" type="button" role="tab" aria-controls="bancarios" aria-selected="false">Datos Bancarios</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- Pestaña de Información Básica -->
+                            <div class="tab-pane fade show active" id="info-basica" role="tabpanel" aria-labelledby="info-basica-tab">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="tipo_documento" class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="tipo_documento" required>
+                                                <option value="">Seleccione tipo</option>
+                                                <option value="NIT">NIT</option>
+                                                <option value="CC">Cédula de Ciudadanía</option>
+                                                <option value="CE">Cédula de Extranjería</option>
+                                                <option value="TI">Tarjeta de Identidad</option>
+                                                <option value="PA">Pasaporte</option>
+                                                <option value="RUT">RUT</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="numero_documento" class="form-label">Número de Documento <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="numero_documento" minlength="5" maxlength="30" required>
+                                            <small class="text-muted">Entre 5 y 30 caracteres</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="razon_social" class="form-label">Razón Social <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="razon_social" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="nombre_comercial" class="form-label">Nombre Comercial</label>
+                                    <input type="text" class="form-control" id="nombre_comercial">
+                                </div>
+
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="es_activo" checked>
+                                    <label class="form-check-label" for="es_activo">Activo</label>
+                                </div>
+                            </div>
+
+                            <!-- Pestaña de Contacto y Ubicación -->
+                            <div class="tab-pane fade" id="contacto" role="tabpanel" aria-labelledby="contacto-tab">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="persona_contacto" class="form-label">Persona de Contacto</label>
+                                            <input type="text" class="form-control" id="persona_contacto">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="telefono" class="form-label">Teléfono Fijo</label>
+                                            <input type="text" class="form-control" id="telefono">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="celular" class="form-label">Celular</label>
+                                            <input type="text" class="form-control" id="celular">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                            <input type="email" class="form-control" id="email" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="direccion" class="form-label">Dirección</label>
+                                    <textarea class="form-control" id="direccion" rows="2"></textarea>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="ciudad" class="form-label">Ciudad</label>
+                                            <input type="text" class="form-control" id="ciudad">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="departamento" class="form-label">Departamento</label>
+                                            <input type="text" class="form-control" id="departamento">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="pais" class="form-label">País</label>
+                                            <input type="text" class="form-control" id="pais" value="Colombia">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pestaña de Datos Bancarios -->
+                            <div class="tab-pane fade" id="bancarios" role="tabpanel" aria-labelledby="bancarios-tab">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="banco" class="form-label">Banco</label>
+                                            <select class="form-select" id="banco">
+                                                <option value="">Seleccione un banco</option>
+                                                <option value="Bancolombia">Bancolombia</option>
+                                                <option value="Davivienda">Davivienda</option>
+                                                <option value="Banco de Bogotá">Banco de Bogotá</option>
+                                                <option value="BBVA">BBVA</option>
+                                                <option value="Banco Caja Social">Banco Caja Social</option>
+                                                <option value="Banco Agrario">Banco Agrario</option>
+                                                <option value="Banco Occidente">Banco de Occidente</option>
+                                                <option value="Banco Popular">Banco Popular</option>
+                                                <option value="Banco AV Villas">Banco AV Villas</option>
+                                                <option value="Itaú">Itaú</option>
+                                                <option value="Scotiabank Colpatria">Scotiabank Colpatria</option>
+                                                <option value="Falabella">Banco Falabella</option>
+                                                <option value="Pichincha">Banco Pichincha</option>
+                                                <option value="Otro">Otro</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="tipo_cuenta" class="form-label">Tipo de Cuenta</label>
+                                            <select class="form-select" id="tipo_cuenta">
+                                                <option value="">Seleccione tipo</option>
+                                                <option value="Ahorro">Ahorros</option>
+                                                <option value="Corriente">Corriente</option>
+                                                <option value="Otro">Otro</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="numero_cuenta" class="form-label">Número de Cuenta</label>
+                                            <input type="text" class="form-control" id="numero_cuenta">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="observaciones" class="form-label">Observaciones</label>
+                                    <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnGuardarProveedor">Guardar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarProveedor" onclick="guardarProveedor()">Guardar</button>
                 </div>
             </div>
         </div>
