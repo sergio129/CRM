@@ -1,4 +1,4 @@
-const { Client, Employee, Payroll, PayrollDetail, Loan, sequelize } = require('../models');
+const { Client, Employee, Payroll, PayrollDetail, Loan, sequelize, Egreso } = require('../models');
 const { Op } = require('sequelize');
 const ExcelJS = require('exceljs');
 
@@ -54,6 +54,16 @@ exports.getDashboardData = async (req, res) => {
             };
         });
 
+        // Obtener egresos mensuales para el gráfico
+        const currentYear = new Date().getFullYear();
+        const monthlyExpenses = await getMonthlyExpenses(currentYear);
+
+        // Obtener ingresos mensuales
+        const monthlyIncome = await getMonthlyIncome(currentYear);
+        
+        // Obtener distribución de egresos por categoría
+        const expensesByCategory = await getExpensesByCategory();
+
         console.log('Dashboard data calculated successfully:', {
             clientCount,
             employeeCount,
@@ -71,13 +81,127 @@ exports.getDashboardData = async (req, res) => {
             activePayrolls,
             pendingPayrolls,
             totalPaid,
-            clientsByType: formattedClientsByStatus // Keep the same key for frontend compatibility
+            clientsByType: formattedClientsByStatus, // Keep the same key for frontend compatibility
+            monthlyExpenses,
+            monthlyIncome,
+            expensesByCategory
         });
     } catch (error) {
         console.error('Error al obtener datos del dashboard:', error);
         res.status(500).json({ message: 'Error al obtener datos del dashboard' });
     }
 };
+
+// Función auxiliar para obtener egresos mensuales
+async function getMonthlyExpenses(year) {
+    try {
+        // Crear array para almacenar los datos de los 12 meses
+        const monthlyData = [];
+        
+        // Para cada mes del año
+        for (let month = 0; month < 12; month++) {
+            // Fechas de inicio y fin del mes
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0);
+            
+            // Consultar la suma de egresos para este mes
+            const totalAmount = await Egreso.sum('monto', {
+                where: {
+                    fecha: {
+                        [Op.between]: [startDate, endDate]
+                    },
+                    estado: 'pagado'
+                }
+            }) || 0;
+            
+            // Añadir al array de resultados
+            monthlyData.push({
+                month: month + 1, // 1-12
+                monthName: new Date(year, month, 1).toLocaleString('es-ES', { month: 'long' }),
+                total: totalAmount
+            });
+        }
+        
+        return monthlyData;
+    } catch (error) {
+        console.error('Error al obtener egresos mensuales:', error);
+        return [];
+    }
+}
+
+// Función auxiliar para obtener ingresos mensuales (de nóminas pagadas)
+async function getMonthlyIncome(year) {
+    try {
+        // Crear array para almacenar los datos de los 12 meses
+        const monthlyData = [];
+        
+        // Para cada mes del año
+        for (let month = 0; month < 12; month++) {
+            // Fechas de inicio y fin del mes
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0);
+            
+            // Consultar la suma de pagos de préstamos para este mes
+            const totalLoanPayments = await sequelize.query(
+                `SELECT SUM(amount_paid) as total FROM payment_histories 
+                 WHERE payment_date BETWEEN :startDate AND :endDate`,
+                {
+                    replacements: { startDate, endDate },
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+            
+            const totalAmount = totalLoanPayments[0]?.total || 0;
+            
+            // Añadir al array de resultados
+            monthlyData.push({
+                month: month + 1, // 1-12
+                monthName: new Date(year, month, 1).toLocaleString('es-ES', { month: 'long' }),
+                total: parseFloat(totalAmount)
+            });
+        }
+        
+        return monthlyData;
+    } catch (error) {
+        console.error('Error al obtener ingresos mensuales:', error);
+        return [];
+    }
+}
+
+// Función auxiliar para obtener egresos por categoría
+async function getExpensesByCategory() {
+    try {
+        const expensesByCategory = await Egreso.findAll({
+            attributes: [
+                'categoria_id', 
+                [sequelize.fn('SUM', sequelize.col('monto')), 'total']
+            ],
+            where: {
+                estado: 'pagado'
+            },
+            group: ['categoria_id'],
+            include: [{
+                model: sequelize.models.CategoriaEgreso,
+                as: 'categoria',
+                attributes: ['nombre'],
+                required: false
+            }]
+        });
+        
+        // Formatear los datos de egresos por categoría
+        return expensesByCategory.map(item => {
+            const categoryName = item.categoria ? item.categoria.nombre : `Categoría ${item.categoria_id || 'Sin categoría'}`;
+            return {
+                categoryId: item.categoria_id,
+                categoryName: categoryName,
+                total: parseFloat(item.dataValues.total || 0)
+            };
+        });
+    } catch (error) {
+        console.error('Error al obtener egresos por categoría:', error);
+        return [];
+    }
+}
 
 // Find client by ID number
 exports.findClientByIdNumber = async (req, res) => {

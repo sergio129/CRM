@@ -68,14 +68,129 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Gráficos -->
-                    <div class="row">
+       <!-- Gráficos -->
+       
+        <div class="col-md-6">
+            <canvas id="clientsPercentageChart" style="max-height: 300px;"></canvas>
+        </div>
+    </div>
+    
+             
+                    <!-- Gráficos financieros -->
+                    <h3 class="mt-5">Análisis Financiero</h3>
+                    <div class="row mt-4">
                         <div class="col-md-6">
-                            <canvas id="clientsChart" style="max-height: 300px;"></canvas>
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Egresos Mensuales</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="monthlyExpensesChart" style="max-height: 300px;"></canvas>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <canvas id="clientsPercentageChart" style="max-height: 300px;"></canvas>
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">Ingresos Mensuales</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="monthlyIncomeChart" style="max-height: 300px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumen financiero y gráfico comparativo -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Comparativa Ingresos vs Egresos</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="incomeVsExpensesChart" style="max-height: 300px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning text-white">
+                                    <h5 class="mb-0">Estado Financiero</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h6>Total Ingresos</h6>
+                                                    <h4 id="totalIncome">$0</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h6>Total Egresos</h6>
+                                                    <h4 id="totalExpenses">$0</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="card" id="balanceCard">
+                                                <div class="card-body text-center">
+                                                    <h6>Balance</h6>
+                                                    <h3 id="totalBalance">$0</h3>
+                                                    <div class="progress mt-3">
+                                                        <div id="balanceProgress" class="progress-bar" role="progressbar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribución de egresos por categoría -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="mb-0">Distribución de Egresos por Categoría</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="expensesByCategoryChart" style="max-height: 300px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white">
+                                    <h5 class="mb-0">Top 5 Categorías de Mayor Gasto</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Categoría</th>
+                                                    <th class="text-end">Monto</th>
+                                                    <th class="text-end">% del Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="topExpensesTable">
+                                                <tr>
+                                                    <td colspan="3" class="text-center">Cargando datos...</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
