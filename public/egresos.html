@@ -681,6 +681,45 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <button id="btnNuevoProveedor" class="btn btn-success mb-3" onclick="mostrarModalNuevoProveedor()">
+                        <i class="fas fa-plus"></i> Nuevo Proveedor
+                    </button>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Razón Social</th>
+                                    <th>Identificación</th>
+                                    <th>Contacto</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaProveedores">
+                                <tr>
+                                    <td colspan="5" class="text-center">Cargando proveedores...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para crear/editar proveedor -->
+    <div class="modal fade" id="proveedorFormModal" tabindex="-1" aria-labelledby="proveedorFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="proveedorModalTitle">Nuevo Proveedor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
                     <!-- Contenedor para mensajes de error del servidor -->
                     <div id="proveedorFormAlert" class="alert alert-danger" style="display: none;"></div>
                     
@@ -880,7 +919,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnGuardarProveedor" onclick="guardarProveedor()">Guardar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarProveedor">Guardar</button>
                 </div>
             </div>
         </div>
