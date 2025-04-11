@@ -1,10 +1,17 @@
 const { Client, Employee, Payroll, PayrollDetail, Loan, sequelize, Egreso } = require('../models');
 const { Op } = require('sequelize');
 const ExcelJS = require('exceljs');
+const moment = require('moment');
 
 // Get dashboard summary data
 exports.getDashboardData = async (req, res) => {
     try {
+        // Get period parameter (default to month)
+        const period = req.query.period || 'month';
+        
+        // Calculate date ranges based on period
+        const dateRange = getDateRangeByPeriod(period);
+        
         // Get total client count
         const clientCount = await Client.count();
         
@@ -62,16 +69,12 @@ exports.getDashboardData = async (req, res) => {
         const monthlyIncome = await getMonthlyIncome(currentYear);
         
         // Obtener distribución de egresos por categoría
-        const expensesByCategory = await getExpensesByCategory();
+        const expensesByCategory = await getExpensesByCategory(dateRange);
+        
+        // Obtener datos de préstamos
+        const loanData = await getLoanSummary(dateRange);
 
-        console.log('Dashboard data calculated successfully:', {
-            clientCount,
-            employeeCount,
-            payrollCount,
-            activePayrolls,
-            pendingPayrolls,
-            totalPaid
-        });
+        console.log('Dashboard data calculated successfully with period:', period);
 
         // Send the dashboard data
         res.json({
@@ -84,13 +87,162 @@ exports.getDashboardData = async (req, res) => {
             clientsByType: formattedClientsByStatus, // Keep the same key for frontend compatibility
             monthlyExpenses,
             monthlyIncome,
-            expensesByCategory
+            expensesByCategory,
+            loanData
         });
     } catch (error) {
         console.error('Error al obtener datos del dashboard:', error);
         res.status(500).json({ message: 'Error al obtener datos del dashboard' });
     }
 };
+
+// Helper function to get date range by period
+function getDateRangeByPeriod(period) {
+    const now = new Date();
+    let startDate, endDate;
+    
+    switch(period) {
+        case 'week':
+            // Start of current week (Monday)
+            startDate = moment().startOf('week').toDate();
+            endDate = now;
+            break;
+        case 'month':
+            // Start of current month
+            startDate = moment().startOf('month').toDate();
+            endDate = now;
+            break;
+        case 'year':
+            // Start of current year
+            startDate = moment().startOf('year').toDate();
+            endDate = now;
+            break;
+        case 'all':
+            // All time - use null for no restriction
+            startDate = null;
+            endDate = now;
+            break;
+        default:
+            // Default to month
+            startDate = moment().startOf('month').toDate();
+            endDate = now;
+    }
+    
+    return { startDate, endDate };
+}
+
+// Get loan summary data based on period
+async function getLoanSummary(dateRange) {
+    try {
+        // Build where clause based on date range
+        const whereClause = {};
+        if (dateRange.startDate) {
+            whereClause.createdAt = {
+                [Op.between]: [dateRange.startDate, dateRange.endDate]
+            };
+        }
+        
+        // Get active loans count
+        const activeLoans = await Loan.count({
+            where: {
+                ...whereClause,
+                loan_status: 'Activo'
+            }
+        });
+        
+        // Get total loan amount for active loans - Corregido: amount_requested en lugar de amount
+        const totalLoanAmount = await Loan.sum('amount_requested', {
+            where: {
+                ...whereClause,
+                loan_status: 'Activo'
+            }
+        }) || 0;
+        
+        // Get pending payments amount
+        const pendingPayments = await Loan.sum('total_due', {
+            where: {
+                ...whereClause,
+                loan_status: 'Activo'
+            }
+        }) || 0;
+        
+        // Get previous period data for comparison
+        const previousPeriod = {};
+        if (dateRange.startDate) {
+            const periodLength = dateRange.endDate - dateRange.startDate;
+            const previousStartDate = new Date(dateRange.startDate.getTime() - periodLength);
+            const previousEndDate = new Date(dateRange.endDate.getTime() - periodLength);
+            
+            previousPeriod.activeLoans = await Loan.count({
+                where: {
+                    createdAt: {
+                        [Op.between]: [previousStartDate, previousEndDate]
+                    },
+                    loan_status: 'Activo'
+                }
+            });
+            
+            // Corregido: amount_requested en lugar de amount
+            previousPeriod.totalLoanAmount = await Loan.sum('amount_requested', {
+                where: {
+                    createdAt: {
+                        [Op.between]: [previousStartDate, previousEndDate]
+                    },
+                    loan_status: 'Activo'
+                }
+            }) || 0;
+            
+            previousPeriod.pendingPayments = await Loan.sum('total_due', {
+                where: {
+                    createdAt: {
+                        [Op.between]: [previousStartDate, previousEndDate]
+                    },
+                    loan_status: 'Activo'
+                }
+            }) || 0;
+        }
+        
+        // Calculate percentage changes
+        let activeLoanChange = 0;
+        let totalAmountChange = 0;
+        let pendingPaymentsChange = 0;
+        
+        if (previousPeriod.activeLoans) {
+            activeLoanChange = ((activeLoans - previousPeriod.activeLoans) / previousPeriod.activeLoans) * 100;
+        }
+        
+        if (previousPeriod.totalLoanAmount) {
+            totalAmountChange = ((totalLoanAmount - previousPeriod.totalLoanAmount) / previousPeriod.totalLoanAmount) * 100;
+        }
+        
+        if (previousPeriod.pendingPayments) {
+            pendingPaymentsChange = ((pendingPayments - previousPeriod.pendingPayments) / previousPeriod.pendingPayments) * 100;
+        }
+        
+        return {
+            activeLoans,
+            totalLoanAmount,
+            pendingPayments,
+            changes: {
+                activeLoans: activeLoanChange.toFixed(2),
+                totalLoanAmount: totalAmountChange.toFixed(2),
+                pendingPayments: pendingPaymentsChange.toFixed(2)
+            }
+        };
+    } catch (error) {
+        console.error('Error al obtener resumen de préstamos:', error);
+        return {
+            activeLoans: 0,
+            totalLoanAmount: 0,
+            pendingPayments: 0,
+            changes: {
+                activeLoans: "0.00",
+                totalLoanAmount: "0.00",
+                pendingPayments: "0.00"
+            }
+        };
+    }
+}
 
 // Función auxiliar para obtener egresos mensuales
 async function getMonthlyExpenses(year) {
@@ -169,16 +321,22 @@ async function getMonthlyIncome(year) {
 }
 
 // Función auxiliar para obtener egresos por categoría
-async function getExpensesByCategory() {
+async function getExpensesByCategory(dateRange = null) {
     try {
+        // Build where clause based on date range
+        const whereClause = { estado: 'pagado' };
+        if (dateRange && dateRange.startDate) {
+            whereClause.fecha = {
+                [Op.between]: [dateRange.startDate, dateRange.endDate]
+            };
+        }
+        
         const expensesByCategory = await Egreso.findAll({
             attributes: [
                 'categoria_id', 
                 [sequelize.fn('SUM', sequelize.col('monto')), 'total']
             ],
-            where: {
-                estado: 'pagado'
-            },
+            where: whereClause,
             group: ['categoria_id'],
             include: [{
                 model: sequelize.models.CategoriaEgreso,
@@ -433,7 +591,7 @@ exports.exportDashboardReport = async (req, res) => {
         loansSheet.addRows(loans.map(loan => ({
             id: loan.id,
             clientId: loan.clientId,
-            amount: loan.amount,
+            amount: loan.amount_requested, // Corregido amount por amount_requested
             interestRate: loan.interestRate,
             term: loan.term,
             status: loan.status

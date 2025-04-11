@@ -14,12 +14,17 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('sidebarCollapse').addEventListener('click', function() {
         document.getElementById('sidebar').classList.toggle('active');
     });
+    
+    // Add event listener for period selector
+    document.getElementById('periodSelector').addEventListener('change', function() {
+        fetchDashboardData(this.value);
+    });
 });
 
 // Fetch all dashboard data
-async function fetchDashboardData() {
+async function fetchDashboardData(period = 'month') {
     try {
-        const response = await fetch('/api/dashboard', {
+        const response = await fetch(`/api/dashboard?period=${period}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -45,9 +50,90 @@ async function fetchDashboardData() {
         // Update expenses by category visualization
         updateExpensesByCategory(data);
         
+        // Update loan information
+        updateLoanData(data);
+        
     } catch (error) {
         console.error('Error al cargar el dashboard:', error);
         showAlert('danger', `Error al cargar datos: ${error.message}`);
+    }
+}
+
+// Update loan data in dashboard
+function updateLoanData(data) {
+    if (!data.loanData) return;
+    
+    // Update active loans count
+    const activeLoansElement = document.getElementById('activeLoans');
+    if (activeLoansElement) {
+        activeLoansElement.textContent = data.loanData.activeLoans;
+    }
+    
+    // Update total loan amount
+    const totalLoanAmountElement = document.getElementById('totalLoanAmount');
+    if (totalLoanAmountElement) {
+        totalLoanAmountElement.textContent = new Intl.NumberFormat('es-CO', { 
+            style: 'currency', 
+            currency: 'COP',
+            minimumFractionDigits: 0
+        }).format(data.loanData.totalLoanAmount);
+    }
+    
+    // Update pending payments
+    const pendingPaymentsElement = document.getElementById('pendingPayments');
+    if (pendingPaymentsElement) {
+        pendingPaymentsElement.textContent = new Intl.NumberFormat('es-CO', { 
+            style: 'currency', 
+            currency: 'COP',
+            minimumFractionDigits: 0
+        }).format(data.loanData.pendingPayments);
+    }
+    
+    // Update percentage changes in UI
+    updatePercentageChange('activeLoans', data.loanData.changes.activeLoans);
+    updatePercentageChange('totalLoanAmount', data.loanData.changes.totalLoanAmount);
+    updatePercentageChange('pendingPayments', data.loanData.changes.pendingPayments);
+    
+    // Update progress bars
+    if (data.loanData.totalLoanAmount > 0) {
+        const progressElement = document.querySelector('.card:has(#totalLoanAmount) .progress-bar');
+        if (progressElement) {
+            const percentage = Math.min(100, (data.loanData.totalLoanAmount / (data.loanData.totalLoanAmount * 2)) * 100);
+            progressElement.style.width = `${percentage}%`;
+            progressElement.setAttribute('aria-valuenow', percentage);
+        }
+    }
+    
+    if (data.loanData.pendingPayments > 0 && data.loanData.totalLoanAmount > 0) {
+        const progressElement = document.querySelector('.card:has(#pendingPayments) .progress-bar');
+        if (progressElement) {
+            const percentage = Math.min(100, (data.loanData.pendingPayments / data.loanData.totalLoanAmount) * 100);
+            progressElement.style.width = `${percentage}%`;
+            progressElement.setAttribute('aria-valuenow', percentage);
+        }
+    }
+}
+
+// Helper function to update percentage change indicators
+function updatePercentageChange(elementId, changeValue) {
+    const change = parseFloat(changeValue);
+    const footerElement = document.querySelector(`.card:has(#${elementId}) .card-footer .badge`);
+    
+    if (footerElement) {
+        // Update badge class based on value
+        footerElement.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+        
+        // Update icon and value
+        if (change > 0) {
+            footerElement.classList.add('bg-success');
+            footerElement.innerHTML = `<i class="fas fa-arrow-up me-1"></i>${Math.abs(change)}%`;
+        } else if (change < 0) {
+            footerElement.classList.add('bg-danger');
+            footerElement.innerHTML = `<i class="fas fa-arrow-down me-1"></i>${Math.abs(change)}%`;
+        } else {
+            footerElement.classList.add('bg-warning');
+            footerElement.innerHTML = `<i class="fas fa-minus me-1"></i>${Math.abs(change)}%`;
+        }
     }
 }
 
@@ -138,54 +224,63 @@ function updateExpensesByCategory(data) {
     // Crear gráfico de distribución de egresos por categoría
     const ctx = document.getElementById('expensesByCategoryChart');
     if (ctx) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: chartData.map(item => item.categoryName),
-                datasets: [{
-                    data: chartData.map(item => item.total),
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(255, 206, 86, 0.6)',
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(153, 102, 255, 0.6)',
-                        'rgba(255, 159, 64, 0.6)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'right'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const percentage = ((value / totalExpenses) * 100).toFixed(2);
-                                return `${label}: ${new Intl.NumberFormat('es-CO', { 
-                                    style: 'currency', 
-                                    currency: 'COP',
-                                    minimumFractionDigits: 0
-                                }).format(value)} (${percentage}%)`;
+        // Destroy existing chart if it exists and is a valid Chart object
+        if (window.expensesByCategoryChart && typeof window.expensesByCategoryChart.destroy === 'function') {
+            window.expensesByCategoryChart.destroy();
+        }
+        
+        try {
+            window.expensesByCategoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.map(item => item.categoryName),
+                    datasets: [{
+                        data: chartData.map(item => item.total),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const percentage = ((value / totalExpenses) * 100).toFixed(2);
+                                    return `${label}: ${new Intl.NumberFormat('es-CO', { 
+                                        style: 'currency', 
+                                        currency: 'COP',
+                                        minimumFractionDigits: 0
+                                    }).format(value)} (${percentage}%)`;
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error("Error al crear el gráfico de egresos por categoría:", error);
+        }
     }
     
     // Actualizar tabla de top 5 categorías
@@ -222,62 +317,77 @@ function initializeCharts(data) {
         const monthLabels = data.monthlyExpenses.map(item => item.monthName);
         const expensesData = data.monthlyExpenses.map(item => item.total);
         
-        new Chart(document.getElementById('monthlyExpensesChart'), {
-            type: 'line',
-            data: {
-                labels: monthLabels,
-                datasets: [{
-                    label: 'Egresos Mensuales',
-                    data: expensesData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Egresos Mensuales'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
+        // Destroy existing chart if it exists and is a valid Chart object
+        if (window.monthlyExpensesChart && typeof window.monthlyExpensesChart.destroy === 'function') {
+            window.monthlyExpensesChart.destroy();
+        }
+        
+        const monthlyExpensesCtx = document.getElementById('monthlyExpensesChart');
+        if (!monthlyExpensesCtx) {
+            console.error("No se encontró el elemento canvas 'monthlyExpensesChart'");
+            return;
+        }
+        
+        try {
+            window.monthlyExpensesChart = new Chart(monthlyExpensesCtx, {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Egresos Mensuales',
+                        data: expensesData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Egresos Mensuales'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('es-CO', { 
+                                            style: 'currency', 
+                                            currency: 'COP',
+                                            minimumFractionDigits: 0
+                                        }).format(context.parsed.y);
+                                    }
+                                    return label;
                                 }
-                                if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('es-CO', { 
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('es-CO', { 
                                         style: 'currency', 
                                         currency: 'COP',
                                         minimumFractionDigits: 0
-                                    }).format(context.parsed.y);
+                                    }).format(value);
                                 }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return new Intl.NumberFormat('es-CO', { 
-                                    style: 'currency', 
-                                    currency: 'COP',
-                                    minimumFractionDigits: 0
-                                }).format(value);
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error("Error al crear el gráfico de egresos mensuales:", error);
+        }
     }
     
     // Gráfico de ingresos mensuales
@@ -285,62 +395,77 @@ function initializeCharts(data) {
         const monthLabels = data.monthlyIncome.map(item => item.monthName);
         const incomeData = data.monthlyIncome.map(item => item.total);
         
-        new Chart(document.getElementById('monthlyIncomeChart'), {
-            type: 'line',
-            data: {
-                labels: monthLabels,
-                datasets: [{
-                    label: 'Ingresos Mensuales',
-                    data: incomeData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Ingresos Mensuales'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
+        // Destroy existing chart if it exists and is a valid Chart object
+        if (window.monthlyIncomeChart && typeof window.monthlyIncomeChart.destroy === 'function') {
+            window.monthlyIncomeChart.destroy();
+        }
+        
+        const monthlyIncomeCtx = document.getElementById('monthlyIncomeChart');
+        if (!monthlyIncomeCtx) {
+            console.error("No se encontró el elemento canvas 'monthlyIncomeChart'");
+            return;
+        }
+        
+        try {
+            window.monthlyIncomeChart = new Chart(monthlyIncomeCtx, {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Ingresos Mensuales',
+                        data: incomeData,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Ingresos Mensuales'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('es-CO', { 
+                                            style: 'currency', 
+                                            currency: 'COP',
+                                            minimumFractionDigits: 0
+                                        }).format(context.parsed.y);
+                                    }
+                                    return label;
                                 }
-                                if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('es-CO', { 
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('es-CO', { 
                                         style: 'currency', 
                                         currency: 'COP',
                                         minimumFractionDigits: 0
-                                    }).format(context.parsed.y);
+                                    }).format(value);
                                 }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return new Intl.NumberFormat('es-CO', { 
-                                    style: 'currency', 
-                                    currency: 'COP',
-                                    minimumFractionDigits: 0
-                                }).format(value);
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error("Error al crear el gráfico de ingresos mensuales:", error);
+        }
     }
     
     // Gráfico comparativo de ingresos vs egresos
@@ -372,78 +497,92 @@ function initializeCharts(data) {
             return incomeData[index] - expensesData[index];
         });
         
-        // Crear el gráfico
-        new Chart(document.getElementById('incomeVsExpensesChart'), {
-            type: 'bar',
-            data: {
-                labels: monthLabels,
-                datasets: [
-                    {
-                        label: 'Ingresos',
-                        data: incomeData,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Egresos',
-                        data: expensesData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Balance',
-                        data: balanceData,
-                        backgroundColor: balanceData.map(val => val >= 0 ? 'rgba(40, 167, 69, 0.6)' : 'rgba(220, 53, 69, 0.6)'),
-                        borderColor: balanceData.map(val => val >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'),
-                        borderWidth: 1,
-                        type: 'bar'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Comparativa Mensual: Ingresos vs Egresos'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
+        // Destroy existing chart if it exists and is a valid Chart object
+        if (window.incomeVsExpensesChart && typeof window.incomeVsExpensesChart.destroy === 'function') {
+            window.incomeVsExpensesChart.destroy();
+        }
+        
+        const incomeVsExpensesCtx = document.getElementById('incomeVsExpensesChart');
+        if (!incomeVsExpensesCtx) {
+            console.error("No se encontró el elemento canvas 'incomeVsExpensesChart'");
+            return;
+        }
+        
+        try {
+            window.incomeVsExpensesChart = new Chart(incomeVsExpensesCtx, {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [
+                        {
+                            label: 'Ingresos',
+                            data: incomeData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Egresos',
+                            data: expensesData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Balance',
+                            data: balanceData,
+                            backgroundColor: balanceData.map(val => val >= 0 ? 'rgba(40, 167, 69, 0.6)' : 'rgba(220, 53, 69, 0.6)'),
+                            borderColor: balanceData.map(val => val >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'),
+                            borderWidth: 1,
+                            type: 'bar'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Comparativa Mensual: Ingresos vs Egresos'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('es-CO', { 
+                                            style: 'currency', 
+                                            currency: 'COP',
+                                            minimumFractionDigits: 0
+                                        }).format(context.parsed.y);
+                                    }
+                                    return label;
                                 }
-                                if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('es-CO', { 
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('es-CO', { 
                                         style: 'currency', 
                                         currency: 'COP',
                                         minimumFractionDigits: 0
-                                    }).format(context.parsed.y);
+                                    }).format(value);
                                 }
-                                return label;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return new Intl.NumberFormat('es-CO', { 
-                                    style: 'currency', 
-                                    currency: 'COP',
-                                    minimumFractionDigits: 0
-                                }).format(value);
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error("Error al crear el gráfico comparativo:", error);
+        }
     }
 }
 

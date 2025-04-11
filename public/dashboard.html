@@ -41,9 +41,29 @@
                         </div>
                     </div>
 
-                    <!-- Tarjetas de Resumen -->
+                    <!-- Selector de período -->
                     <div class="row mt-4">
-                        <div class="col-md-4">
+                        <div class="col-12">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Resumen General</h5>
+                                    <div class="d-flex align-items-center">
+                                        <label class="me-2">Período:</label>
+                                        <select id="periodSelector" class="form-select form-select-sm" style="width: 150px;">
+                                            <option value="week">Esta semana</option>
+                                            <option value="month" selected>Este mes</option>
+                                            <option value="year">Este año</option>
+                                            <option value="all">Todo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjetas de Resumen -->
+                    <div class="row mt-3">
+                        <div class="col-md-3">
                             <div class="card shadow-sm border-0 mb-3 h-100">
                                 <div class="card-body d-flex flex-row align-items-center p-3">
                                     <div class="d-flex justify-content-center align-items-center rounded-circle bg-primary bg-opacity-25" style="width: 60px; height: 60px; min-width: 60px;">
@@ -64,7 +84,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card shadow-sm border-0 mb-3 h-100">
                                 <div class="card-body d-flex flex-row align-items-center p-3">
                                     <div class="d-flex justify-content-center align-items-center rounded-circle bg-success bg-opacity-25" style="width: 60px; height: 60px; min-width: 60px;">
@@ -85,7 +105,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card shadow-sm border-0 mb-3 h-100">
                                 <div class="card-body d-flex flex-row align-items-center p-3">
                                     <div class="d-flex justify-content-center align-items-center rounded-circle bg-warning bg-opacity-25" style="width: 60px; height: 60px; min-width: 60px;">
@@ -102,6 +122,67 @@
                                             <i class="fas fa-arrow-down me-1"></i>3%
                                         </span>
                                         <small class="text-muted">Desde el mes pasado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card shadow-sm border-0 mb-3 h-100">
+                                <div class="card-body d-flex flex-row align-items-center p-3">
+                                    <div class="d-flex justify-content-center align-items-center rounded-circle bg-info bg-opacity-25" style="width: 60px; height: 60px; min-width: 60px;">
+                                        <i class="fas fa-credit-card fa-2x text-info"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h6 class="text-muted mb-1 fs-6">Créditos Activos</h6>
+                                        <h3 class="m-0 fw-bold" id="activeLoans">0</h3>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 py-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-success me-2">
+                                            <i class="fas fa-arrow-up me-1"></i>5%
+                                        </span>
+                                        <small class="text-muted">Desde el mes pasado</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tarjetas de Finanzas -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0 mb-3">
+                                <div class="card-body d-flex flex-row align-items-center p-3">
+                                    <div class="d-flex justify-content-center align-items-center rounded-circle bg-success bg-opacity-25" style="width: 60px; height: 60px; min-width: 60px;">
+                                        <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                                    </div>
+                                    <div class="ms-3 w-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="text-muted mb-0 fs-6">Total en Préstamos</h6>
+                                            <h4 class="m-0 fw-bold" id="totalLoanAmount">$0</h4>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: 65%;" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0 mb-3">
+                                <div class="card-body d-flex flex-row align-items-center p-3">
+                                    <div class="d-flex justify-content-center align-items-center rounded-circle bg-danger bg-opacity-25" style="width: 60px; height: 60px; min-width: 60px;">
+                                        <i class="fas fa-hand-holding-usd fa-2x text-danger"></i>
+                                    </div>
+                                    <div class="ms-3 w-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="text-muted mb-0 fs-6">Pagos Pendientes</h6>
+                                            <h4 class="m-0 fw-bold" id="pendingPayments">$0</h4>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: 35%;" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
