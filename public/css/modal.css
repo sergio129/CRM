@@ -1,0 +1,94 @@
+/* Estilos para modales personalizados que no utilizan Bootstrap */
+.custom-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.custom-modal.show {
+  display: block;
+  opacity: 1;
+}
+
+.custom-modal-content {
+  background-color: #fff;
+  margin: 10vh auto;
+  max-width: 500px;
+  width: 90%;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transform: translateY(-20px);
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+
+.custom-modal.show .custom-modal-content {
+  transform: translateY(0);
+}
+
+.custom-modal-header {
+  padding: 15px 20px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.custom-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+/* Estilos específicos para modales de Bootstrap */
+.modal {
+  z-index: 1050; /* Asegurar que el modal principal tenga un z-index adecuado */
+}
+
+.modal-backdrop {
+  z-index: 1040; /* Asegurar que el backdrop esté debajo del modal */
+}
+
+/* Estilos para modales anidados */
+.modal.show ~ .modal-backdrop + .modal-backdrop {
+  z-index: 1051; /* Siguiente backdrop un nivel por encima */
+}
+
+.modal.show ~ .modal {
+  z-index: 1052; /* Siguiente modal dos niveles por encima */
+}
+
+/* Estilos para el modal de categorías */
+#categoriaFormModal {
+  z-index: 1060 !important; /* Forzar un z-index alto */
+}
+
+#categoriaFormModal .modal-dialog {
+  margin-top: 7vh; /* Ajustar posición vertical */
+}
+
+/* Asegurar que el segundo backdrop tenga un z-index adecuado */
+.modal-backdrop + .modal-backdrop {
+  z-index: 1055;
+}
+
+/* Estilos responsivos */
+@media (max-width: 576px) {
+  .modal-content {
+    width: 95%;
+    margin: 5vh auto;
+  }
+  
+  .modal-header, .modal-body, .modal-footer {
+    padding: 12px;
+  }
+}
