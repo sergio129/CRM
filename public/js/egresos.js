@@ -174,14 +174,24 @@ function cargarProveedores() {
         
         let filas = '';
         data.forEach(proveedor => {
-            const estadoClass = proveedor.activo ? 'success' : 'danger';
-            const estadoTexto = proveedor.activo ? 'Activo' : 'Inactivo';
+            // Corregir: usar es_activo para determinar el estado
+            const estadoClass = proveedor.es_activo ? 'success' : 'danger';
+            const estadoTexto = proveedor.es_activo ? 'Activo' : 'Inactivo';
+            
+            // Corregir: usar razon_social como nombre principal
+            const nombreMostrar = proveedor.razon_social || '-';
+            
+            // Corregir: usar numero_documento para identificación
+            const identificacion = proveedor.numero_documento || '-';
+            
+            // Corregir: usar persona_contacto para contacto
+            const contacto = proveedor.persona_contacto || '-';
             
             filas += `
             <tr>
-                <td>${proveedor.nombre}</td>
-                <td>${proveedor.identificacion || '-'}</td>
-                <td>${proveedor.contacto || '-'}</td>
+                <td>${nombreMostrar}</td>
+                <td>${identificacion}</td>
+                <td>${contacto}</td>
                 <td><span class="badge bg-${estadoClass}">${estadoTexto}</span></td>
                 <td class="action-buttons">
                     <button onclick="editarProveedor(${proveedor.id})" class="btn btn-sm btn-primary" title="Editar">
@@ -307,36 +317,101 @@ function guardarProveedor() {
     const proveedorId = document.getElementById('proveedorId').value;
     const esNuevo = !proveedorId;
     
-    // Validar formulario
+    // Limpiar validaciones anteriores
     const form = document.getElementById('proveedorForm');
-    if (!form.checkValidity()) {
-        // Activar la validación visual del navegador
-        form.reportValidity();
-        return;
+    const inputs = form.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.classList.remove('is-invalid');
+    });
+    
+    // Ocultar mensaje de error general si existe
+    const alertElement = document.getElementById('proveedorFormAlert');
+    alertElement.style.display = 'none';
+    alertElement.textContent = '';
+    
+    // Obtener campos
+    const tipo_documento = document.getElementById('tipo_documento');
+    const numero_documento = document.getElementById('numero_documento');
+    const razon_social = document.getElementById('razon_social');
+    const email = document.getElementById('email');
+    const banco = document.getElementById('banco');
+    const tipo_cuenta = document.getElementById('tipo_cuenta');
+    const numero_cuenta = document.getElementById('numero_cuenta');
+    
+    // Validar campos obligatorios
+    let isValid = true;
+    
+    // Validación de tipo documento
+    if (!tipo_documento.value) {
+        tipo_documento.classList.add('is-invalid');
+        isValid = false;
+        // Activar la pestaña de información básica
+        document.querySelector('#info-basica-tab').click();
     }
     
-    // Verificar campos específicos que requieren validación adicional
-    const numeroDocumento = document.getElementById('numero_documento').value;
-    if (numeroDocumento.length < 5 || numeroDocumento.length > 30) {
-        mostrarNotificacion('Error', 'El número de documento debe tener entre 5 y 30 caracteres', 'error');
-        document.getElementById('numero_documento').focus();
-        return;
+    // Validación de número documento
+    if (!numero_documento.value) {
+        numero_documento.classList.add('is-invalid');
+        isValid = false;
+        document.querySelector('#info-basica-tab').click();
+    } else if (numero_documento.value.length < 5 || numero_documento.value.length > 30) {
+        numero_documento.classList.add('is-invalid');
+        isValid = false;
+        document.querySelector('#info-basica-tab').click();
     }
-
-    const email = document.getElementById('email').value;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email && !emailRegex.test(email)) {
-        mostrarNotificacion('Error', 'El email debe tener un formato válido', 'error');
-        document.getElementById('email').focus();
+    
+    // Validación de razón social
+    if (!razon_social.value) {
+        razon_social.classList.add('is-invalid');
+        isValid = false;
+        document.querySelector('#info-basica-tab').click();
+    }
+    
+    // Validación de email
+    if (!email.value) {
+        email.classList.add('is-invalid');
+        isValid = false;
+        document.querySelector('#contacto-tab').click();
+    } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.value)) {
+            email.classList.add('is-invalid');
+            isValid = false;
+            document.querySelector('#contacto-tab').click();
+        }
+    }
+    
+    // Validación de datos bancarios (si al menos uno está completo, todos deben estarlo)
+    if (banco.value || tipo_cuenta.value || numero_cuenta.value) {
+        if (!banco.value) {
+            banco.classList.add('is-invalid');
+            isValid = false;
+            document.querySelector('#bancarios-tab').click();
+        }
+        
+        if (!tipo_cuenta.value) {
+            tipo_cuenta.classList.add('is-invalid');
+            isValid = false;
+            document.querySelector('#bancarios-tab').click();
+        }
+        
+        if (!numero_cuenta.value) {
+            numero_cuenta.classList.add('is-invalid');
+            isValid = false;
+            document.querySelector('#bancarios-tab').click();
+        }
+    }
+    
+    if (!isValid) {
         return;
     }
     
     // Construir objeto con los datos del formulario
     const data = {
         // Información básica
-        tipo_documento: document.getElementById('tipo_documento').value,
-        numero_documento: numeroDocumento,
-        razon_social: document.getElementById('razon_social').value,
+        tipo_documento: tipo_documento.value,
+        numero_documento: numero_documento.value,
+        razon_social: razon_social.value,
         nombre_comercial: document.getElementById('nombre_comercial').value,
         es_activo: document.getElementById('es_activo').checked,
         
@@ -344,25 +419,22 @@ function guardarProveedor() {
         persona_contacto: document.getElementById('persona_contacto').value,
         telefono: document.getElementById('telefono').value,
         celular: document.getElementById('celular').value,
-        email: document.getElementById('email').value,
+        email: email.value,
         direccion: document.getElementById('direccion').value,
         ciudad: document.getElementById('ciudad').value,
         departamento: document.getElementById('departamento').value,
         pais: document.getElementById('pais').value || 'Colombia',
         
         // Información bancaria
-        banco: document.getElementById('banco').value,
-        tipo_cuenta: document.getElementById('tipo_cuenta').value,
-        numero_cuenta: document.getElementById('numero_cuenta').value,
+        banco: banco.value,
+        tipo_cuenta: tipo_cuenta.value,
+        numero_cuenta: numero_cuenta.value,
         observaciones: document.getElementById('observaciones').value
     };
     
     // Determinar URL y método HTTP
     const url = esNuevo ? '/api/proveedores' : `/api/proveedores/${proveedorId}`;
     const method = esNuevo ? 'POST' : 'PUT';
-    
-    // Mostrar una notificación de carga
-    mostrarNotificacion('Información', 'Guardando proveedor...', 'info');
     
     // Enviar datos a la API
     fetch(url, {
@@ -377,11 +449,37 @@ function guardarProveedor() {
         if (!response.ok) {
             return response.json().then(err => {
                 let mensajeError = 'Error al guardar el proveedor';
-                if (err.errors && err.errors.length > 0) {
-                    mensajeError = err.errors.map(e => e.msg).join('. ');
-                } else if (err.message) {
+                
+                // Manejar errores específicos del backend
+                if (err.message) {
                     mensajeError = err.message;
+                    
+                    // Manejar errores específicos conocidos
+                    if (mensajeError.includes('número de documento')) {
+                        // Marcar el campo de número de documento como inválido
+                        numero_documento.classList.add('is-invalid');
+                        // Personalizar el mensaje de error
+                        const customFeedback = document.createElement('div');
+                        customFeedback.className = 'invalid-feedback';
+                        customFeedback.textContent = mensajeError;
+                        // Reemplazar el mensaje de feedback existente
+                        const existingFeedback = numero_documento.nextElementSibling;
+                        if (existingFeedback && existingFeedback.className === 'invalid-feedback') {
+                            existingFeedback.textContent = mensajeError;
+                        }
+                        // Activar la pestaña correspondiente
+                        document.querySelector('#info-basica-tab').click();
+                    } else {
+                        // Para otros errores, mostrar alerta general
+                        alertElement.textContent = mensajeError;
+                        alertElement.style.display = 'block';
+                    }
+                } else if (err.errors && err.errors.length > 0) {
+                    mensajeError = err.errors.map(e => e.msg).join('. ');
+                    alertElement.textContent = mensajeError;
+                    alertElement.style.display = 'block';
                 }
+                
                 throw new Error(mensajeError);
             });
         }
@@ -398,7 +496,8 @@ function guardarProveedor() {
         cargarProveedores();
     })
     .catch(error => {
-        mostrarNotificacion('Error', error.message, 'error');
+        console.error('Error al guardar proveedor:', error);
+        // No mostrar notificación toast para errores que ya se muestran en el formulario
     });
 }
 

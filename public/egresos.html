@@ -681,45 +681,9 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <button id="btnNuevoProveedor" class="btn btn-success mb-3" onclick="mostrarModalNuevoProveedor()">
-                        <i class="fas fa-plus"></i> Nuevo Proveedor
-                    </button>
+                    <!-- Contenedor para mensajes de error del servidor -->
+                    <div id="proveedorFormAlert" class="alert alert-danger" style="display: none;"></div>
                     
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>RUC/Identificación</th>
-                                    <th>Contacto</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaProveedores">
-                                <tr>
-                                    <td colspan="5" class="text-center">Cargando proveedores...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para crear/editar proveedor -->
-    <div class="modal fade" id="proveedorFormModal" tabindex="-1" aria-labelledby="proveedorFormModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="proveedorModalTitle">Nuevo Proveedor</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
                     <form id="proveedorForm">
                         <input type="hidden" id="proveedorId">
 
@@ -752,12 +716,18 @@
                                                 <option value="PA">Pasaporte</option>
                                                 <option value="RUT">RUT</option>
                                             </select>
+                                            <div class="invalid-feedback">
+                                                El tipo de documento es obligatorio.
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="numero_documento" class="form-label">Número de Documento <span class="text-danger">*</span></label>
                                             <input type="text" class="form-control" id="numero_documento" minlength="5" maxlength="30" required>
+                                            <div class="invalid-feedback">
+                                                El número de documento es obligatorio (5-30 caracteres).
+                                            </div>
                                             <small class="text-muted">Entre 5 y 30 caracteres</small>
                                         </div>
                                     </div>
@@ -766,6 +736,9 @@
                                 <div class="mb-3">
                                     <label for="razon_social" class="form-label">Razón Social <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="razon_social" required>
+                                    <div class="invalid-feedback">
+                                        La razón social es obligatoria.
+                                    </div>
                                 </div>
 
                                 <div class="mb-3">
@@ -807,6 +780,9 @@
                                         <div class="mb-3">
                                             <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
                                             <input type="email" class="form-control" id="email" required>
+                                            <div class="invalid-feedback">
+                                                Por favor ingrese un email válido.
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -861,6 +837,9 @@
                                                 <option value="Pichincha">Banco Pichincha</option>
                                                 <option value="Otro">Otro</option>
                                             </select>
+                                            <div class="invalid-feedback">
+                                                El banco es obligatorio si completa información bancaria.
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -871,16 +850,22 @@
                                             <label for="tipo_cuenta" class="form-label">Tipo de Cuenta</label>
                                             <select class="form-select" id="tipo_cuenta">
                                                 <option value="">Seleccione tipo</option>
-                                                <option value="Ahorro">Ahorros</option>
-                                                <option value="Corriente">Corriente</option>
-                                                <option value="Otro">Otro</option>
+                                                <option value="ahorro">Ahorros</option>
+                                                <option value="corriente">Corriente</option>
+                                                <option value="otro">Otro</option>
                                             </select>
+                                            <div class="invalid-feedback">
+                                                El tipo de cuenta es obligatorio si completa información bancaria.
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="numero_cuenta" class="form-label">Número de Cuenta</label>
                                             <input type="text" class="form-control" id="numero_cuenta">
+                                            <div class="invalid-feedback">
+                                                El número de cuenta es obligatorio si completa información bancaria.
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
