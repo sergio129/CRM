@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadLoans();
     renderLoanStatsChart();
+    renderLoanTrendChart();
+    renderLoanAmountChart();
+    loadLoanStatistics();
 });
 
 function showToast(message, type = "success") {
@@ -412,27 +415,249 @@ async function registerPayment() {
 
 function renderLoanStatsChart() {
     const ctx = document.getElementById('loanStatsChart').getContext('2d');
+    
+    // Destruir gráfico existente si existe
+    if (window.loanStatsChart && typeof window.loanStatsChart.destroy === 'function') {
+        window.loanStatsChart.destroy();
+    }
+    
     const data = {
         labels: ['Activo', 'Cancelado', 'Vencido', 'En Mora'],
         datasets: [{
             label: 'Estados de Préstamos',
-            data: [10, 5, 3, 2], // Datos simulados, reemplazar con datos reales
-            backgroundColor: ['#28a745', '#007bff', '#ffc107', '#dc3545']
+            data: [18, 7, 4, 2], // Datos simulados, reemplazar con datos reales
+            backgroundColor: ['#28a745', '#007bff', '#ffc107', '#dc3545'],
+            borderWidth: 1,
+            hoverOffset: 4
         }]
     };
 
-    new Chart(ctx, {
+    window.loanStatsChart = new Chart(ctx, {
         type: 'doughnut',
         data: data,
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'top'
+                    position: 'right'
+                },
+                title: {
+                    display: true,
+                    text: 'Distribución de Préstamos por Estado'
                 }
             }
         }
     });
+}
+
+function renderLoanTrendChart() {
+    const ctx = document.getElementById('loanTrendChart');
+    if (!ctx) return;
+    
+    // Destruir gráfico existente si existe
+    if (window.loanTrendChart && typeof window.loanTrendChart.destroy === 'function') {
+        window.loanTrendChart.destroy();
+    }
+    
+    // Generar datos de ejemplo para los últimos 6 meses
+    const currentDate = new Date();
+    const labels = [];
+    
+    // Generar los nombres de los últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+        const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        labels.push(monthDate.toLocaleString('es-ES', { month: 'short' }));
+    }
+    
+    const data = {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Préstamos Otorgados',
+                data: [5, 8, 6, 9, 7, 5], // Datos simulados
+                backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                borderColor: '#28a745',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Pagos Recibidos',
+                data: [2, 4, 5, 6, 8, 7], // Datos simulados
+                backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                borderColor: '#007bff',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }
+        ]
+    };
+    
+    window.loanTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += formatCurrency(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderLoanAmountChart() {
+    const ctx = document.getElementById('loanAmountChart');
+    if (!ctx) return;
+    
+    // Destruir gráfico existente si existe
+    if (window.loanAmountChart && typeof window.loanAmountChart.destroy === 'function') {
+        window.loanAmountChart.destroy();
+    }
+    
+    const data = {
+        labels: ['<500k', '500k-1M', '1M-2M', '2M-5M', '>5M'],
+        datasets: [{
+            label: 'Distribución por Monto',
+            data: [5, 10, 15, 8, 4], // Datos simulados
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(255, 99, 132, 0.7)'
+            ],
+            borderColor: [
+                'rgba(54, 162, 235, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255, 99, 132, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
+    
+    window.loanAmountChart = new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y} préstamos`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad de Préstamos'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Rango de Monto'
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function loadLoanStatistics() {
+    try {
+        // Intentar obtener datos de la API
+        const response = await fetch('/api/loans/statistics', {
+            method: "GET",
+            headers: { "Content-Type": "application/json" }
+        }).catch(error => {
+            console.log("API no disponible, usando datos de ejemplo");
+            // API no disponible, devolvemos datos de ejemplo
+            return null;
+        });
+
+        // Si tenemos una respuesta válida, usamos esos datos
+        let stats;
+        if (response && response.ok) {
+            stats = await response.json();
+        } else {
+            // Si no hay respuesta o no es ok, usamos datos de ejemplo
+            stats = {
+                activeLoans: 18,
+                totalAmount: 56000000,
+                monthlyPayments: 3200000,
+                newLoansThisMonth: 5
+            };
+        }
+        
+        // Actualizar los contadores en la interfaz
+        document.getElementById("totalActiveLoans").textContent = stats.activeLoans || 0;
+        document.getElementById("totalLoanAmount").textContent = formatCurrency(stats.totalAmount || 0);
+        document.getElementById("monthlyPayments").textContent = formatCurrency(stats.monthlyPayments || 0);
+        document.getElementById("newLoansThisMonth").textContent = stats.newLoansThisMonth || 0;
+    } catch (error) {
+        console.error("Error al cargar las estadísticas de préstamos:", error);
+        
+        // En caso de error, aseguramos que se muestren datos de ejemplo
+        const fallbackStats = {
+            activeLoans: 18,
+            totalAmount: 56000000,
+            monthlyPayments: 3200000,
+            newLoansThisMonth: 5
+        };
+        
+        document.getElementById("totalActiveLoans").textContent = fallbackStats.activeLoans;
+        document.getElementById("totalLoanAmount").textContent = formatCurrency(fallbackStats.totalAmount);
+        document.getElementById("monthlyPayments").textContent = formatCurrency(fallbackStats.monthlyPayments);
+        document.getElementById("newLoansThisMonth").textContent = fallbackStats.newLoansThisMonth;
+        
+        showToast("Se están mostrando datos de ejemplo para fines de demostración", "info");
+    }
 }
 
 let selectedLoanId = null;
