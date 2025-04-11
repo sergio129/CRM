@@ -1600,17 +1600,18 @@ function descargarPDFEgreso() {
     // Creamos el contenido del PDF con el formato elegante
     const contenidoHTML = prepararContenidoEgreso();
     
-    // Crear un div visible para renderizar correctamente
+    // Crear un elemento visible en el documento para renderizar correctamente
     const contenedorPDF = document.createElement('div');
     contenedorPDF.innerHTML = contenidoHTML;
     contenedorPDF.className = 'pdf-container';
     contenedorPDF.style.width = '800px';
     contenedorPDF.style.backgroundColor = 'white';
     contenedorPDF.style.padding = '20px';
-    contenedorPDF.style.position = 'fixed';
+    contenedorPDF.style.position = 'absolute';
+    contenedorPDF.style.left = '0';
     contenedorPDF.style.top = '0';
-    contenedorPDF.style.left = '-9999px';
-    contenedorPDF.style.zIndex = '-9999';
+    contenedorPDF.style.zIndex = '9999';
+    contenedorPDF.style.visibility = 'hidden'; // Ocultamos pero mantenemos layout
     document.body.appendChild(contenedorPDF);
     
     // Obtener el número del comprobante para nombrar el archivo
@@ -1619,64 +1620,79 @@ function descargarPDFEgreso() {
     
     // Esperamos a que todo se renderice correctamente
     setTimeout(() => {
+        // Hacemos visible el contenedor temporalmente para la captura
+        contenedorPDF.style.visibility = 'visible';
+        
         // Usamos html2canvas con opciones mejoradas
         html2canvas(contenedorPDF, {
-            scale: 1.5, // Mayor escala para mejor calidad
+            scale: 2, // Mayor escala para mejor calidad
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#ffffff', // Fondo blanco explícito
-            logging: true, // Activar logs para depuración
-            onclone: function(clonedDoc) {
-                // Asegurarse que el clon es visible
-                const clonedElement = clonedDoc.querySelector('.pdf-container');
-                if (clonedElement) {
-                    clonedElement.style.position = 'static';
-                    clonedElement.style.display = 'block';
-                    clonedElement.style.width = '800px';
-                    clonedElement.style.margin = '0 auto';
-                }
+            logging: false, // Desactivar logs para producción
+            onrendered: function(canvas) {
+                // Callback para compatibilidad con versiones antiguas
+                procesarCanvas(canvas);
             }
         }).then(canvas => {
-            // Crear el PDF con jsPDF
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            
-            // Calcular dimensiones para que se ajuste a la página A4
-            const imgData = canvas.toDataURL('image/jpeg', 1.0);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            
-            // Calcular la escala para ajustar el contenido a la página
-            const ratio = Math.min((pdfWidth - 20) / canvasWidth, (pdfHeight - 40) / canvasHeight);
-            const imgWidth = canvasWidth * ratio;
-            const imgHeight = canvasHeight * ratio;
-            const imgX = (pdfWidth - imgWidth) / 2;
-            const imgY = 20;
-            
-            // Añadir la imagen al PDF
-            pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth, imgHeight);
-            
-            // Añadir pie de página
-            pdf.setFontSize(10);
-            pdf.setTextColor(100, 100, 100);
-            const footer = `Generado desde GESCOOP el ${new Date().toLocaleString()}`;
-            pdf.text(footer, pdfWidth/2, pdfHeight - 10, { align: 'center' });
-            
-            // Guardar el PDF
-            pdf.save(nombreArchivo);
-            
-            // Eliminar el contenedor temporal
-            document.body.removeChild(contenedorPDF);
-            
-            // Mostrar notificación de éxito
-            mostrarNotificacion('Éxito', 'PDF generado correctamente', 'success');
+            // Para versiones nuevas de html2canvas
+            procesarCanvas(canvas);
         }).catch(error => {
-            console.error('Error al generar el PDF:', error);
+            console.error('Error al generar el canvas:', error);
             document.body.removeChild(contenedorPDF);
             mostrarNotificacion('Error', 'Error al generar el PDF. Verifique la consola para más detalles.', 'error');
         });
+        
+        // Función para procesar el canvas y generar el PDF
+        function procesarCanvas(canvas) {
+            try {
+                // Volvemos a ocultar el contenedor
+                contenedorPDF.style.visibility = 'hidden';
+                
+                // Convertir el canvas a una imagen data URL con alta calidad
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                
+                // Crear el PDF con jsPDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                // Calcular dimensiones para que se ajuste a la página A4
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                
+                // Calcular la escala para ajustar el contenido a la página
+                const ratio = Math.min((pdfWidth - 20) / canvasWidth, (pdfHeight - 40) / canvasHeight);
+                const imgWidth = canvasWidth * ratio;
+                const imgHeight = canvasHeight * ratio;
+                const imgX = (pdfWidth - imgWidth) / 2;
+                const imgY = 20;
+                
+                // Añadir la imagen al PDF
+                pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth, imgHeight);
+                
+                // Añadir pie de página
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                const footer = `Generado desde GESCOOP el ${new Date().toLocaleString()}`;
+                pdf.text(footer, pdfWidth/2, pdfHeight - 10, { align: 'center' });
+                
+                // Guardar el PDF
+                pdf.save(nombreArchivo);
+                
+                // Mostrar notificación de éxito
+                mostrarNotificacion('Éxito', 'PDF generado correctamente', 'success');
+            } catch (e) {
+                console.error('Error al procesar el PDF:', e);
+                mostrarNotificacion('Error', 'Error al procesar el PDF. Verifique la consola para más detalles.', 'error');
+            } finally {
+                // Eliminar el contenedor temporal en cualquier caso
+                if (document.body.contains(contenedorPDF)) {
+                    document.body.removeChild(contenedorPDF);
+                }
+            }
+        }
     }, 500); // Esperar 500ms para asegurar la renderización
 }
 
