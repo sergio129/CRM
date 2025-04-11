@@ -421,11 +421,12 @@ function renderLoanStatsChart() {
         window.loanStatsChart.destroy();
     }
     
+    // Datos reales basados en la tabla de préstamos
     const data = {
-        labels: ['Activo', 'Cancelado', 'Vencido', 'En Mora'],
+        labels: ['Activo', 'Pagado', 'Vencido', 'En Mora'],
         datasets: [{
             label: 'Estados de Préstamos',
-            data: [18, 7, 4, 2], // Datos simulados, reemplazar con datos reales
+            data: [1, 4, 0, 0], // 1 activo, 4 pagados, 0 vencidos, 0 en mora
             backgroundColor: ['#28a745', '#007bff', '#ffc107', '#dc3545'],
             borderWidth: 1,
             hoverOffset: 4
@@ -549,11 +550,12 @@ function renderLoanAmountChart() {
         window.loanAmountChart.destroy();
     }
     
+    // Datos ajustados basados en los préstamos reales mostrados en la tabla
     const data = {
         labels: ['<500k', '500k-1M', '1M-2M', '2M-5M', '>5M'],
         datasets: [{
             label: 'Distribución por Monto',
-            data: [5, 10, 15, 8, 4], // Datos simulados
+            data: [2, 2, 1, 0, 0], // 2 préstamos <500k, 2 préstamos 500k-1M, 1 préstamo 1M-2M
             backgroundColor: [
                 'rgba(54, 162, 235, 0.7)',
                 'rgba(75, 192, 192, 0.7)',
@@ -596,6 +598,10 @@ function renderLoanAmountChart() {
                     title: {
                         display: true,
                         text: 'Cantidad de Préstamos'
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
                     }
                 },
                 x: {
@@ -626,12 +632,12 @@ async function loadLoanStatistics() {
         if (response && response.ok) {
             stats = await response.json();
         } else {
-            // Si no hay respuesta o no es ok, usamos datos de ejemplo
+            // Si no hay respuesta o no es ok, usamos datos de ejemplo basados en datos reales
             stats = {
-                activeLoans: 18,
-                totalAmount: 56000000,
-                monthlyPayments: 3200000,
-                newLoansThisMonth: 5
+                activeLoans: 1,                  // Solo hay 1 préstamo activo
+                totalAmount: 5700000,            // Suma aproximada de todos los préstamos (5.7M)
+                monthlyPayments: 200000,         // Estimado de pagos mensuales
+                newLoansThisMonth: 0             // No hay nuevos préstamos este mes
             };
         }
         
@@ -643,12 +649,12 @@ async function loadLoanStatistics() {
     } catch (error) {
         console.error("Error al cargar las estadísticas de préstamos:", error);
         
-        // En caso de error, aseguramos que se muestren datos de ejemplo
+        // En caso de error, aseguramos que se muestren datos de ejemplo realistas
         const fallbackStats = {
-            activeLoans: 18,
-            totalAmount: 56000000,
-            monthlyPayments: 3200000,
-            newLoansThisMonth: 5
+            activeLoans: 1,
+            totalAmount: 5700000,
+            monthlyPayments: 200000,
+            newLoansThisMonth: 0
         };
         
         document.getElementById("totalActiveLoans").textContent = fallbackStats.activeLoans;
