@@ -501,6 +501,96 @@ function guardarProveedor() {
     });
 }
 
+// Función para editar un proveedor existente
+function editarProveedor(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    fetch(`/api/proveedores/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error al obtener los datos del proveedor');
+        }
+        return response.json();
+    })
+    .then(proveedor => {
+        // Establecer el id del proveedor y cambiar título del modal
+        document.getElementById('proveedorId').value = proveedor.id;
+        document.getElementById('proveedorModalTitle').textContent = 'Editar Proveedor';
+        
+        // Información básica
+        document.getElementById('tipo_documento').value = proveedor.tipo_documento || '';
+        document.getElementById('numero_documento').value = proveedor.numero_documento || '';
+        document.getElementById('razon_social').value = proveedor.razon_social || '';
+        document.getElementById('nombre_comercial').value = proveedor.nombre_comercial || '';
+        document.getElementById('es_activo').checked = proveedor.es_activo;
+        
+        // Información de contacto
+        document.getElementById('persona_contacto').value = proveedor.persona_contacto || '';
+        document.getElementById('telefono').value = proveedor.telefono || '';
+        document.getElementById('celular').value = proveedor.celular || '';
+        document.getElementById('email').value = proveedor.email || '';
+        document.getElementById('direccion').value = proveedor.direccion || '';
+        document.getElementById('ciudad').value = proveedor.ciudad || '';
+        document.getElementById('departamento').value = proveedor.departamento || '';
+        document.getElementById('pais').value = proveedor.pais || 'Colombia';
+        
+        // Información bancaria
+        document.getElementById('banco').value = proveedor.banco || '';
+        document.getElementById('tipo_cuenta').value = proveedor.tipo_cuenta || '';
+        document.getElementById('numero_cuenta').value = proveedor.numero_cuenta || '';
+        document.getElementById('observaciones').value = proveedor.observaciones || '';
+        
+        // Activar la primera pestaña
+        document.querySelector('#info-basica-tab').click();
+        
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('proveedorFormModal'));
+        modal.show();
+    })
+    .catch(error => {
+        mostrarNotificacion('Error', error.message, 'error');
+    });
+}
+
+// Función para eliminar un proveedor
+function eliminarProveedor(id) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    if (confirm('¿Está seguro de desactivar este proveedor?')) {
+        fetch(`/api/proveedores/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al desactivar el proveedor');
+            }
+            return response.json();
+        })
+        .then(data => {
+            mostrarNotificacion('Éxito', 'Proveedor desactivado correctamente', 'success');
+            cargarProveedores(); // Recargar la lista de proveedores
+        })
+        .catch(error => {
+            mostrarNotificacion('Error', error.message, 'error');
+        });
+    }
+}
+
 // Función para mostrar notificaciones
 function mostrarNotificacion(titulo, mensaje, tipo) {
     const toastContainer = document.getElementById('toastContainer');
