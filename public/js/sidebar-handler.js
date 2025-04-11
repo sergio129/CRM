@@ -306,3 +306,16 @@ function setupModuleSpecificActions() {
     // Insertar las acciones en el contenedor
     actionsContainer.innerHTML = actionsHtml;
 }
+
+/**
+ * Función para cerrar sesión - Disponible globalmente para todas las páginas
+ * que incluyen la barra lateral
+ */
+function logout() {
+    // Eliminar el token de autenticación
+    localStorage.removeItem("token");
+    // También eliminamos cualquier información de usuario guardada
+    localStorage.removeItem("userInfo");
+    // Redirigir a la página de inicio de sesión
+    window.location.href = "/login";
+}
