@@ -480,7 +480,7 @@
                     <h5 class="modal-title" id="detalleEgresoModalLabel">Detalle del Egreso</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" id="detalle-egreso-contenido">
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <h6 class="fw-bold">Información Básica</h6>
@@ -560,8 +560,20 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalle">Editar</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <div class="d-flex w-100 justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-success" id="btnImprimirEgreso">
+                                <i class="fas fa-print me-1"></i> Imprimir
+                            </button>
+                            <button type="button" class="btn btn-danger" id="btnDescargarPDF">
+                                <i class="fas fa-file-pdf me-1"></i> Descargar PDF
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalle">Editar</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1023,6 +1035,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Librerías para generación de PDF e impresión -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Agregar el script del sidebar compartido -->
     <script src="js/sidebar-handler.js"></script>
     <script src="js/egresos.js"></script>

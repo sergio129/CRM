@@ -1485,6 +1485,315 @@ function descargarArchivo(id) {
     window.open(`/api/egresos/archivos/${id}/descargar?token=${token}`, '_blank');
 }
 
+// Función para imprimir el detalle del egreso
+function imprimirDetalleEgreso() {
+    // Crear una ventana de impresión
+    const contenidoImprimir = prepararContenidoEgreso();
+    const ventanaImpresion = window.open('', '_blank');
+    
+    ventanaImpresion.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Detalle del Egreso - GESCOOP</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+            <style>
+                body { 
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                }
+                .egreso-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #3498db;
+                    padding-bottom: 15px;
+                }
+                .egreso-header h1 {
+                    color: #2c3e50;
+                    font-size: 24px;
+                    margin-bottom: 5px;
+                }
+                .egreso-header p {
+                    color: #7f8c8d;
+                    font-size: 14px;
+                }
+                .egreso-content {
+                    margin-bottom: 30px;
+                }
+                .egreso-footer {
+                    margin-top: 50px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                    font-size: 12px;
+                    text-align: center;
+                    color: #7f8c8d;
+                }
+                .table-info {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .table-info td {
+                    padding: 8px;
+                    vertical-align: top;
+                }
+                .label {
+                    font-weight: bold;
+                    width: 40%;
+                }
+                .monto {
+                    font-size: 20px;
+                    font-weight: bold;
+                    color: #27ae60;
+                }
+                .egreso-meta {
+                    background-color: #f8f9fa;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-top: 20px;
+                }
+                .comprobante {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #3498db;
+                }
+                @media print {
+                    body { 
+                        padding: 0;
+                        margin: 0;
+                    }
+                    .no-print {
+                        display: none;
+                    }
+                    .page-break {
+                        page-break-after: always;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            ${contenidoImprimir}
+            <div class="egreso-footer">
+                <p>Este documento fue generado desde el sistema GESCOOP el ${new Date().toLocaleString()}</p>
+            </div>
+            <div class="no-print text-center mt-4">
+                <button class="btn btn-primary" onclick="window.print();">Imprimir ahora</button>
+                <button class="btn btn-secondary ms-2" onclick="window.close();">Cerrar</button>
+            </div>
+            <script>
+                window.onload = function() {
+                    window.setTimeout(function() {
+                        window.print();
+                    }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `);
+}
+
+// Función para descargar el detalle del egreso como PDF
+function descargarPDFEgreso() {
+    mostrarNotificacion('Información', 'Generando PDF...', 'info');
+    
+    // Utilizamos jsPDF para generar el PDF
+    const { jsPDF } = window.jspdf;
+    
+    // Creamos un elemento temporal para renderizar el contenido
+    const elementoTemp = document.createElement('div');
+    elementoTemp.innerHTML = prepararContenidoEgreso();
+    elementoTemp.style.width = '700px';
+    elementoTemp.style.padding = '20px';
+    elementoTemp.style.position = 'absolute';
+    elementoTemp.style.left = '-9999px';
+    document.body.appendChild(elementoTemp);
+    
+    // Renderizamos el HTML con html2canvas
+    html2canvas(elementoTemp, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+    }).then(canvas => {
+        // Removemos el elemento temporal
+        document.body.removeChild(elementoTemp);
+        
+        // Obtenemos los datos de la imagen
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Creamos el documento PDF (A4)
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        const imgY = 20;
+        
+        // Añadimos la imagen al PDF
+        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+        
+        // Añadimos un pie de página
+        const footer = `Generado desde GESCOOP el ${new Date().toLocaleString()}`;
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(footer, pdfWidth/2, pdfHeight - 10, { align: 'center' });
+        
+        // Obtenemos el número del comprobante
+        const comprobante = document.getElementById('detalleComprobante').textContent || 'egreso';
+        
+        // Guardamos el PDF
+        pdf.save(`Detalle_Egreso_${comprobante}.pdf`);
+        
+        mostrarNotificacion('Éxito', 'PDF generado correctamente', 'success');
+    }).catch(error => {
+        console.error('Error al generar el PDF:', error);
+        mostrarNotificacion('Error', 'Error al generar el PDF. Intente nuevamente.', 'error');
+    });
+}
+
+// Función para preparar el contenido HTML del egreso para impresión/PDF
+function prepararContenidoEgreso() {
+    // Obtener todos los datos del egreso
+    const comprobante = document.getElementById('detalleComprobante').textContent;
+    const fecha = document.getElementById('detalleFecha').textContent;
+    const categoria = document.getElementById('detalleCategoria').textContent;
+    const concepto = document.getElementById('detalleConcepto').textContent;
+    const descripcion = document.getElementById('detalleDescripcion').textContent;
+    const monto = document.getElementById('detalleMonto').textContent;
+    const estado = document.getElementById('detalleEstado').textContent;
+    const metodo = document.getElementById('detalleMetodo').textContent;
+    const beneficiario = document.getElementById('detalleBeneficiario').textContent;
+    
+    // Determinar la clase CSS para el estado
+    let estadoClass = '';
+    if (estado.includes('Pagado')) {
+        estadoClass = 'success';
+    } else if (estado.includes('Pendiente')) {
+        estadoClass = 'warning';
+    } else if (estado.includes('Anulado')) {
+        estadoClass = 'danger';
+    }
+    
+    // Construir el HTML con un diseño elegante
+    let html = `
+        <div class="egreso-header">
+            <h1>DETALLE DEL EGRESO</h1>
+            <p>Sistema de Gestión Financiera GESCOOP</p>
+        </div>
+        
+        <div class="egreso-content">
+            <div class="row mb-4">
+                <div class="col-12 text-center mb-4">
+                    <span class="comprobante">Comprobante: ${comprobante}</span>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="mb-3 text-primary">Información Básica</h5>
+                    <table class="table-info">
+                        <tr>
+                            <td class="label">Fecha:</td>
+                            <td>${fecha}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Categoría:</td>
+                            <td>${categoria}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Concepto:</td>
+                            <td>${concepto}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Descripción:</td>
+                            <td>${descripcion}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5 class="mb-3 text-primary">Información de Pago</h5>
+                    <table class="table-info">
+                        <tr>
+                            <td class="label">Monto:</td>
+                            <td class="monto">${monto}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Estado:</td>
+                            <td><span class="badge bg-${estadoClass}">${estado}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Método de Pago:</td>
+                            <td>${metodo}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Beneficiario:</td>
+                            <td>${beneficiario}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+    `;
+    
+    // Añadir información de recurrencia si está visible
+    const recurrenciaContainer = document.getElementById('detalleRecurrenciaContainer');
+    if (recurrenciaContainer && recurrenciaContainer.style.display !== 'none') {
+        const frecuencia = document.getElementById('detalleRecurrenciaFrecuencia').textContent;
+        const inicio = document.getElementById('detalleRecurrenciaInicio').textContent;
+        const fin = document.getElementById('detalleRecurrenciaFin').textContent;
+        const proximoPago = document.getElementById('detalleProximoPago').textContent;
+        
+        html += `
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5 class="mb-3 text-primary">Información de Recurrencia</h5>
+                    <div class="egreso-meta p-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="mb-1 fw-bold">Frecuencia:</p>
+                                <p>${frecuencia}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1 fw-bold">Inicio:</p>
+                                <p>${inicio}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1 fw-bold">Fin:</p>
+                                <p>${fin}</p>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-2">
+                            <strong>Próximo pago programado:</strong> ${proximoPago}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Añadir archivos adjuntos si están disponibles
+    const archivosContainer = document.getElementById('detalleArchivosContainer');
+    if (archivosContainer && archivosContainer.style.display !== 'none') {
+        html += `
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5 class="mb-3 text-primary">Archivos Adjuntos</h5>
+                    <div id="archivosContent">
+                        ${document.getElementById('detalleArchivos').innerHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>'; // Cerramos el egreso-content
+    
+    return html;
+}
+
+// Inicialización para asociar eventos a los botones de imprimir y descargar PDF
 document.addEventListener('DOMContentLoaded', function() {
     // Verificación de autenticación
     const token = localStorage.getItem('token');
@@ -1624,6 +1933,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             editarEgreso(currentEgresoId);
         });
+
+        // Event listeners para descargar PDF e imprimir
+        document.getElementById('btnDescargarPDF').addEventListener('click', descargarPDFEgreso);
+        document.getElementById('btnImprimirEgreso').addEventListener('click', imprimirDetalleEgreso);
     }
 
     // Carga las categorías desde la API
