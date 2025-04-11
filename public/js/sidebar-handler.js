@@ -24,8 +24,14 @@ function loadSidebar() {
     const sidebarContainer = document.getElementById('sidebar-container');
     if (!sidebarContainer) return;
     
+    // Asegurar que se solicite el archivo con la extensión .html explícitamente
     fetch('/templates/sidebar.html')
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: No se pudo cargar el sidebar`);
+            }
+            return response.text();
+        })
         .then(html => {
             sidebarContainer.innerHTML = html;
             // Configurar el comportamiento después de cargar
@@ -38,7 +44,7 @@ function loadSidebar() {
             console.error('Error al cargar el sidebar:', error);
             sidebarContainer.innerHTML = `
                 <div class="alert alert-danger">
-                    Error al cargar el sidebar. Por favor, recargue la página.
+                    Error al cargar el sidebar: ${error.message}. Por favor, recargue la página.
                 </div>
             `;
         });

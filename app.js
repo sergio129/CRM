@@ -52,6 +52,20 @@ app.use(
 app.use(bodyParser.json());
 app.use(express.json());
 
+// Middleware para redireccionar URLs con extensión .html a versiones limpias
+app.use((req, res, next) => {
+  const url = req.url;
+  
+  // Si la URL termina en .html, redirigir a la versión sin extensión
+  if (url.endsWith('.html')) {
+    const cleanUrl = url.substring(0, url.length - 5); // Quitar los últimos 5 caracteres (.html)
+    console.log(`Redirigiendo URL con extensión: ${url} -> ${cleanUrl}`);
+    return res.redirect(301, cleanUrl); // 301 es redirección permanente
+  }
+  
+  next();
+});
+
 // Rutas específicas para páginas HTML sin extensión
 app.get('/dashboard', (req, res) => {
   // Servir dashboard.html cuando se accede a /dashboard
@@ -92,8 +106,16 @@ app.get('/:page', (req, res, next) => {
 // Aplicar middleware de autenticación para páginas HTML antes de servir archivos estáticos
 app.use(pageAuthMiddleware);
 
+// Ruta específica para el sidebar sin extensión
+app.get('/templates/sidebar', (req, res) => {
+  console.log('Acceso directo a /templates/sidebar - Sirviendo sidebar.html');
+  res.sendFile(path.join(__dirname, 'public/templates/sidebar.html'));
+});
+
 // Servir archivos estáticos después de validar autenticación
 app.use(express.static('public'));
+// Configurar alias para que /templates apunte a public/templates
+app.use('/templates', express.static(path.join(__dirname, 'public/templates')));
 
 app.use(fileUpload({
   createParentPath: true,
