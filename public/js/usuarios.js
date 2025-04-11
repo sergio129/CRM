@@ -414,7 +414,7 @@ function showMessage(message, type = "error") {
 
 function logout() {
     localStorage.removeItem("token");
-    window.location.href = "login.html";
+    window.location.href = "/login";
 }
 
 function goToDashboard() {

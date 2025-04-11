@@ -2,22 +2,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const welcomeMessage = document.getElementById('welcomeMessage');
     welcomeMessage.textContent = 'Bienvenido a CRM GESCOOP';
 
+    // Preparar contenedor de toasts
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+    toastContainer.style.zIndex = '11';
+    document.body.appendChild(toastContainer);
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
+        // Mostrar toast de carga
+        showToast('Iniciando sesión...', 'info');
+
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem("token", data.token); // Guardar el token en localStorage
+                // Guardar el token en localStorage
+                localStorage.setItem("token", data.token);
+                showToast('Inicio de sesión exitoso', 'success');
 
                 // Mostrar modal de bienvenida
                 const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
@@ -48,15 +60,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (percentage >= 100) {
                         clearInterval(interval);
                         welcomeModal.hide();
-                        window.location.href = "dashboard.html";
+                        
+                        // Redirigir al dashboard sin incluir el token en la URL
+                        window.location.href = '/dashboard';
                     }
                 }, 1000);
             } else {
-                alert('Usuario o contraseña incorrectos');
+                // Mostrar el mensaje de error del servidor
+                const errorMessage = data.message || 'Usuario o contraseña incorrectos';
+                showToast(errorMessage, 'danger');
+                console.error('Error de login:', data);
             }
         } catch (error) {
             console.error('Error al iniciar sesión:', error);
-            alert('Ocurrió un error. Intenta nuevamente.');
+            showToast('Error de conexión. Intenta nuevamente.', 'danger');
         }
     });
+
+    // Función para mostrar toast notifications
+    function showToast(message, type) {
+        const toastId = `toast-${Date.now()}`;
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.id = toastId;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        const toastInstance = new bootstrap.Toast(toast, {
+            animation: true,
+            autohide: true,
+            delay: 5000
+        });
+        
+        toastInstance.show();
+        
+        // Remover toast del DOM después de ocultarse
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
 });

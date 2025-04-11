@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if user is logged in
     const token = localStorage.getItem('token');
     if (!token) {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
     }
 
@@ -217,7 +217,7 @@ async function searchClient() {
                     <p><strong>Deuda Total:</strong> ${formatMoney(client.deudaTotal || 0)}</p>
                     <p><strong>Estado:</strong> <span class="badge bg-${getStatusBadgeColor(client.status)}">${client.status || 'No especificado'}</span></p>
                     <p><strong>Estado de Pago:</strong> <span class="badge bg-${getPaymentStatusBadgeColor(client.paymentStatus)}">${client.paymentStatus || 'No especificado'}</span></p>
-                    <a href="/clientes.html?id=${client.id}" class="btn btn-primary btn-sm">Ver detalles</a>
+                    <a href="/clientes/detalles?id=${client.id}" class="btn btn-primary btn-sm">Ver detalles</a>
                 </div>
             </div>
         `;

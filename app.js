@@ -18,9 +18,12 @@ const categoriaEgresoRoutes = require('./routes/categoriaEgresoRoutes'); // Impo
 const egresoRoutes = require('./routes/egresoRoutes'); // Importa las rutas de egresos
 const proveedorRoutes = require('./routes/proveedorRoutes'); // Importa las rutas de proveedores
 const errorHandler = require('./middleware/errorHandler');
+const pageAuthMiddleware = require('./middleware/pageAuthMiddleware'); // Importar middleware de autenticación para páginas
 const sequelize = require('./config/database');
 const bodyParser = require('body-parser');
 const fileUpload = require('express-fileupload'); // Para subir archivos adjuntos
+const path = require('path');
+const fs = require('fs');
 
 // Cargar el archivo .env correcto según el entorno
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
@@ -48,7 +51,50 @@ app.use(
 
 app.use(bodyParser.json());
 app.use(express.json());
+
+// Rutas específicas para páginas HTML sin extensión
+app.get('/dashboard', (req, res) => {
+  // Servir dashboard.html cuando se accede a /dashboard
+  console.log('Acceso a /dashboard - Sirviendo dashboard.html');
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/login', (req, res) => {
+  // Servir login.html cuando se accede a /login
+  console.log('Acceso a /login - Sirviendo login.html');
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Para otras páginas
+app.get('/:page', (req, res, next) => {
+  const page = req.params.page;
+  // Si tiene extensión o es una carpeta/API, pasar al siguiente middleware
+  if (page.includes('.') || 
+      page === 'api' || 
+      page === 'js' || 
+      page === 'css' || 
+      page === 'img' || 
+      page === 'assets') {
+    return next();
+  }
+  
+  // Intentar servir el archivo HTML correspondiente
+  const htmlPath = path.join(__dirname, 'public', `${page}.html`);
+  if (fs.existsSync(htmlPath)) {
+    console.log(`Acceso a /${page} - Sirviendo ${page}.html`);
+    return res.sendFile(htmlPath);
+  }
+  
+  // Si no existe, continuar con la cadena de middleware
+  next();
+});
+
+// Aplicar middleware de autenticación para páginas HTML antes de servir archivos estáticos
+app.use(pageAuthMiddleware);
+
+// Servir archivos estáticos después de validar autenticación
 app.use(express.static('public'));
+
 app.use(fileUpload({
   createParentPath: true,
   limits: { 

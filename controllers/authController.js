@@ -41,3 +41,14 @@ exports.login = async (req, res) => {
         res.status(500).json({ message: 'Error al procesar el login', error });
     }
 };
+
+exports.verifyToken = async (req, res) => {
+    try {
+        // La verificación ya se hizo en el middleware de autenticación
+        // Si llegamos aquí, el token es válido
+        res.status(200).json({ valid: true });
+    } catch (error) {
+        console.error("Error verificando token:", error);
+        res.status(401).json({ valid: false, message: 'Token inválido' });
+    }
+};
