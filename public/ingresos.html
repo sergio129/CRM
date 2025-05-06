@@ -3,73 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Ingresos</title>
+    <title>Gestión de Ingresos - GESCOOP</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/general.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
-    <!-- Datepicker -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <!-- SweetAlert2 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
     <style>
-        .select2-container--bootstrap-5 .select2-selection {
-            min-height: 39px;
+        .badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
         }
-        .badge.bg-confirmado {
+        
+        .stat-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 15px;
+        }
+        
+        .filter-section {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .action-buttons .btn {
+            margin-right: 5px;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1080 !important; /* Mayor que cualquier modal */
+        }
+        
+        .toast {
+            z-index: 1080 !important; /* Asegura que los toasts siempre estén encima */
+            position: relative;
+        }
+        
+        .badge.bg-confirmado, .badge.bg-pagado {
             background-color: #198754;
         }
+        
         .badge.bg-pendiente {
             background-color: #ffc107;
         }
+        
         .badge.bg-anulado {
             background-color: #dc3545;
         }
-        .action-buttons {
-            white-space: nowrap;
+        
+        /* Estilos para modal sobre modal */
+        .modal-backdrop + .modal-backdrop {
+            z-index: 1060;
         }
-        .tab-content {
-            padding-top: 20px;
+        
+        .higher-modal {
+            z-index: 1070 !important;
         }
-        .form-control-sm {
-            height: calc(1.5em + 0.5rem + 2px);
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            border-radius: 0.2rem;
+        
+        .higher-modal .modal-dialog {
+            box-shadow: 0 5px 15px rgba(0,0,0,.5);
         }
-        .stats-card {
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
+        
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 39px;
         }
-        .stats-card:hover {
-            transform: translateY(-5px);
-        }
-        .categoria-chip {
-            border-radius: 16px;
-            padding: 5px 12px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            display: inline-block;
-            font-size: 0.85rem;
-            background-color: #e9ecef;
-        }
+        
         .required-field::after {
             content: " *";
             color: red;
         }
+        
         .custom-file-input {
             cursor: pointer;
         }
+        
         .archivos-adjuntos {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-top: 10px;
         }
+        
         .archivo-item {
             display: flex;
             align-items: center;
@@ -79,10 +120,12 @@
             border-radius: 5px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+        
         .archivo-item a {
             margin-right: 5px;
             text-decoration: none;
         }
+        
         .archivo-item .btn-sm {
             padding: 0.2rem 0.4rem;
             font-size: 0.75rem;
@@ -90,123 +133,175 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar - Importado con JavaScript -->
-            <div id="sidebar-container" class="col-lg-2 col-md-3 min-vh-100"></div>
-            
-            <!-- Contenido principal -->
-            <div class="col-lg-10 col-md-9 p-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Gestión de Ingresos</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group mr-2">
-                            <button id="btnNuevoIngreso" class="btn btn-sm btn-primary">
-                                <i class="fas fa-plus"></i> Nuevo Ingreso
-                            </button>
-                            <button id="btnAdministrarCategorias" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-cogs"></i> Administrar Categorías
-                            </button>
-                        </div>
-                    </div>
+    <div class="wrapper">
+        <!-- El sidebar compartido se cargará aquí -->
+        <div id="sidebar-container"></div>
+
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-light">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="ml-3 mb-0">Gestión de Ingresos</h2>
                 </div>
-                
-                <!-- Estadísticas -->
+            </nav>
+
+            <div class="content-body">
+                <!-- Dashboard Cards -->
                 <div class="row mb-4">
-                    <div class="col-md-3 mb-3">
-                        <div class="stats-card bg-primary text-white p-3">
-                            <h5 class="card-title">Total Ingresos</h5>
-                            <h3 id="totalIngresos">$0.00</h3>
-                            <p class="mb-0">Total registrado</p>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-primary">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Total Ingresos</h6>
+                                        <h3 class="card-title mb-0" id="totalIngresos">$0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="stats-card bg-success text-white p-3">
-                            <h5 class="card-title">Confirmados</h5>
-                            <h3 id="totalConfirmados">$0.00</h3>
-                            <p class="mb-0">Ingresos confirmados</p>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-success">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Total Confirmado</h6>
+                                        <h3 class="card-title mb-0" id="totalConfirmados">$0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="stats-card bg-warning text-dark p-3">
-                            <h5 class="card-title">Pendientes</h5>
-                            <h3 id="totalPendientes">$0.00</h3>
-                            <p class="mb-0">Ingresos pendientes</p>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-warning">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Total Pendiente</h6>
+                                        <h3 class="card-title mb-0" id="totalPendientes">$0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="stats-card bg-info text-white p-3">
-                            <h5 class="card-title">Valor Neto</h5>
-                            <h3 id="totalNeto">$0.00</h3>
-                            <p class="mb-0">Después de retenciones</p>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-info">
+                                        <i class="fas fa-file-invoice-dollar"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Valor Neto</h6>
+                                        <h3 class="card-title mb-0" id="totalNeto">$0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Filtros -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">Filtros</h5>
+                <div class="filter-section">
+                    <h5 class="mb-3"><i class="fas fa-filter"></i> Filtros</h5>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="fechaRango" class="form-label">Rango de fechas</label>
+                            <input type="text" id="fechaRango" class="form-control" placeholder="DD/MM/AAAA - DD/MM/AAAA">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="categoriaFiltro" class="form-label">Categoría</label>
+                            <select id="categoriaFiltro" class="form-select select2">
+                                <option value="">Todas las categorías</option>
+                                <!-- Se llenará con JavaScript -->
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="estadoFiltro" class="form-label">Estado</label>
+                            <select id="estadoFiltro" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="confirmado">Confirmado</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="anulado">Anulado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="metodoFiltro" class="form-label">Método de pago</label>
+                            <select id="metodoFiltro" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="cheque">Cheque</option>
+                                <option value="tarjeta">Tarjeta</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label for="busquedaTexto" class="form-label">Búsqueda</label>
+                            <input type="text" id="busquedaTexto" class="form-control" placeholder="Buscar...">
+                        </div>
                     </div>
+                    <div class="row mt-2">
+                        <div class="col-md-12">
+                            <button id="btnBuscar" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                            <button id="btnLimpiarFiltros" class="btn btn-outline-secondary ms-2">
+                                <i class="fas fa-undo"></i> Limpiar filtros
+                            </button>
+                            <span class="ms-3">Total registros: <strong id="totalRegistros">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="card mb-4">
                     <div class="card-body">
-                        <form id="filtroForm" class="row g-3">
-                            <div class="col-md-3">
-                                <label for="fechaRango" class="form-label">Rango de fechas</label>
-                                <input type="text" class="form-control" id="fechaRango" placeholder="Seleccionar fechas">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button class="btn btn-primary" id="btnNuevoIngreso">
+                                            <i class="fas fa-plus me-1"></i> Nuevo Ingreso
+                                        </button>
+                                        <button class="btn btn-warning" id="btnAdministrarCategorias">
+                                            <i class="fas fa-tags me-1"></i> Categorías
+                                        </button>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button class="btn btn-success" onclick="exportarIngresos()">
+                                            <i class="fas fa-file-export me-1"></i> Exportar
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="generarReporteIngresos()">
+                                            <i class="fas fa-chart-bar me-1"></i> Reporte
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label for="categoriaFiltro" class="form-label">Categoría</label>
-                                <select class="form-select select2" id="categoriaFiltro">
-                                    <option value="">Todas las categorías</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label for="estadoFiltro" class="form-label">Estado</label>
-                                <select class="form-select" id="estadoFiltro">
-                                    <option value="">Todos los estados</option>
-                                    <option value="confirmado">Confirmado</option>
-                                    <option value="pendiente">Pendiente</option>
-                                    <option value="anulado">Anulado</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label for="metodoFiltro" class="form-label">Método de pago</label>
-                                <select class="form-select" id="metodoFiltro">
-                                    <option value="">Todos los métodos</option>
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="transferencia">Transferencia</option>
-                                    <option value="cheque">Cheque</option>
-                                    <option value="tarjeta">Tarjeta</option>
-                                    <option value="otro">Otro</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-search"></i> Buscar
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Tabla de Ingresos -->
                 <div class="card">
-                    <div class="card-header">
-                        <ul class="nav nav-tabs card-header-tabs" id="ingresoTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="lista-tab" data-bs-toggle="tab" data-bs-target="#lista" type="button" role="tab" aria-controls="lista" aria-selected="true">Lista de Ingresos</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="estadisticas-tab" data-bs-toggle="tab" data-bs-target="#estadisticas" type="button" role="tab" aria-controls="estadisticas" aria-selected="false">Estadísticas</button>
-                            </li>
-                        </ul>
-                    </div>
                     <div class="card-body">
                         <div class="tab-content" id="ingresoTabsContent">
                             <!-- Tab: Lista de Ingresos -->
                             <div class="tab-pane fade show active" id="lista" role="tabpanel" aria-labelledby="lista-tab">
                                 <div class="table-responsive">
-                                    <table class="table table-striped table-hover">
+                                    <table class="table table-hover">
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>Comprobante</th>
@@ -234,44 +329,6 @@
                                         <!-- Se genera dinámicamente -->
                                     </ul>
                                 </nav>
-                            </div>
-                            
-                            <!-- Tab: Estadísticas -->
-                            <div class="tab-pane fade" id="estadisticas" role="tabpanel" aria-labelledby="estadisticas-tab">
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <div class="card h-100">
-                                            <div class="card-header bg-light">
-                                                <h5 class="card-title mb-0">Ingresos por Categoría</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <canvas id="categoriaChart" height="250"></canvas>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card h-100">
-                                            <div class="card-header bg-light">
-                                                <h5 class="card-title mb-0">Ingresos por Método de Pago</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <canvas id="metodoPagoChart" height="250"></canvas>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="card">
-                                            <div class="card-header bg-light">
-                                                <h5 class="card-title mb-0">Ingresos Mensuales</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <canvas id="ingresosMensualesChart" height="150"></canvas>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -571,22 +628,36 @@
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container">
+        <!-- Los toasts se generan dinámicamente -->
+    </div>
+
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/locale/es.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <!-- Agregar el script del sidebar compartido -->
+    <script src="js/sidebar-handler.js"></script>
     <script src="js/ingresos.js"></script>
     <script>
-        // Cargar el sidebar
-        $(document).ready(function() {
-            $("#sidebar-container").load("/templates/sidebar");
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar/ocultar sidebar
+            document.getElementById('sidebarCollapse').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('active');
+            });
         });
     </script>
 </body>
