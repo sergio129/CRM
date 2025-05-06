@@ -1167,6 +1167,131 @@ async function cargarCreditosTabla(clienteId) {
     }
 }
 
+// Función para seleccionar un crédito de la tabla
+async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoActual) {
+    try {
+        console.log(`Seleccionando crédito: ID=${creditoId}, Número=${numeroCredito}, Tipo=${tipoCredito}, Saldo=${saldoActual}`);
+        
+        // Mostrar indicador de carga
+        const btnSeleccionar = event.currentTarget;
+        const btnTextOriginal = btnSeleccionar.innerHTML;
+        btnSeleccionar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+        btnSeleccionar.disabled = true;
+        
+        // Obtener los detalles del crédito seleccionado
+        const response = await fetch(`/api/loans/${creditoId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        console.log('Respuesta de API de detalles del préstamo:', response.status);
+        
+        // Restablecer el botón
+        btnSeleccionar.innerHTML = btnTextOriginal;
+        btnSeleccionar.disabled = false;
+        
+        if (!response.ok) {
+            throw new Error(`Error al obtener detalles del crédito: ${response.status}`);
+        }
+        
+        const detallesCredito = await response.json();
+        console.log('Detalles del crédito:', detallesCredito);
+        
+        // Actualizar la información del crédito seleccionado en el formulario
+        document.getElementById('creditoSeleccionado').innerText = `${numeroCredito} - ${tipoCredito}`;
+        
+        // Establecer el valor a pagar por defecto igual al saldo
+        if (document.getElementById('valorPago')) {
+            document.getElementById('valorPago').value = saldoActual;
+            // Trigger change event para actualizar cualquier cálculo dependiente
+            document.getElementById('valorPago').dispatchEvent(new Event('change'));
+        }
+        
+        // Actualizar la tabla de amortización con los datos del crédito
+        actualizarTablaAmortizacion(detallesCredito);
+        
+        // Cerrar la modal de selección de crédito
+        const creditoModal = bootstrap.Modal.getInstance(document.getElementById('clienteCreditoModal'));
+        if (creditoModal) {
+            creditoModal.hide();
+        }
+        
+        // Mostrar sección de datos del pago si existe
+        if (document.getElementById('datosPago')) {
+            document.getElementById('datosPago').style.display = 'block';
+        }
+        
+        showToast('Crédito seleccionado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al seleccionar crédito:', error);
+        showToast('Error al seleccionar crédito: ' + error.message, 'error');
+    }
+}
+
+// Función para actualizar la tabla de amortización con los datos del crédito
+function actualizarTablaAmortizacion(credito) {
+    console.log('Actualizando tabla de amortización con datos:', credito);
+    
+    // Extraer los valores del crédito, con valores por defecto si no existen
+    const montoTotal = credito.amount_requested || 0;
+    const saldoActual = credito.total_due || 0;
+    const cuotasPagadas = credito.payment_term ? (credito.payment_term - credito.remaining_installments) : 0;
+    const cuotasPendientes = credito.remaining_installments || 0;
+    const valorCuota = credito.installment_amount || 0;
+    const interesesGenerados = credito.interest_amount || (montoTotal * (credito.interest_rate / 100)) || 0;
+    
+    // Próximo vencimiento (usar fecha actual + 30 días si no existe)
+    let proximoVencimiento = credito.next_payment_date || '';
+    if (!proximoVencimiento) {
+        const hoy = new Date();
+        hoy.setDate(hoy.getDate() + 30);
+        proximoVencimiento = hoy.toISOString().split('T')[0];
+    }
+    
+    // Formatear la fecha de próximo vencimiento para mostrar
+    let fechaFormateada = '--/--/----';
+    if (proximoVencimiento) {
+        try {
+            const fecha = new Date(proximoVencimiento);
+            fechaFormateada = fecha.toLocaleDateString('es-CO');
+        } catch (e) {
+            console.error('Error al formatear fecha:', e);
+        }
+    }
+    
+    // Actualizar los campos de la tabla de amortización
+    if (document.getElementById('valorTotalCredito')) {
+        document.getElementById('valorTotalCredito').textContent = formatCurrency(montoTotal);
+    }
+    
+    if (document.getElementById('cuotasPagadas')) {
+        document.getElementById('cuotasPagadas').textContent = cuotasPagadas;
+    }
+    
+    if (document.getElementById('valorCuota')) {
+        document.getElementById('valorCuota').textContent = formatCurrency(valorCuota);
+    }
+    
+    if (document.getElementById('cuotasPendientes')) {
+        document.getElementById('cuotasPendientes').textContent = cuotasPendientes;
+    }
+    
+    if (document.getElementById('interesesGenerados')) {
+        document.getElementById('interesesGenerados').textContent = formatCurrency(interesesGenerados);
+    }
+    
+    if (document.getElementById('proximoVencimiento')) {
+        document.getElementById('proximoVencimiento').textContent = fechaFormateada;
+    }
+    
+    console.log('Tabla de amortización actualizada con éxito');
+}
+
 // Cargar lista completa de clientes
 async function cargarListaClientes() {
     try {
