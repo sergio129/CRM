@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Retenciones - GESCOOP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/general.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
+    <style>
+        .badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
+        }
+        
+        .stat-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 15px;
+        }
+        
+        .filter-section {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .action-buttons .btn {
+            margin-right: 5px;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1080 !important;
+        }
+        
+        .toast {
+            z-index: 1080 !important;
+            position: relative;
+        }
+        
+        /* Estilos para modal sobre modal */
+        .modal-backdrop + .modal-backdrop {
+            z-index: 1060;
+        }
+        
+        .higher-modal {
+            z-index: 1070 !important;
+        }
+        
+        .higher-modal .modal-dialog {
+            box-shadow: 0 5px 15px rgba(0,0,0,.5);
+        }
+        
+        .fecha-limite-alerta {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .countdown {
+            font-weight: bold;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <!-- El sidebar compartido se cargará aquí -->
+        <div id="sidebar-container"></div>
+
+        <!-- Page Content -->
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-light">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="ml-3 mb-0">Gestión de Retenciones</h2>
+                </div>
+            </nav>
+
+            <div class="content-body">
+                <!-- Dashboard Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-primary">
+                                        <i class="fas fa-receipt"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Total Retenido</h6>
+                                        <h3 class="card-title mb-0" id="totalRetenido">$0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-success">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Retenciones del Mes</h6>
+                                        <h3 class="card-title mb-0" id="retencionesDelMes">$0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-warning">
+                                        <i class="fas fa-percentage"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Conceptos Activos</h6>
+                                        <h3 class="card-title mb-0" id="conceptosActivos">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stat-icon bg-info">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="card-subtitle mb-1 text-muted">Fecha Envío DIAN</h6>
+                                        <h3 class="card-title mb-0" id="fechaEnvioDian">--/--/----</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fecha límite alerta -->
+                <div class="fecha-limite-alerta" id="fechaLimiteAlerta">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-3 fs-5 text-warning"></i>
+                        <div>
+                            <h5 class="mb-1">Próximo informe de retenciones para la DIAN</h5>
+                            <p class="mb-1">Fecha límite: <span id="alertaFechaLimite">--/--/----</span></p>
+                            <p class="mb-0">Quedan <span class="countdown" id="countdownDias">0</span> días para enviar el informe.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs para secciones -->
+                <ul class="nav nav-tabs mb-4" id="retencionTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="conceptos-tab" data-bs-toggle="tab" data-bs-target="#conceptos" type="button" role="tab" aria-controls="conceptos" aria-selected="true">
+                            <i class="fas fa-tags me-2"></i>Conceptos de Retención
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="reportes-tab" data-bs-toggle="tab" data-bs-target="#reportes" type="button" role="tab" aria-controls="reportes" aria-selected="false">
+                            <i class="fas fa-chart-bar me-2"></i>Reportes DIAN
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="configuracion-tab" data-bs-toggle="tab" data-bs-target="#configuracion" type="button" role="tab" aria-controls="configuracion" aria-selected="false">
+                            <i class="fas fa-cog me-2"></i>Configuración
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="retencionTabsContent">
+                    <!-- Tab: Conceptos de Retención -->
+                    <div class="tab-pane fade show active" id="conceptos" role="tabpanel" aria-labelledby="conceptos-tab">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Conceptos de Retención</h5>
+                                <p class="text-muted small mb-0">Administre los porcentajes de retención para cada categoría de ingreso</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Categoría</th>
+                                                <th>Descripción</th>
+                                                <th width="150">% Retención</th>
+                                                <th>Estado</th>
+                                                <th width="100">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tablaConceptos">
+                                            <tr>
+                                                <td colspan="5" class="text-center">Cargando conceptos...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Reportes DIAN -->
+                    <div class="tab-pane fade" id="reportes" role="tabpanel" aria-labelledby="reportes-tab">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Generar Reporte de Retenciones</h5>
+                                <p class="text-muted small mb-0">Filtre por período para generar el reporte para la DIAN</p>
+                            </div>
+                            <div class="card-body">
+                                <form id="reporteForm" class="mb-4">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="reporteFechaInicio" class="form-label">Fecha Inicio</label>
+                                                <input type="date" class="form-control" id="reporteFechaInicio" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="reporteFechaFin" class="form-label">Fecha Fin</label>
+                                                <input type="date" class="form-control" id="reporteFechaFin" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="reporteFormato" class="form-label">Formato</label>
+                                                <select class="form-select" id="reporteFormato" required>
+                                                    <option value="excel">Excel</option>
+                                                    <option value="json">JSON</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-file-export me-2"></i>Generar Reporte
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div id="reporteResultado" style="display: none;">
+                                    <h5>Resumen del Período</h5>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="card bg-light mb-3">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Total Retenciones</h6>
+                                                    <p class="card-text fs-4" id="resumenTotalRetenciones">$0.00</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card bg-light mb-3">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Operaciones</h6>
+                                                    <p class="card-text fs-4" id="resumenOperaciones">0</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card bg-light mb-3">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Base Gravable</h6>
+                                                    <p class="card-text fs-4" id="resumenBaseGravable">$0.00</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h5 class="mt-4">Retenciones por Concepto</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Concepto</th>
+                                                    <th class="text-center">Operaciones</th>
+                                                    <th class="text-end">Base</th>
+                                                    <th class="text-center">%</th>
+                                                    <th class="text-end">Retención</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="resumenConceptosBody">
+                                                <tr>
+                                                    <td colspan="5" class="text-center">Sin datos</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Configuración -->
+                    <div class="tab-pane fade" id="configuracion" role="tabpanel" aria-labelledby="configuracion-tab">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Configuración de Retenciones</h5>
+                                <p class="text-muted small mb-0">Configure las fechas límite para el envío de reportes a la DIAN</p>
+                            </div>
+                            <div class="card-body">
+                                <form id="configuracionForm">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="fechaLimiteEnvio" class="form-label">Fecha Límite de Envío a la DIAN</label>
+                                                <input type="date" class="form-control" id="fechaLimiteEnvio" required>
+                                                <div class="form-text">Esta fecha se utilizará para mostrar alertas y calcular el tiempo restante para el envío.</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="observacionesConfig" class="form-label">Observaciones</label>
+                                                <textarea class="form-control" id="observacionesConfig" rows="3"></textarea>
+                                                <div class="form-text">Notas adicionales para el equipo contable sobre el proceso de retenciones.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>Guardar Configuración
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar porcentaje de retención -->
+    <div class="modal fade" id="editarPorcentajeModal" tabindex="-1" aria-labelledby="editarPorcentajeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editarPorcentajeModalLabel">Editar Porcentaje de Retención</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editarPorcentajeForm">
+                        <input type="hidden" id="editarCategoriaId">
+                        <div class="mb-3">
+                            <label for="editarCategoriaNombre" class="form-label">Categoría</label>
+                            <input type="text" class="form-control" id="editarCategoriaNombre" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editarPorcentajeRetencion" class="form-label">Porcentaje de Retención (%)</label>
+                            <input type="number" class="form-control" id="editarPorcentajeRetencion" min="0" max="100" step="0.01" required>
+                            <div class="form-text">Ingrese el porcentaje sin el símbolo %. Ejemplo: 11.50</div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Este porcentaje se aplicará automáticamente a todos los ingresos nuevos de esta categoría.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarPorcentaje">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container">
+        <!-- Los toasts se generan dinámicamente -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Agregar el script del sidebar compartido -->
+    <script src="js/sidebar-handler.js"></script>
+    <script src="js/retenciones.js"></script>
+    <script>
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar/ocultar sidebar
+            document.getElementById('sidebarCollapse').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>

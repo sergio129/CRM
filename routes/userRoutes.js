@@ -1,7 +1,10 @@
 const express = require('express');
-const { getUsers, getUserById, createUser, updateUser, deleteUser, searchUser, changeUserRole } = require('../controllers/userController');
+const { getUsers, getUserById, createUser, updateUser, deleteUser, searchUser, changeUserRole, getCurrentUser } = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
+
+// Ruta para obtener el usuario actual
+router.get('/current', authenticate, getCurrentUser);
 
 router.get('/', authenticate, authorize(['Administrador']), getUsers);
 router.get('/:id', authenticate, authorize(['Administrador']), getUserById);

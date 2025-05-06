@@ -19,6 +19,7 @@ const egresoRoutes = require('./routes/egresoRoutes'); // Importa las rutas de e
 const proveedorRoutes = require('./routes/proveedorRoutes'); // Importa las rutas de proveedores
 const categoriaIngresoRoutes = require('./routes/categoriasIngresos'); // Importa las rutas de categorías de ingresos
 const ingresoRoutes = require('./routes/ingresos'); // Importa las rutas de ingresos
+const retencionesRoutes = require('./routes/retenciones'); // Importa las rutas de retenciones
 const errorHandler = require('./middleware/errorHandler');
 const pageAuthMiddleware = require('./middleware/pageAuthMiddleware'); // Importar middleware de autenticación para páginas
 const sequelize = require('./config/database');
@@ -148,6 +149,7 @@ app.use('/api/egresos', egresoRoutes); // Añade las rutas de egresos
 app.use('/api/proveedores', proveedorRoutes); // Añade las rutas de proveedores
 app.use('/api/categorias-ingreso', categoriaIngresoRoutes); // Añade las rutas de categorías de ingresos
 app.use('/api/ingresos', ingresoRoutes); // Añade las rutas de ingresos
+app.use('/api/retenciones', retencionesRoutes); // Añade las rutas de retenciones en la fuente
 
 // Middleware de errores
 app.use(errorHandler);

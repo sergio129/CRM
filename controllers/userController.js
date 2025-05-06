@@ -224,3 +224,53 @@ exports.changeUserRole = async (req, res) => {
         });
     }
 };
+
+// Obtener el usuario actual autenticado
+exports.getCurrentUser = async (req, res) => {
+    try {
+        // El middleware de autenticación ya añade req.usuario
+        if (!req.usuario || !req.usuario.id) {
+            return res.status(401).json({ message: "No autenticado" });
+        }
+
+        const userId = req.usuario.id;
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'nombre', 'apellido', 'email', 'username', 'role', 'status', 'imagen_perfil'],
+            include: [
+                {
+                    model: Role,
+                    as: 'userRole',
+                    attributes: ['role_name']
+                }
+            ]
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        // Devolver la información del usuario
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                nombre: user.nombre,
+                apellido: user.apellido,
+                email: user.email,
+                username: user.username,
+                role: user.role,
+                roleName: user.userRole ? user.userRole.role_name : null,
+                status: user.status,
+                imagen_perfil: user.imagen_perfil
+            }
+        });
+
+    } catch (error) {
+        console.error("Error al obtener usuario actual:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Error al obtener información del usuario actual", 
+            error: error.message 
+        });
+    }
+};

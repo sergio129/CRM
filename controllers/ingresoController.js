@@ -88,23 +88,23 @@ exports.getIngresos = async (req, res) => {
       include: [
         {
           model: CategoriaIngreso,
-          as: 'categoria',
+          as: 'Categoria',
           attributes: ['id', 'nombre']
         },
         {
           model: Client,
-          as: 'cliente',
-          attributes: ['id', 'nombre', 'apellido']
+          as: 'Cliente',
+          attributes: ['id', 'full_name', 'identification'] // Cliente usa full_name
         },
         {
           model: Employee,
-          as: 'asesor',
-          attributes: ['id', 'nombre', 'apellido']
+          as: 'Asesor',
+          attributes: ['id', 'full_name', 'id_number'] // Employee también usa full_name
         },
         {
           model: User,
-          as: 'usuario',
-          attributes: ['id', 'nombre', 'apellido']
+          as: 'Usuario',
+          attributes: ['id', 'full_name', 'username'] // User también usa full_name
         }
       ]
     });
@@ -165,11 +165,11 @@ exports.getEstadisticas = async (req, res) => {
       include: [
         {
           model: CategoriaIngreso,
-          as: 'categoria',
+          as: 'Categoria',
           attributes: ['nombre']
         }
       ],
-      group: ['categoria_id', 'categoria.id'],
+      group: ['categoria_id', 'Categoria.id'],
       raw: true
     });
     
@@ -242,19 +242,23 @@ exports.getIngresoById = async (req, res) => {
       include: [
         {
           model: CategoriaIngreso,
-          as: 'categoria'
+          as: 'Categoria',
+          attributes: ['id', 'nombre']
         },
         {
           model: Client,
-          as: 'cliente'
+          as: 'Cliente',
+          attributes: ['id', 'full_name', 'identification', 'phone'] // Cliente usa full_name
         },
         {
           model: Employee,
-          as: 'asesor'
+          as: 'Asesor',
+          attributes: ['id', 'full_name', 'id_number'] // Employee también usa full_name
         },
         {
           model: User,
-          as: 'usuario'
+          as: 'Usuario',
+          attributes: ['id', 'full_name', 'username'] // User también usa full_name
         }
       ]
     });
@@ -862,36 +866,48 @@ exports.generarComprobante = async (req, res) => {
 
 // Función auxiliar para calcular totales
 async function calcularTotales(where) {
-  const totales = await Ingreso.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('valor_bruto')), 'total_bruto'],
-      [Sequelize.fn('SUM', Sequelize.col('valor_neto')), 'total_neto'],
-      [Sequelize.fn('SUM', Sequelize.col('valor_retencion')), 'total_retencion'],
-      [Sequelize.fn('SUM', Sequelize.col('valor_comision')), 'total_comision'],
-      [Sequelize.fn('COUNT', Sequelize.col('id')), 'cantidad']
-    ],
-    where,
-    raw: true
-  });
-  
-  // Totales por estado
-  const porEstado = await Ingreso.findAll({
-    attributes: [
-      'estado',
-      [Sequelize.fn('SUM', Sequelize.col('valor_bruto')), 'total'],
-      [Sequelize.fn('COUNT', Sequelize.col('id')), 'cantidad']
-    ],
-    where,
-    group: ['estado'],
-    raw: true
-  });
-  
-  return {
-    total_bruto: totales[0].total_bruto || 0,
-    total_neto: totales[0].total_neto || 0,
-    total_retencion: totales[0].total_retencion || 0,
-    total_comision: totales[0].total_comision || 0,
-    cantidad: totales[0].cantidad || 0,
-    por_estado: porEstado
-  };
+  try {
+    const totales = await Ingreso.findAll({
+      attributes: [
+        [Sequelize.fn('SUM', Sequelize.col('valor_bruto')), 'total_bruto'],
+        [Sequelize.fn('SUM', Sequelize.col('valor_neto')), 'total_neto'],
+        [Sequelize.fn('SUM', Sequelize.col('valor_retencion')), 'total_retencion'],
+        [Sequelize.fn('SUM', Sequelize.col('valor_comision')), 'total_comision'],
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'cantidad']
+      ],
+      where,
+      raw: true
+    });
+    
+    // Totales por estado
+    const porEstado = await Ingreso.findAll({
+      attributes: [
+        'estado',
+        [Sequelize.fn('SUM', Sequelize.col('valor_bruto')), 'total'],
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'cantidad']
+      ],
+      where,
+      group: ['estado'],
+      raw: true
+    });
+    
+    return {
+      total_bruto: parseFloat(totales[0].total_bruto || 0),
+      total_neto: parseFloat(totales[0].total_neto || 0),
+      total_retencion: parseFloat(totales[0].total_retencion || 0),
+      total_comision: parseFloat(totales[0].total_comision || 0),
+      cantidad: parseInt(totales[0].cantidad || 0),
+      por_estado: porEstado
+    };
+  } catch (error) {
+    console.error('Error al calcular totales:', error);
+    return {
+      total_bruto: 0,
+      total_neto: 0,
+      total_retencion: 0,
+      total_comision: 0,
+      cantidad: 0,
+      por_estado: []
+    };
+  }
 }
