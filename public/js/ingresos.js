@@ -348,14 +348,37 @@ async function cargarCategorias() {
         }
         
         categorias = result.data.filter(cat => cat.es_activo);
+        console.log('Categorías cargadas:', categorias.length);
         
         // Llenar select de categorías en filtro
         const selectCategoriaFiltro = document.getElementById('categoriaFiltro');
-        selectCategoriaFiltro.innerHTML = '<option value="">Todas las categorías</option>';
+        if (selectCategoriaFiltro) {
+            selectCategoriaFiltro.innerHTML = '<option value="">Todas las categorías</option>';
+            
+            categorias.forEach(categoria => {
+                selectCategoriaFiltro.innerHTML += `<option value="${categoria.id}">${categoria.nombre}</option>`;
+            });
+        }
         
-        categorias.forEach(categoria => {
-            selectCategoriaFiltro.innerHTML += `<option value="${categoria.id}">${categoria.nombre}</option>`;
-        });
+        // Llenar select de categorías en el modal de nuevo ingreso
+        const selectCategoriaIngreso = document.getElementById('categoriaIngreso');
+        if (selectCategoriaIngreso) {
+            selectCategoriaIngreso.innerHTML = '<option value="">Seleccione una categoría</option>';
+            
+            categorias.forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria.id;
+                option.textContent = categoria.nombre;
+                
+                // Agregar atributos de datos para usar en manejarCambioCategoria
+                option.dataset.retencion = categoria.porcentaje_retencion || 0;
+                option.dataset.cliente = categoria.requiere_cliente || false;
+                option.dataset.comision = categoria.permite_comision || false;
+                option.dataset.credito = categoria.es_credito || false;
+                
+                selectCategoriaIngreso.appendChild(option);
+            });
+        }
         
         // Inicializar select2 para categorías
         $('.select2').select2({
