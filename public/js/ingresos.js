@@ -926,6 +926,9 @@ async function buscarClientePorDocumentoModal() {
         btnBuscar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
         btnBuscar.disabled = true;
         
+        // Log para depurar
+        console.log(`Buscando cliente con tipo: ${tipoDocumento}, numero: ${numeroDocumento}`);
+        
         const response = await fetch(`/api/clients/document/${tipoDocumento}/${numeroDocumento}`, {
             method: 'GET',
             headers: {
@@ -934,61 +937,78 @@ async function buscarClientePorDocumentoModal() {
             }
         });
         
-        const result = await response.json();
+        // Log para depurar
+        console.log('Respuesta recibida:', response.status);
         
         // Restablecer el botón
         btnBuscar.innerHTML = btnTextOriginal;
         btnBuscar.disabled = false;
         
+        // Obtener el JSON de la respuesta
+        const result = await response.json();
+        
+        // Log para depurar
+        console.log('Datos del cliente:', result);
+        
+        // Verificar si la respuesta fue exitosa
         if (!result.success) {
-            throw new Error('Cliente no encontrado');
+            throw new Error(result.error || 'Cliente no encontrado');
         }
         
+        // Obtener los datos del cliente de la respuesta
         const cliente = result.data;
         
+        // Log para depurar
+        console.log('Cliente encontrado:', cliente);
+        
         // Llenar los campos del modal con la información del cliente
-        document.getElementById('nombrePagadorModal').value = cliente.full_name || 
-            `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-        document.getElementById('telefonoPagadorModal').value = cliente.telefono || cliente.phone || '';
-        document.getElementById('correoPagadorModal').value = cliente.email || cliente.correo || '';
-        document.getElementById('direccionPagadorModal').value = cliente.direccion || cliente.address || '';
+        document.getElementById('nombrePagadorModal').value = cliente.full_name || '';
+        document.getElementById('telefonoPagadorModal').value = cliente.phone || cliente.telefono_movil || '';
+        document.getElementById('correoPagadorModal').value = cliente.email || '';
+        document.getElementById('direccionPagadorModal').value = cliente.address || '';
         
         // Seleccionar el cliente en el dropdown de clientes con créditos
         const selectClienteCredito = document.getElementById('clienteCreditoModal');
-        
-        // Verificar si ya existe en la lista
-        let existe = false;
-        for (let i = 0; i < selectClienteCredito.options.length; i++) {
-            if (selectClienteCredito.options[i].value == cliente.id) {
-                selectClienteCredito.selectedIndex = i;
-                existe = true;
-                break;
+        if (selectClienteCredito) {
+            // Verificar si ya existe en la lista
+            let existe = false;
+            for (let i = 0; i < selectClienteCredito.options.length; i++) {
+                if (selectClienteCredito.options[i].value == cliente.id) {
+                    selectClienteCredito.selectedIndex = i;
+                    existe = true;
+                    break;
+                }
             }
-        }
-        
-        // Si no existe, agregar a la lista
-        if (!existe) {
-            // Crear nombre completo
-            const nombreCompleto = cliente.full_name || 
-                `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-            const documento = cliente.id_number || cliente.identification || 'Sin documento';
             
-            const option = new Option(`${nombreCompleto} - ${documento}`, cliente.id);
-            selectClienteCredito.add(option);
-            option.selected = true;
-        }
-        
-        // Trigger change event para cargar créditos
-        if (document.createEvent) {
-            var event = document.createEvent('HTMLEvents');
-            event.initEvent('change', true, false);
-            selectClienteCredito.dispatchEvent(event);
-        } else {
-            selectClienteCredito.fireEvent('onchange');
+            // Si no existe, agregar a la lista
+            if (!existe) {
+                const nombreCompleto = cliente.full_name || '';
+                const documento = cliente.identification || cliente.id_number || 'Sin documento';
+                
+                const option = new Option(`${nombreCompleto} - ${documento}`, cliente.id);
+                selectClienteCredito.add(option);
+                option.selected = true;
+                
+                // Actualizar Select2 si está siendo utilizado
+                try {
+                    $(selectClienteCredito).trigger('change');
+                } catch(e) {
+                    console.log('Error al actualizar Select2:', e);
+                }
+            }
         }
         
         // Cargar los créditos del cliente
         await cargarCreditosTabla(cliente.id);
+        
+        // Mostrar sección de datos del pago
+        document.getElementById('datosPagoCredito').style.display = 'block';
+        
+        // Eliminar mensaje de error si existe
+        const errorElement = document.querySelector('.error');
+        if (errorElement) {
+            errorElement.style.display = 'none';
+        }
         
         showToast('Cliente encontrado', 'success');
         
@@ -996,11 +1016,31 @@ async function buscarClientePorDocumentoModal() {
         console.error('Error al buscar cliente:', error);
         showToast(`No se encontró el cliente con documento ${numeroDocumento}`, 'error');
         
+        // Crear un mensaje de error y mostrarlo en el modal
+        let errorDiv = document.querySelector('.error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'error alert alert-danger';
+            const modalBody = document.querySelector('#clienteCreditoModal .modal-body');
+            if (modalBody) {
+                modalBody.insertBefore(errorDiv, modalBody.firstChild);
+            }
+        }
+        
+        // Actualizar y mostrar mensaje de error
+        if (errorDiv) {
+            errorDiv.textContent = `No se encontró el cliente con documento ${numeroDocumento}`;
+            errorDiv.style.display = 'block';
+        }
+        
         // Limpiar campos
         document.getElementById('nombrePagadorModal').value = '';
         document.getElementById('telefonoPagadorModal').value = '';
         document.getElementById('correoPagadorModal').value = '';
         document.getElementById('direccionPagadorModal').value = '';
+        
+        // Ocultar sección de datos del pago
+        document.getElementById('datosPagoCredito').style.display = 'none';
     }
 }
 
