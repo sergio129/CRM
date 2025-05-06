@@ -1091,7 +1091,20 @@ async function cargarCreditosTabla(clienteId) {
             }
         });
         
-        const result = await response.json();
+        console.log('Respuesta de API de préstamos:', response.status);
+        
+        const responseText = await response.text();
+        console.log('Respuesta completa de préstamos:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Error al parsear JSON de préstamos:', e);
+            throw new Error('Error al procesar la respuesta del servidor');
+        }
+        
+        console.log('Préstamos parseados:', result);
         
         let creditos = [];
         
@@ -1106,6 +1119,8 @@ async function cargarCreditosTabla(clienteId) {
             throw new Error(result.error || 'Error al cargar créditos');
         }
         
+        console.log('Créditos a mostrar:', creditos);
+        
         // Mostrar los créditos en la tabla
         const tablaCreditos = document.getElementById('tablaCreditos');
         
@@ -1117,10 +1132,15 @@ async function cargarCreditosTabla(clienteId) {
         let html = '';
         creditos.forEach(credito => {
             const numero = credito.loan_number || credito.numero || `CRED-${credito.id}`;
-            const tipo = credito.tipo || credito.type || 'No especificado';
-            const monto = formatCurrency(credito.monto || credito.amount || 0);
-            const saldo = formatCurrency(credito.saldo_actual || credito.current_balance || 0);
-            const estado = credito.estado || credito.status || 'Activo';
+            const tipo = credito.interest_type || credito.tipo || 'No especificado';
+            
+            // Usar amount_requested para el monto inicial del préstamo
+            const monto = formatCurrency(credito.amount_requested || credito.monto || 0);
+            
+            // Usar total_due para el saldo actual
+            const saldo = formatCurrency(credito.total_due || credito.saldo_actual || credito.current_balance || 0);
+            
+            const estado = credito.loan_status || credito.estado || credito.status || 'Activo';
             
             html += `
                 <tr>
@@ -1130,7 +1150,7 @@ async function cargarCreditosTabla(clienteId) {
                     <td>${saldo}</td>
                     <td>${estado}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="seleccionarCredito(${credito.id}, '${numero}', '${tipo}', ${credito.saldo_actual || credito.current_balance || 0})">
+                        <button class="btn btn-sm btn-primary" onclick="seleccionarCredito(${credito.id}, '${numero}', '${tipo}', ${credito.total_due || credito.saldo_actual || credito.current_balance || 0})">
                             <i class="fas fa-check"></i> Seleccionar
                         </button>
                     </td>
