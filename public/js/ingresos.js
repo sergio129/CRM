@@ -1202,13 +1202,41 @@ async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoAc
         console.log('Detalles del crédito:', detallesCredito);
         
         // Actualizar la información del crédito seleccionado en el formulario
-        document.getElementById('creditoSeleccionado').innerText = `${numeroCredito} - ${tipoCredito}`;
+        // Verificar primero si los elementos existen para evitar errores
+        const creditoSeleccionadoEl = document.getElementById('creditoSeleccionado');
+        if (creditoSeleccionadoEl) {
+            creditoSeleccionadoEl.innerText = `${numeroCredito} - ${tipoCredito}`;
+        } else {
+            console.warn('Elemento creditoSeleccionado no encontrado en el DOM');
+        }
+        
+        // Guardar el creditoId en un campo oculto si existe
+        const creditoIdHidden = document.getElementById('creditoIdHidden');
+        if (creditoIdHidden) {
+            creditoIdHidden.value = creditoId;
+        }
+        
+        // Guardar info del crédito en el formulario principal
+        if (document.getElementById('conceptoIngreso')) {
+            document.getElementById('conceptoIngreso').value = `Pago crédito ${numeroCredito}`;
+        }
         
         // Establecer el valor a pagar por defecto igual al saldo
         if (document.getElementById('valorPago')) {
             document.getElementById('valorPago').value = saldoActual;
             // Trigger change event para actualizar cualquier cálculo dependiente
             document.getElementById('valorPago').dispatchEvent(new Event('change'));
+        }
+        
+        // Si existe el campo valorBruto, actualizarlo con el valor del saldo
+        if (document.getElementById('valorBruto')) {
+            document.getElementById('valorBruto').value = saldoActual;
+            // Disparar el evento change para que se recalculen los valores
+            document.getElementById('valorBruto').dispatchEvent(new Event('change'));
+            // También llamar a la función de calcular valores si existe
+            if (typeof calcularValores === 'function') {
+                calcularValores();
+            }
         }
         
         // Actualizar la tabla de amortización con los datos del crédito
@@ -1221,8 +1249,15 @@ async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoAc
         }
         
         // Mostrar sección de datos del pago si existe
-        if (document.getElementById('datosPago')) {
-            document.getElementById('datosPago').style.display = 'block';
+        const datosPagoEl = document.getElementById('datosPago');
+        if (datosPagoEl) {
+            datosPagoEl.style.display = 'block';
+        }
+        
+        // Si existe, mostrar también la sección de info del crédito
+        const infoCreditoEl = document.getElementById('infoCredito');
+        if (infoCreditoEl) {
+            infoCreditoEl.style.display = 'block';
         }
         
         showToast('Crédito seleccionado correctamente', 'success');
