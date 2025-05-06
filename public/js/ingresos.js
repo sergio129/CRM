@@ -163,11 +163,6 @@ function manejarCambioCategoria() {
             document.getElementById('seccionTipoPago').style.display = 'none';
         }
         
-        // Ocultar el botón de búsqueda de cliente de crédito
-        if (document.getElementById('btnBuscarClienteCredito')) {
-            document.getElementById('btnBuscarClienteCredito').style.display = 'none';
-        }
-        
         return;
     }
     
@@ -203,49 +198,28 @@ function manejarCambioCategoria() {
     // Aplicar porcentaje de retención automático
     document.getElementById('porcentajeRetencion').value = porcentajeRetencion;
     
-    // Mostrar sección cliente en todos los casos que se requiera
-    if (requiereCliente && !esCreditoConsumo) {
+    // Para categorías de crédito, abrir directamente la modal de búsqueda de clientes y créditos
+    if (esCreditoConsumo) {
+        // Ocultar la sección de cliente y crédito en la modal principal
+        document.getElementById('seccionCliente').style.display = 'none';
+        document.getElementById('seccionCredito').style.display = 'none';
+        
+        // Abrir automáticamente la modal de búsqueda de clientes y créditos
+        const clienteCreditoModal = new bootstrap.Modal(document.getElementById('clienteCreditoModal'));
+        clienteCreditoModal.show();
+    } 
+    else if (requiereCliente) {
         // Para clientes sin crédito, mostrar la sección normal
         document.getElementById('seccionCliente').style.display = 'block';
-        
-        // Ocultar créditos y botón de crédito
         document.getElementById('seccionCredito').style.display = 'none';
-        if (document.getElementById('btnBuscarClienteCredito')) {
-            document.getElementById('btnBuscarClienteCredito').style.display = 'none';
-        }
         
         // Llenar selectores de clientes
         llenarSelectorClientes();
-    } 
-    else if (esCreditoConsumo) {
-        // Para créditos, mostrar sección cliente y botón de búsqueda de crédito
-        document.getElementById('seccionCliente').style.display = 'block';
-        
-        // Mostrar solo el botón de búsqueda de cliente de crédito
-        const btnBuscarClienteCredito = document.getElementById('btnBuscarClienteCredito');
-        if (btnBuscarClienteCredito) {
-            btnBuscarClienteCredito.style.display = 'block';
-            console.log('Botón de búsqueda de cliente de crédito MOSTRADO');
-            // Asegurarse que no haya estilos que oculten el botón
-            btnBuscarClienteCredito.style.visibility = 'visible';
-            btnBuscarClienteCredito.style.opacity = '1';
-        } else {
-            console.error('El elemento btnBuscarClienteCredito no existe en el DOM');
-        }
-        
-        // Ocultar secciones de cliente y crédito que ahora se manejan desde la modal
-        document.getElementById('seccionCredito').style.display = 'none';
-        if (document.getElementById('seccionDatosPagador')) {
-            document.getElementById('seccionDatosPagador').style.display = 'none';
-        }
     } 
     else {
         // Para el resto de categorías, ocultar todo
         document.getElementById('seccionCliente').style.display = 'none';
         document.getElementById('seccionCredito').style.display = 'none';
-        if (document.getElementById('btnBuscarClienteCredito')) {
-            document.getElementById('btnBuscarClienteCredito').style.display = 'none';
-        }
     }
     
     // Mostrar/ocultar sección de comisión
