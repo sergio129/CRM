@@ -345,6 +345,356 @@ async function cargarAsesores() {
     }
 }
 
+// Función para cargar los créditos activos de un cliente
+async function cargarCreditosCliente(clienteId) {
+    if (!clienteId) {
+        document.getElementById('creditoIngreso').innerHTML = '<option value="">Seleccione un crédito</option>';
+        document.getElementById('infoCredito').style.display = 'none';
+        return;
+    }
+    
+    try {
+        // Mostrar indicador de carga en el select de créditos
+        const selectCreditos = document.getElementById('creditoIngreso');
+        selectCreditos.innerHTML = '<option value="">Cargando créditos...</option>';
+        selectCreditos.disabled = true;
+        
+        const response = await fetch(`/api/clients/${clienteId}/loans?active=true`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        selectCreditos.disabled = false;
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar créditos del cliente');
+        }
+        
+        const creditos = await response.json();
+        
+        // Verificar formato de respuesta y obtener array de créditos
+        let creditosArray = creditos;
+        if (creditos.data) {
+            creditosArray = creditos.data;
+        }
+        
+        // Si no hay créditos, mostrar mensaje
+        if (!Array.isArray(creditosArray) || creditosArray.length === 0) {
+            selectCreditos.innerHTML = '<option value="">No hay créditos activos</option>';
+            document.getElementById('infoCredito').style.display = 'block';
+            document.getElementById('infoCredito').innerHTML = `
+                <div class="alert alert-info">
+                    <p>El cliente seleccionado no tiene créditos activos.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Llenar selector con los créditos activos
+        selectCreditos.innerHTML = '<option value="">Seleccione un crédito</option>';
+        
+        creditosArray.forEach(credito => {
+            const numero = credito.numero_credito || credito.loan_number || `CR-${credito.id}`;
+            const monto = formatCurrency(credito.monto_aprobado || credito.amount || 0);
+            const saldo = formatCurrency(credito.saldo_pendiente || credito.balance_due || 0);
+            
+            selectCreditos.innerHTML += `
+                <option value="${credito.id}">
+                    ${numero} - ${monto} (Saldo: ${saldo})
+                </option>
+            `;
+        });
+        
+        // Si solo hay un crédito, seleccionarlo automáticamente
+        if (creditosArray.length === 1) {
+            selectCreditos.value = creditosArray[0].id;
+            // Disparar evento de cambio para cargar detalles del crédito
+            selectCreditos.dispatchEvent(new Event('change'));
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar créditos del cliente:', error);
+        const selectCreditos = document.getElementById('creditoIngreso');
+        selectCreditos.innerHTML = '<option value="">Error al cargar créditos</option>';
+        selectCreditos.disabled = false;
+        
+        document.getElementById('infoCredito').style.display = 'block';
+        document.getElementById('infoCredito').innerHTML = `
+            <div class="alert alert-danger">
+                <p>Error al cargar créditos: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Función para cargar los detalles de un crédito específico
+async function cargarDetalleCredito(creditoId) {
+    if (!creditoId) {
+        document.getElementById('infoCredito').style.display = 'none';
+        return;
+    }
+    
+    // Mostrar sección de crédito si no está visible
+    document.getElementById('seccionCredito').style.display = 'block';
+    
+    // Cargar la tabla de amortización
+    cargarTablaAmortizacion(creditoId);
+}
+
+// Función para buscar cliente por documento
+async function buscarClientePorDocumento() {
+    const tipoDocumento = document.getElementById('tipoBusquedaCliente').value;
+    const numeroDocumento = document.getElementById('documentoBusquedaCliente').value.trim();
+    
+    if (!numeroDocumento) {
+        showToast('Por favor ingrese el número de documento', 'error');
+        return;
+    }
+    
+    try {
+        // Mostrar indicador de carga
+        document.getElementById('btnBuscarCliente').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Buscando...';
+        document.getElementById('btnBuscarCliente').disabled = true;
+        
+        const response = await fetch(`/api/clients/search?tipo=${tipoDocumento}&documento=${numeroDocumento}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        // Restaurar botón
+        document.getElementById('btnBuscarCliente').innerHTML = '<i class="fas fa-search"></i> Buscar';
+        document.getElementById('btnBuscarCliente').disabled = false;
+        
+        if (!response.ok) {
+            throw new Error('Error al buscar cliente');
+        }
+        
+        const resultado = await response.json();
+        
+        // Verificar si se encontró el cliente
+        if (resultado && resultado.id) {
+            // Seleccionar el cliente en el select
+            const selectCliente = document.getElementById('clienteIngreso');
+            
+            // Verificar si el cliente ya existe en el select
+            let clienteExiste = false;
+            for (let i = 0; i < selectCliente.options.length; i++) {
+                if (selectCliente.options[i].value == resultado.id) {
+                    selectCliente.selectedIndex = i;
+                    clienteExiste = true;
+                    break;
+                }
+            }
+            
+            // Si el cliente no existe en el select, añadirlo
+            if (!clienteExiste) {
+                const option = document.createElement('option');
+                option.value = resultado.id;
+                option.text = `${resultado.full_name || resultado.nombre + ' ' + (resultado.apellido || '')} - ${resultado.identification || resultado.numero_documento || 'Sin documento'}`;
+                option.selected = true;
+                selectCliente.add(option);
+            }
+            
+            // Disparar evento change para cargar créditos del cliente
+            selectCliente.dispatchEvent(new Event('change'));
+            
+            // Si existe la sección de datos del pagador, llenarla con los datos del cliente
+            if (document.getElementById('nombrePagador')) {
+                document.getElementById('nombrePagador').value = resultado.full_name || resultado.nombre + ' ' + (resultado.apellido || '');
+                document.getElementById('tipoPagador').value = resultado.tipo_documento || tipoDocumento;
+                document.getElementById('documentoPagador').value = resultado.identification || resultado.numero_documento || numeroDocumento;
+                document.getElementById('telefonoPagador').value = resultado.phone || '';
+                document.getElementById('correoPagador').value = resultado.email || '';
+                document.getElementById('direccionPagador').value = resultado.address || '';
+            }
+            
+            showToast('Cliente encontrado y seleccionado correctamente');
+        } else {
+            showToast('No se encontró ningún cliente con el documento especificado', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error al buscar cliente:', error);
+        document.getElementById('btnBuscarCliente').innerHTML = '<i class="fas fa-search"></i> Buscar';
+        document.getElementById('btnBuscarCliente').disabled = false;
+        showToast('Error al buscar cliente: ' + error.message, 'error');
+    }
+}
+
+// Función para cargar la lista completa de clientes
+async function cargarListaClientes() {
+    try {
+        const tablaClientes = document.getElementById('tablaClientes');
+        tablaClientes.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p>Cargando clientes...</p>
+                </td>
+            </tr>
+        `;
+        
+        // Si ya tenemos los clientes cargados globalmente, usarlos
+        if (clientes && clientes.length > 0) {
+            renderizarTablaClientes(clientes);
+            return;
+        }
+        
+        // Si no, cargarlos
+        const response = await fetch('/api/clients', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar clientes');
+        }
+        
+        const resultado = await response.json();
+        
+        // Verificar formato de respuesta
+        let clientesData = [];
+        if (Array.isArray(resultado)) {
+            clientesData = resultado;
+        } else if (resultado.data && Array.isArray(resultado.data)) {
+            clientesData = resultado.data;
+        } else {
+            throw new Error('Formato de respuesta no reconocido');
+        }
+        
+        // Actualizar clientes globales y renderizar
+        clientes = clientesData;
+        renderizarTablaClientes(clientes);
+        
+    } catch (error) {
+        console.error('Error al cargar lista de clientes:', error);
+        document.getElementById('tablaClientes').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-danger">
+                    Error al cargar clientes: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Función para renderizar la tabla de clientes
+function renderizarTablaClientes(clientesData) {
+    const tablaClientes = document.getElementById('tablaClientes');
+    
+    if (!clientesData || clientesData.length === 0) {
+        tablaClientes.innerHTML = '<tr><td colspan="4" class="text-center">No se encontraron clientes</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    clientesData.forEach(cliente => {
+        const nombre = cliente.full_name || `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+        const documento = cliente.identification || cliente.numero_documento || 'Sin documento';
+        const telefono = cliente.phone || cliente.telefono || 'N/A';
+        
+        html += `
+            <tr>
+                <td>${nombre}</td>
+                <td>${documento}</td>
+                <td>${telefono}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="seleccionarCliente(${cliente.id})">
+                        <i class="fas fa-check"></i> Seleccionar
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tablaClientes.innerHTML = html;
+}
+
+// Función para filtrar clientes en la tabla
+function filtrarClientes() {
+    const filtro = document.getElementById('filtroBusquedaClientes').value.toLowerCase();
+    
+    if (!clientes || clientes.length === 0) {
+        return;
+    }
+    
+    // Filtrar por nombre o documento
+    const clientesFiltrados = clientes.filter(cliente => {
+        const nombre = cliente.full_name || `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+        const documento = cliente.identification || cliente.numero_documento || '';
+        
+        return nombre.toLowerCase().includes(filtro) || documento.toLowerCase().includes(filtro);
+    });
+    
+    // Renderizar tabla con clientes filtrados
+    renderizarTablaClientes(clientesFiltrados);
+}
+
+// Función para seleccionar un cliente desde la tabla
+function seleccionarCliente(clienteId) {
+    // Buscar el cliente en la lista
+    const cliente = clientes.find(c => c.id === clienteId);
+    
+    if (!cliente) {
+        showToast('No se pudo encontrar la información del cliente', 'error');
+        return;
+    }
+    
+    const selectCliente = document.getElementById('clienteIngreso');
+    
+    // Verificar si el cliente ya existe en el select
+    let clienteExiste = false;
+    for (let i = 0; i < selectCliente.options.length; i++) {
+        if (selectCliente.options[i].value == clienteId) {
+            selectCliente.selectedIndex = i;
+            clienteExiste = true;
+            break;
+        }
+    }
+    
+    // Si el cliente no existe en el select, añadirlo
+    if (!clienteExiste) {
+        const option = document.createElement('option');
+        option.value = clienteId;
+        option.text = `${cliente.full_name || cliente.nombre + ' ' + (cliente.apellido || '')} - ${cliente.identification || cliente.numero_documento || 'Sin documento'}`;
+        option.selected = true;
+        selectCliente.add(option);
+    }
+    
+    // Disparar evento change para cargar créditos del cliente
+    selectCliente.dispatchEvent(new Event('change'));
+    
+    // Si existe la sección de datos del pagador, llenarla con los datos del cliente
+    if (document.getElementById('nombrePagador')) {
+        document.getElementById('nombrePagador').value = cliente.full_name || cliente.nombre + ' ' + (cliente.apellido || '');
+        document.getElementById('tipoPagador').value = cliente.tipo_documento || 'CC';
+        document.getElementById('documentoPagador').value = cliente.identification || cliente.numero_documento || '';
+        document.getElementById('telefonoPagador').value = cliente.phone || cliente.telefono || '';
+        document.getElementById('correoPagador').value = cliente.email || cliente.correo || '';
+        document.getElementById('direccionPagador').value = cliente.address || cliente.direccion || '';
+    }
+    
+    // Ocultar la lista de clientes
+    const collapseClientes = document.getElementById('collapseClientes');
+    const bsCollapse = bootstrap.Collapse.getInstance(collapseClientes);
+    if (bsCollapse) {
+        bsCollapse.hide();
+    }
+    
+    showToast('Cliente seleccionado correctamente');
+}
+
 // Función para manejar cambios en la categoría seleccionada
 function manejarCambioCategoria() {
     const selectCategoria = document.getElementById('categoriaIngreso');
@@ -731,1074 +1081,217 @@ async function mostrarTablaCuotas(creditoId) {
     }
 }
 
-// Función para cargar créditos de un cliente
-async function cargarCreditosCliente(clienteId) {
-    if (!clienteId) {
-        const selectCredito = document.getElementById('creditoIngreso');
-        selectCredito.innerHTML = '<option value="">Seleccione un crédito</option>';
-        document.getElementById('infoCredito').style.display = 'none';
-        return;
-    }
+// Función para cargar la tabla de amortización completa del crédito
+async function cargarTablaAmortizacion(creditoId) {
+    if (!creditoId) return;
     
     try {
-        const response = await fetch(`/api/clients/${clienteId}/loans`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Error al obtener créditos del cliente');
-        }
-        
-        const creditos = await response.json();
-        
-        // Cargar clientes con saldos activos
-        const selectCredito = document.getElementById('creditoIngreso');
-        selectCredito.innerHTML = '<option value="">Seleccione un crédito</option>';
-        
-        // Filtrar solo créditos activos
-        const creditosActivos = creditos.filter(c => c.estado === 'Activo' || c.status === 'Active');
-        
-        if (creditosActivos.length === 0) {
-            selectCredito.innerHTML += '<option value="" disabled>No hay créditos activos</option>';
-        } else {
-            creditosActivos.forEach(credito => {
-                const numeroCredito = credito.numero_credito || credito.loan_number || `CR-${credito.id}`;
-                const saldo = formatCurrency(credito.saldo_pendiente || credito.balance_due || 0);
-                
-                selectCredito.innerHTML += `<option value="${credito.id}">${numeroCredito} - Saldo: ${saldo}</option>`;
-            });
-        }
-        
-        // Cargar también datos del cliente al pagador si está disponible
-        const cliente = await fetch(`/api/clients/${clienteId}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        }).then(res => res.json());
-        
-        // Auto-llenar campos del pagador si existen
-        if (document.getElementById('nombrePagador')) {
-            document.getElementById('nombrePagador').value = cliente.full_name || '';
-            document.getElementById('tipoPagador').value = cliente.tipo_documento || '';
-            document.getElementById('documentoPagador').value = cliente.identification || '';
-            document.getElementById('telefonoPagador').value = cliente.phone || '';
-            document.getElementById('correoPagador').value = cliente.email || '';
-            document.getElementById('direccionPagador').value = cliente.address || '';
-        }
-        
-        // Limpiar info de crédito
-        document.getElementById('infoCredito').style.display = 'none';
-        
-    } catch (error) {
-        console.error('Error al cargar créditos del cliente:', error);
-        showToast('Error al cargar créditos: ' + error.message, 'error');
-    }
-}
-
-// Función para cargar detalles de un crédito
-async function cargarDetalleCredito(creditoId) {
-    const infoCredito = document.getElementById('infoCredito');
-    
-    if (!creditoId) {
-        infoCredito.style.display = 'none';
-        return;
-    }
-    
-    try {
+        // Mostrar spinner mientras se carga
+        const infoCredito = document.getElementById('infoCredito');
         infoCredito.style.display = 'block';
         infoCredito.innerHTML = `
-            <div class="d-flex justify-content-center">
+            <div class="d-flex justify-content-center p-3">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Cargando...</span>
                 </div>
+                <p class="ms-2 mb-0">Cargando plan de pagos...</p>
             </div>
         `;
         
-        const response = await fetch(`/api/loans/${creditoId}`, {
+        // Obtener información del crédito
+        const responseCredito = await fetch(`/api/loans/${creditoId}`, {
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             }
         });
         
-        if (!response.ok) {
+        if (!responseCredito.ok) {
             throw new Error('Error al obtener información del crédito');
         }
         
-        const credito = await response.json();
+        const credito = await responseCredito.json();
         
-        // Si hay un tipo de pago seleccionado, aplicar su lógica
-        const radioTipoPago = document.querySelector('input[name="tipoPago"]:checked');
-        if (radioTipoPago) {
-            manejarCambioTipoPago();
-            return;
+        // Obtener tabla de amortización
+        const responsePlan = await fetch(`/api/loans/${creditoId}/payment-schedule`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!responsePlan.ok) {
+            throw new Error('Error al obtener plan de pagos');
         }
         
-        // De lo contrario, mostrar información general del crédito
-        infoCredito.innerHTML = `
+        const planPagos = await responsePlan.json();
+        
+        // Calcular totales
+        let totalPagado = 0;
+        let totalPendiente = 0;
+        let cuotasPagadas = 0;
+        let cuotasPendientes = 0;
+        
+        planPagos.forEach(cuota => {
+            if (cuota.estado === 'pagado' || cuota.status === 'paid') {
+                totalPagado += parseFloat(cuota.monto_cuota || cuota.amount || 0);
+                cuotasPagadas++;
+            } else {
+                totalPendiente += parseFloat(cuota.monto_cuota || cuota.amount || 0);
+                cuotasPendientes++;
+            }
+        });
+        
+        // Encontrar la siguiente cuota pendiente
+        const proximaCuota = planPagos.find(cuota => 
+            cuota.estado === 'pendiente' || cuota.status === 'pending'
+        );
+        
+        // Mostrar información del crédito
+        let htmlInfo = `
             <div class="card">
-                <div class="card-header bg-light">
+                <div class="card-header bg-primary text-white">
                     <h6 class="mb-0">Información del Crédito</h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Número de crédito:</strong> ${credito.numero_credito || credito.loan_number || `CR-${credito.id}`}</p>
-                            <p><strong>Tipo de crédito:</strong> ${credito.tipo || credito.type || 'No especificado'}</p>
-                            <p><strong>Fecha de aprobación:</strong> ${new Date(credito.fecha_aprobacion || credito.approval_date || credito.createdAt).toLocaleDateString('es-CO')}</p>
+                            <p><strong>Número:</strong> ${credito.numero_credito || credito.loan_number || `CR-${credito.id}`}</p>
+                            <p><strong>Monto original:</strong> ${formatCurrency(credito.monto_aprobado || credito.amount || 0)}</p>
+                            <p><strong>Plazo:</strong> ${credito.plazo || credito.term || 0} meses</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Monto original:</strong> ${formatCurrency(credito.monto_aprobado || credito.amount || 0)}</p>
+                            <p><strong>Tasa anual:</strong> ${credito.tasa_interes || credito.interest_rate || 0}%</p>
                             <p><strong>Saldo pendiente:</strong> ${formatCurrency(credito.saldo_pendiente || credito.balance_due || 0)}</p>
-                            <p><strong>Tasa de interés:</strong> ${credito.tasa_interes || credito.interest_rate || 0}%</p>
+                            <p><strong>Estado:</strong> ${credito.estado || credito.status || 'Activo'}</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-        
-    } catch (error) {
-        console.error('Error al cargar detalle del crédito:', error);
-        infoCredito.innerHTML = `
-            <div class="alert alert-danger">
-                <h6>Error al cargar información del crédito</h6>
-                <p>${error.message}</p>
-            </div>
-        `;
-    }
-}
-
-// Función para buscar datos de pagador por documento
-async function buscarPagadorPorDocumento() {
-    const documento = document.getElementById('documentoPagador').value;
-    const tipoDocumento = document.getElementById('tipoPagador').value;
-    
-    if (!documento || !tipoDocumento) {
-        showToast('Ingrese el tipo y número de documento', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/clients/search?documento=${documento}&tipo=${tipoDocumento}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Error al buscar pagador');
-        }
-        
-        const resultado = await response.json();
-        
-        if (resultado && resultado.id) {
-            // Si se encuentra, llenar los campos
-            document.getElementById('nombrePagador').value = resultado.full_name || '';
-            document.getElementById('telefonoPagador').value = resultado.phone || '';
-            document.getElementById('correoPagador').value = resultado.email || '';
-            document.getElementById('direccionPagador').value = resultado.address || '';
             
-            showToast('Datos del pagador cargados correctamente');
-            
-            // Opcionalmente, también se podría seleccionar al cliente en el selector
-            if (document.getElementById('clienteIngreso')) {
-                document.getElementById('clienteIngreso').value = resultado.id;
-                // Disparar evento de cambio para cargar sus créditos
-                document.getElementById('clienteIngreso').dispatchEvent(new Event('change'));
-            }
-        } else {
-            showToast('No se encontró un pagador con el documento especificado', 'error');
-        }
-        
-    } catch (error) {
-        console.error('Error al buscar pagador:', error);
-        showToast('Error al buscar pagador: ' + error.message, 'error');
-    }
-}
-
-// Función para inicializar el formulario de ingreso
-function inicializarFormularioIngreso(esNuevo = true) {
-    // Reiniciar formulario
-    document.getElementById('ingresoForm').reset();
-    
-    // Ocultar secciones condicionales
-    document.getElementById('seccionCliente').style.display = 'none';
-    document.getElementById('seccionCredito').style.display = 'none';
-    document.getElementById('seccionComision').style.display = 'none';
-    document.getElementById('infoCredito').style.display = 'none';
-    
-    // Ocultar sección de datos del pagador si existe
-    if (document.getElementById('seccionDatosPagador')) {
-        document.getElementById('seccionDatosPagador').style.display = 'none';
-    }
-    
-    // Ocultar sección de tipo de pago si existe
-    if (document.getElementById('seccionTipoPago')) {
-        document.getElementById('seccionTipoPago').style.display = 'none';
-    }
-    
-    // Establecer valores predeterminados
-    document.getElementById('ingresoId').value = '';
-    document.getElementById('fechaIngreso').valueAsDate = new Date();
-    document.getElementById('porcentajeRetencion').value = '0';
-    document.getElementById('valorRetencion').value = '0';
-    document.getElementById('valorBruto').value = '0';
-    document.getElementById('valorNeto').value = '0';
-    
-    // Configurar título del modal
-    document.getElementById('ingresoModalLabel').textContent = esNuevo ? 'Nuevo Ingreso' : 'Editar Ingreso';
-    
-    // Llenar categorías en el selector
-    const selectCategoria = document.getElementById('categoriaIngreso');
-    selectCategoria.innerHTML = '<option value="">Seleccione una categoría</option>';
-    
-    categorias.forEach(categoria => {
-        const option = document.createElement('option');
-        option.value = categoria.id;
-        option.textContent = categoria.nombre;
-        
-        // Agregar atributos de datos para comportamiento condicional
-        option.dataset.retencion = categoria.porcentaje_retencion || 0;
-        option.dataset.cliente = categoria.requiere_cliente ? 'true' : 'false';
-        option.dataset.comision = categoria.permite_comision ? 'true' : 'false';
-        option.dataset.credito = categoria.es_credito ? 'true' : 'false';
-        
-        selectCategoria.appendChild(option);
-    });
-    
-    // Agregar botón de búsqueda rápida para el pagador si la sección existe
-    const seccionDatosPagador = document.getElementById('seccionDatosPagador');
-    if (seccionDatosPagador) {
-        // Verificar si ya existe el botón de búsqueda
-        if (!document.getElementById('btnBuscarPagador')) {
-            const inputDocumento = document.getElementById('documentoPagador');
-            const parentElement = inputDocumento.parentElement;
-            
-            // Convertir el div en un input-group
-            parentElement.classList.add('input-group');
-            
-            // Crear el botón de búsqueda
-            const btnBuscar = document.createElement('button');
-            btnBuscar.id = 'btnBuscarPagador';
-            btnBuscar.type = 'button';
-            btnBuscar.className = 'btn btn-outline-primary';
-            btnBuscar.innerHTML = '<i class="fas fa-search"></i>';
-            btnBuscar.title = 'Buscar pagador por documento';
-            
-            // Agregar el evento al botón
-            btnBuscar.addEventListener('click', buscarPagadorPorDocumento);
-            
-            // Reestructurar el HTML
-            inputDocumento.parentNode.insertBefore(btnBuscar, inputDocumento.nextSibling);
-        }
-    }
-}
-
-// Función para calcular retención, comisión y valor neto
-function calcularValores() {
-    const valorBruto = parseFloat(document.getElementById('valorBruto').value) || 0;
-    const porcentajeRetencion = parseFloat(document.getElementById('porcentajeRetencion').value) || 0;
-    const porcentajeComision = parseFloat(document.getElementById('porcentajeComision').value) || 0;
-    
-    // Calcular retención
-    const valorRetencion = (valorBruto * porcentajeRetencion) / 100;
-    document.getElementById('valorRetencion').value = valorRetencion.toFixed(2);
-    
-    // Calcular comisión si aplica
-    let valorComision = 0;
-    if (document.getElementById('seccionComision').style.display !== 'none') {
-        valorComision = (valorBruto * porcentajeComision) / 100;
-        document.getElementById('valorComision').value = valorComision.toFixed(2);
-    }
-    
-    // Calcular valor neto
-    const valorNeto = valorBruto - valorRetencion - valorComision;
-    document.getElementById('valorNeto').value = valorNeto.toFixed(2);
-}
-
-// Función para mostrar el modal de nuevo ingreso
-function nuevoIngreso() {
-    inicializarFormularioIngreso(true);
-    const modal = new bootstrap.Modal(document.getElementById('ingresoModal'));
-    modal.show();
-}
-
-// Función para guardar un ingreso (nuevo o edición)
-async function guardarIngreso() {
-    try {
-        // Validar formulario
-        const form = document.getElementById('ingresoForm');
-        if (!validarFormulario()) {
-            return;
-        }
-
-        // Obtener datos del formulario
-        const id = document.getElementById('ingresoId').value;
-        const esNuevo = !id;
-        const datos = obtenerDatosFormulario();
-        
-        // Agregar validación para evitar pagos duplicados
-        if (esNuevo && datos.credito_id) {
-            const esDuplicado = await verificarPagoDuplicado(datos);
-            if (esDuplicado) {
-                if (!confirm('Ya existe un pago similar para este crédito en la misma fecha. ¿Desea continuar?')) {
-                    return;
-                }
-            }
-        }
-
-        // Preparar formData para manejar archivos
-        const formData = new FormData();
-        
-        // Agregar campos del formulario
-        Object.keys(datos).forEach(key => {
-            formData.append(key, datos[key]);
-        });
-        
-        // Agregar archivos adjuntos si existen
-        const fileInput = document.getElementById('archivoAdjunto');
-        if (fileInput && fileInput.files.length > 0) {
-            for (let i = 0; i < fileInput.files.length; i++) {
-                formData.append('archivos', fileInput.files[i]);
-            }
-        }
-        
-        // URL y método según sea nuevo o edición
-        const url = esNuevo ? '/api/ingresos' : `/api/ingresos/${id}`;
-        const method = esNuevo ? 'POST' : 'PUT';
-        
-        // Enviar solicitud
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Error al guardar ingreso');
-        }
-        
-        // Mostrar mensaje de éxito
-        showToast(esNuevo ? 'Ingreso creado exitosamente' : 'Ingreso actualizado exitosamente');
-        
-        // Cerrar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('ingresoModal'));
-        modal.hide();
-        
-        // Actualizar tabla de ingresos
-        cargarIngresos();
-        
-        // Si es un pago de crédito, enviar notificación al cliente
-        if (datos.credito_id && datos.cliente_id) {
-            enviarNotificacionCliente(datos.cliente_id, datos.credito_id, datos);
-        }
-        
-        // Si tiene retención, programar recordatorio para el equipo contable
-        if (datos.valor_retencion > 0) {
-            enviarNotificacionRetencion(datos);
-        }
-        
-    } catch (error) {
-        console.error('Error al guardar ingreso:', error);
-        showToast('Error al guardar ingreso: ' + error.message, 'error');
-    }
-}
-
-// Función para validar el formulario
-function validarFormulario() {
-    const form = document.getElementById('ingresoForm');
-    const categoriaId = document.getElementById('categoriaIngreso').value;
-    const valorBruto = document.getElementById('valorBruto').value;
-    const fechaIngreso = document.getElementById('fechaIngreso').value;
-    const concepto = document.getElementById('conceptoIngreso').value;
-    const metodoPago = document.getElementById('metodoPago').value;
-    
-    let isValid = true;
-    let errorMessage = '';
-    
-    // Validar campos básicos
-    if (!categoriaId) {
-        errorMessage = 'Seleccione una categoría';
-        isValid = false;
-    } else if (!valorBruto || parseFloat(valorBruto) <= 0) {
-        errorMessage = 'Ingrese un valor válido';
-        isValid = false;
-    } else if (!fechaIngreso) {
-        errorMessage = 'Seleccione una fecha';
-        isValid = false;
-    } else if (!concepto) {
-        errorMessage = 'Ingrese un concepto';
-        isValid = false;
-    } else if (!metodoPago) {
-        errorMessage = 'Seleccione un método de pago';
-        isValid = false;
-    }
-    
-    // Validar campos según tipo de ingreso
-    const seccionCliente = document.getElementById('seccionCliente');
-    if (seccionCliente.style.display !== 'none') {
-        const clienteId = document.getElementById('clienteIngreso').value;
-        if (!clienteId) {
-            errorMessage = 'Seleccione un cliente';
-            isValid = false;
-        }
-    }
-    
-    const seccionCredito = document.getElementById('seccionCredito');
-    if (seccionCredito.style.display !== 'none') {
-        const creditoId = document.getElementById('creditoIngreso').value;
-        if (!creditoId) {
-            errorMessage = 'Seleccione un crédito';
-            isValid = false;
-        }
-    }
-    
-    const seccionComision = document.getElementById('seccionComision');
-    if (seccionComision.style.display !== 'none') {
-        const asesorId = document.getElementById('asesorIngreso').value;
-        if (!asesorId) {
-            errorMessage = 'Seleccione un asesor';
-            isValid = false;
-        }
-    }
-    
-    // Validar datos de pagador cuando se requieren
-    const seccionDatosPagador = document.getElementById('seccionDatosPagador');
-    if (seccionDatosPagador && seccionDatosPagador.style.display !== 'none') {
-        const nombrePagador = document.getElementById('nombrePagador').value;
-        const tipoPagador = document.getElementById('tipoPagador').value;
-        const documentoPagador = document.getElementById('documentoPagador').value;
-        
-        if (!nombrePagador) {
-            errorMessage = 'Ingrese el nombre del pagador';
-            isValid = false;
-        } else if (!tipoPagador) {
-            errorMessage = 'Seleccione el tipo de documento del pagador';
-            isValid = false;
-        } else if (!documentoPagador) {
-            errorMessage = 'Ingrese el número de documento del pagador';
-            isValid = false;
-        }
-    }
-    
-    if (!isValid) {
-        showToast(errorMessage, 'error');
-    }
-    
-    return isValid;
-}
-
-// Función para obtener los datos del formulario
-function obtenerDatosFormulario() {
-    const datos = {
-        categoria_id: document.getElementById('categoriaIngreso').value,
-        concepto: document.getElementById('conceptoIngreso').value,
-        descripcion: document.getElementById('descripcionIngreso').value || '',
-        fecha: document.getElementById('fechaIngreso').value,
-        valor_bruto: parseFloat(document.getElementById('valorBruto').value),
-        valor_neto: parseFloat(document.getElementById('valorNeto').value),
-        porcentaje_retencion: parseFloat(document.getElementById('porcentajeRetencion').value) || 0,
-        valor_retencion: parseFloat(document.getElementById('valorRetencion').value) || 0,
-        metodo_pago: document.getElementById('metodoPago').value,
-        referencia_pago: document.getElementById('referenciaPago').value || '',
-        estado: document.getElementById('estadoIngreso').value
-    };
-    
-    // Agregar cliente si está visible
-    const seccionCliente = document.getElementById('seccionCliente');
-    if (seccionCliente.style.display !== 'none') {
-        datos.cliente_id = document.getElementById('clienteIngreso').value;
-    }
-    
-    // Agregar crédito si está visible
-    const seccionCredito = document.getElementById('seccionCredito');
-    if (seccionCredito.style.display !== 'none') {
-        datos.credito_id = document.getElementById('creditoIngreso').value;
-    }
-    
-    // Agregar asesor y comisión si está visible
-    const seccionComision = document.getElementById('seccionComision');
-    if (seccionComision.style.display !== 'none') {
-        datos.asesor_id = document.getElementById('asesorIngreso').value;
-        datos.porcentaje_comision = parseFloat(document.getElementById('porcentajeComision').value) || 0;
-        datos.valor_comision = parseFloat(document.getElementById('valorComision').value) || 0;
-    }
-    
-    // Agregar datos del pagador si está visible
-    const seccionDatosPagador = document.getElementById('seccionDatosPagador');
-    if (seccionDatosPagador && seccionDatosPagador.style.display !== 'none') {
-        datos.pagador = {
-            nombre: document.getElementById('nombrePagador').value,
-            tipo_documento: document.getElementById('tipoPagador').value,
-            documento: document.getElementById('documentoPagador').value,
-            telefono: document.getElementById('telefonoPagador').value || '',
-            correo: document.getElementById('correoPagador').value || '',
-            direccion: document.getElementById('direccionPagador').value || ''
-        };
-    }
-    
-    // Agregar tipo de pago si está visible
-    const seccionTipoPago = document.getElementById('seccionTipoPago');
-    if (seccionTipoPago && seccionTipoPago.style.display !== 'none') {
-        const radios = document.getElementsByName('tipoPago');
-        for (const radio of radios) {
-            if (radio.checked) {
-                datos.tipo_pago = radio.value;
-                break;
-            }
-        }
-    }
-    
-    return datos;
-}
-
-// Función para verificar si un pago de crédito es duplicado
-async function verificarPagoDuplicado(datos) {
-    try {
-        // Solo verificar pagos de crédito
-        if (!datos.credito_id) {
-            return false;
-        }
-
-        // Obtener fecha en formato YYYY-MM-DD
-        const fechaPago = datos.fecha;
-        
-        // Verificar si ya existe un pago para este crédito en la misma fecha
-        const response = await fetch(`/api/ingresos?creditoId=${datos.credito_id}&fechaInicio=${fechaPago}&fechaFin=${fechaPago}&estado=confirmado`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const result = await response.json();
-        
-        // Si hay resultados, podría ser un duplicado
-        return result.success && result.data && result.data.length > 0;
-        
-    } catch (error) {
-        console.error('Error al verificar pago duplicado:', error);
-        return false; // En caso de error, permitir continuar
-    }
-}
-
-// Función para enviar notificación al cliente
-async function enviarNotificacionCliente(clienteId, creditoId, datos) {
-    try {
-        const response = await fetch(`/api/clients/${clienteId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const cliente = await response.json();
-        
-        // Verificar si el cliente tiene correo electrónico
-        if (!cliente.email) {
-            console.warn('Cliente sin correo electrónico para enviar notificación');
-            return;
-        }
-        
-        // Enviar notificación por correo (simulado)
-        console.log(`Notificación enviada a ${cliente.full_name} (${cliente.email}) sobre el pago recibido por ${formatCurrency(datos.valor_bruto)}`);
-        
-        // También podríamos implementar esto con una llamada API real
-        // await fetch('/api/notificaciones/cliente', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'Authorization': `Bearer ${token}`
-        //     },
-        //     body: JSON.stringify({
-        //         cliente_id: clienteId,
-        //         credito_id: creditoId,
-        //         tipo: 'pago_recibido',
-        //         datos: {
-        //             monto: datos.valor_bruto,
-        //             fecha: datos.fecha,
-        //             concepto: datos.concepto
-        //         }
-        //     })
-        // });
-        
-    } catch (error) {
-        console.error('Error al enviar notificación al cliente:', error);
-    }
-}
-
-// Función para enviar notificación de retención al equipo contable
-function enviarNotificacionRetencion(datos) {
-    // Esta función podría implementar el envío real de la notificación
-    // Por ahora, solo lo simulamos
-    const fechaLimite = new Date();
-    fechaLimite.setDate(fechaLimite.getDate() + 30); // 30 días después
-    
-    console.log(`Recordatorio programado para el equipo contable sobre retención de ${formatCurrency(datos.valor_retencion)} con fecha límite ${fechaLimite.toLocaleDateString()}`);
-    
-    // También podríamos implementar esto con una llamada API real
-    // fetch('/api/notificaciones/contable', {
-    //     method: 'POST',
-    //     headers: {
-    //         'Content-Type': 'application/json',
-    //         'Authorization': `Bearer ${token}`
-    //     },
-    //     body: JSON.stringify({
-    //         tipo: 'retención',
-    //         datos: {
-    //             valor: datos.valor_retencion,
-    //             concepto: datos.concepto,
-    //             fecha_ingreso: datos.fecha,
-    //             fecha_limite: fechaLimite.toISOString().split('T')[0]
-    //         }
-    //     })
-    // });
-}
-
-// Función para editar un ingreso existente
-async function editarIngreso(id) {
-    try {
-        // Mostrar spinner
-        document.getElementById('ingresoModalLabel').textContent = 'Cargando información...';
-        
-        // Inicializar formulario como edición
-        inicializarFormularioIngreso(false);
-        
-        // Mostrar el modal mientras se carga la información
-        const modal = new bootstrap.Modal(document.getElementById('ingresoModal'));
-        modal.show();
-        
-        // Obtener datos del ingreso
-        const response = await fetch(`/api/ingresos/${id}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Error al obtener datos del ingreso');
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Error al obtener datos del ingreso');
-        }
-        
-        const ingreso = result.data;
-        
-        // Establecer el ID del ingreso en el campo oculto
-        document.getElementById('ingresoId').value = ingreso.id;
-        
-        // Actualizar título del modal
-        document.getElementById('ingresoModalLabel').textContent = 'Editar Ingreso';
-        
-        // Llenar campos básicos
-        document.getElementById('categoriaIngreso').value = ingreso.categoria_id;
-        document.getElementById('conceptoIngreso').value = ingreso.concepto;
-        document.getElementById('descripcionIngreso').value = ingreso.descripcion || '';
-        
-        // Formatear fecha (YYYY-MM-DD)
-        const fecha = new Date(ingreso.fecha);
-        const fechaFormateada = fecha.toISOString().split('T')[0];
-        document.getElementById('fechaIngreso').value = fechaFormateada;
-        
-        // Valores monetarios
-        document.getElementById('valorBruto').value = ingreso.valor_bruto;
-        document.getElementById('porcentajeRetencion').value = ingreso.porcentaje_retencion || 0;
-        document.getElementById('valorRetencion').value = ingreso.valor_retencion || 0;
-        document.getElementById('valorNeto').value = ingreso.valor_neto;
-        
-        // Método de pago y referencia
-        document.getElementById('metodoPago').value = ingreso.metodo_pago;
-        document.getElementById('referenciaPago').value = ingreso.referencia_pago || '';
-        document.getElementById('estadoIngreso').value = ingreso.estado;
-        
-        // Disparar evento de cambio de categoría para mostrar/ocultar secciones correspondientes
-        document.getElementById('categoriaIngreso').dispatchEvent(new Event('change'));
-        
-        // Si tiene cliente, seleccionarlo
-        if (ingreso.cliente_id) {
-            document.getElementById('clienteIngreso').value = ingreso.cliente_id;
-            // Cargar créditos del cliente
-            await cargarCreditosCliente(ingreso.cliente_id);
-            
-            // Si tiene datos de pagador, llenarlos
-            if (ingreso.pagador) {
-                const seccionDatosPagador = document.getElementById('seccionDatosPagador');
-                if (seccionDatosPagador) {
-                    document.getElementById('nombrePagador').value = ingreso.pagador.nombre || '';
-                    document.getElementById('tipoPagador').value = ingreso.pagador.tipo_documento || '';
-                    document.getElementById('documentoPagador').value = ingreso.pagador.documento || '';
-                    document.getElementById('telefonoPagador').value = ingreso.pagador.telefono || '';
-                    document.getElementById('correoPagador').value = ingreso.pagador.correo || '';
-                    document.getElementById('direccionPagador').value = ingreso.pagador.direccion || '';
-                }
-            }
-        }
-        
-        // Si tiene crédito, seleccionarlo
-        if (ingreso.credito_id) {
-            document.getElementById('creditoIngreso').value = ingreso.credito_id;
-            // Cargar detalles del crédito
-            await cargarDetalleCredito(ingreso.credito_id);
-            
-            // Si tiene tipo de pago, seleccionarlo
-            if (ingreso.tipo_pago) {
-                const radios = document.getElementsByName('tipoPago');
-                for (const radio of radios) {
-                    if (radio.value === ingreso.tipo_pago) {
-                        radio.checked = true;
-                        // Disparar el evento para mostrar la información correspondiente
-                        radio.dispatchEvent(new Event('change'));
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // Si tiene asesor y comisión, seleccionarlo
-        if (ingreso.asesor_id) {
-            document.getElementById('asesorIngreso').value = ingreso.asesor_id;
-            document.getElementById('porcentajeComision').value = ingreso.porcentaje_comision || 0;
-            document.getElementById('valorComision').value = ingreso.valor_comision || 0;
-        }
-        
-        // Mostrar archivos adjuntos si existen
-        if (ingreso.archivos_adjuntos) {
-            const archivosContainer = document.getElementById('archivosContainer');
-            archivosContainer.innerHTML = '';
-            
-            try {
-                const archivos = JSON.parse(ingreso.archivos_adjuntos);
-                
-                if (archivos && archivos.length > 0) {
-                    archivos.forEach(archivo => {
-                        const archivoElement = document.createElement('div');
-                        archivoElement.classList.add('archivo-item');
-                        archivoElement.innerHTML = `
-                            <i class="fas fa-file"></i>
-                            <a href="${archivo.ruta}" target="_blank">${archivo.nombre_original}</a>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarArchivo(${ingreso.id}, '${archivo.nombre_sistema}')">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                        archivosContainer.appendChild(archivoElement);
-                    });
-                }
-            } catch (e) {
-                console.error('Error al parsear archivos adjuntos:', e);
-            }
-        }
-        
-    } catch (error) {
-        console.error('Error al editar ingreso:', error);
-        showToast('Error al editar ingreso: ' + error.message, 'error');
-        
-        // Cerrar modal en caso de error
-        const modal = bootstrap.Modal.getInstance(document.getElementById('ingresoModal'));
-        if (modal) modal.hide();
-    }
-}
-
-// Función para anular un ingreso
-async function anularIngreso(id) {
-    if (!confirm('¿Está seguro de anular este ingreso? Esta acción no se puede deshacer.')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/ingresos/${id}/anular`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Error al anular ingreso');
-        }
-        
-        showToast('Ingreso anulado exitosamente');
-        
-        // Cerrar modal de detalle si está abierto
-        const modalDetalle = bootstrap.Modal.getInstance(document.getElementById('detalleIngresoModal'));
-        if (modalDetalle) modalDetalle.hide();
-        
-        // Recargar ingresos
-        cargarIngresos();
-        
-    } catch (error) {
-        console.error('Error al anular ingreso:', error);
-        showToast('Error al anular ingreso: ' + error.message, 'error');
-    }
-}
-
-// Función para eliminar un archivo adjunto
-async function eliminarArchivo(ingresoId, nombreArchivo) {
-    if (!confirm('¿Está seguro de eliminar este archivo? Esta acción no se puede deshacer.')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/ingresos/${ingresoId}/archivos/${nombreArchivo}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Error al eliminar archivo');
-        }
-        
-        showToast('Archivo eliminado exitosamente');
-        
-        // Actualizar la vista eliminando el elemento
-        const archivoElement = document.querySelector(`.archivo-item a[href*="${nombreArchivo}"]`).parentNode;
-        if (archivoElement) {
-            archivoElement.remove();
-        }
-        
-    } catch (error) {
-        console.error('Error al eliminar archivo:', error);
-        showToast('Error al eliminar archivo: ' + error.message, 'error');
-    }
-}
-
-// Función para ver detalles de un ingreso
-async function verDetalleIngreso(id) {
-    try {
-        // Obtener el contenedor donde se mostrará la información
-        const container = document.getElementById('detalleIngresoContent');
-        
-        // Mostrar spinner mientras se carga
-        container.innerHTML = `
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p>Cargando información del ingreso...</p>
-            </div>
-        `;
-        
-        // Mostrar el modal
-        const modal = new bootstrap.Modal(document.getElementById('detalleIngresoModal'));
-        modal.show();
-        
-        // Obtener datos del ingreso
-        const response = await fetch(`/api/ingresos/${id}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Error al obtener datos del ingreso');
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Error al obtener datos del ingreso');
-        }
-        
-        const ingreso = result.data;
-        
-        // Formatear fecha
-        const fecha = new Date(ingreso.fecha).toLocaleDateString('es-CO');
-        // Formatear montos
-        const valorBruto = formatCurrency(ingreso.valor_bruto);
-        const valorRetencion = formatCurrency(ingreso.valor_retencion || 0);
-        const valorComision = formatCurrency(ingreso.valor_comision || 0);
-        const valorNeto = formatCurrency(ingreso.valor_neto);
-        
-        // Determinar clase CSS para el estado
-        let estadoClass = '';
-        switch (ingreso.estado) {
-            case 'confirmado': estadoClass = 'bg-success'; break;
-            case 'pendiente': estadoClass = 'bg-warning'; break;
-            case 'anulado': estadoClass = 'bg-danger'; break;
-            default: estadoClass = 'bg-secondary';
-        }
-        
-        // Construir HTML para mostrar archivos adjuntos
-        let archivosHTML = '<p>No hay archivos adjuntos.</p>';
-        
-        if (ingreso.archivos_adjuntos) {
-            try {
-                const archivos = JSON.parse(ingreso.archivos_adjuntos);
-                
-                if (archivos && archivos.length > 0) {
-                    archivosHTML = '<div class="list-group">';
-                    archivos.forEach(archivo => {
-                        archivosHTML += `
-                            <a href="${archivo.ruta}" class="list-group-item list-group-item-action" target="_blank">
-                                <i class="fas fa-file me-2"></i>
-                                ${archivo.nombre_original}
-                            </a>
-                        `;
-                    });
-                    archivosHTML += '</div>';
-                }
-            } catch (e) {
-                console.error('Error al parsear archivos adjuntos:', e);
-            }
-        }
-        
-        // Construir HTML para la tarjeta de información
-        const infoHTML = `
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Información General</h5>
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">Resumen de Pagos</h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>N° Comprobante:</strong> ${ingreso.numero_comprobante || `ING-${ingreso.id}`}</p>
-                            <p><strong>Fecha:</strong> ${fecha}</p>
-                            <p><strong>Categoría:</strong> ${ingreso.Categoria ? ingreso.Categoria.nombre : 'No especificada'}</p>
-                            <p><strong>Concepto:</strong> ${ingreso.concepto}</p>
-                            <p><strong>Estado:</strong> <span class="badge ${estadoClass}">${ingreso.estado}</span></p>
+                            <p><strong>Cuotas pagadas:</strong> ${cuotasPagadas} de ${planPagos.length}</p>
+                            <p><strong>Total pagado:</strong> ${formatCurrency(totalPagado)}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Valor Bruto:</strong> ${valorBruto}</p>
-                            <p><strong>Retención:</strong> ${valorRetencion}</p>
-                            <p><strong>Comisión:</strong> ${valorComision}</p>
-                            <p><strong>Valor Neto:</strong> ${valorNeto}</p>
-                            <p><strong>Método de Pago:</strong> ${ingreso.metodo_pago}</p>
-                            ${ingreso.referencia_pago ? `<p><strong>Referencia:</strong> ${ingreso.referencia_pago}</p>` : ''}
+                            <p><strong>Cuotas pendientes:</strong> ${cuotasPendientes}</p>
+                            <p><strong>Total pendiente:</strong> ${formatCurrency(totalPendiente)}</p>
                         </div>
+                    </div>`;
+                    
+        if (proximaCuota) {
+            htmlInfo += `
+                <div class="alert alert-warning mt-2">
+                    <strong>Próxima cuota:</strong> N° ${proximaCuota.numero_cuota || proximaCuota.number}
+                    <br>
+                    <strong>Vencimiento:</strong> ${new Date(proximaCuota.fecha_vencimiento || proximaCuota.due_date).toLocaleDateString('es-CO')}
+                    <br>
+                    <strong>Valor:</strong> ${formatCurrency(proximaCuota.monto_cuota || proximaCuota.amount || 0)}
+                </div>
+            `;
+        }
+                    
+        htmlInfo += `
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Tabla de Amortización</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>N° Cuota</th>
+                                    <th>Vencimiento</th>
+                                    <th>Capital</th>
+                                    <th>Intereses</th>
+                                    <th>Valor Cuota</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
+                                
+        // Generar filas de la tabla de amortización
+        for (let cuota of planPagos) {
+            // Determinar clase CSS según estado
+            let rowClass = '';
+            const estado = cuota.estado || cuota.status || '';
+            if (estado.toLowerCase() === 'pagado' || estado.toLowerCase() === 'paid') {
+                rowClass = 'table-success';
+            } else if (estado.toLowerCase() === 'pendiente' || estado.toLowerCase() === 'pending') {
+                const fechaVencimiento = new Date(cuota.fecha_vencimiento || cuota.due_date);
+                const hoy = new Date();
+                
+                if (fechaVencimiento < hoy) {
+                    rowClass = 'table-danger'; // Vencida
+                } else {
+                    rowClass = 'table-warning'; // Pendiente
+                }
+            }
+            
+            htmlInfo += `
+                <tr class="${rowClass}">
+                    <td>${cuota.numero_cuota || cuota.number}</td>
+                    <td>${new Date(cuota.fecha_vencimiento || cuota.due_date).toLocaleDateString('es-CO')}</td>
+                    <td>${formatCurrency(cuota.capital || 0)}</td>
+                    <td>${formatCurrency(cuota.interes || cuota.interest || 0)}</td>
+                    <td>${formatCurrency(cuota.monto_cuota || cuota.amount || 0)}</td>
+                    <td>${cuota.estado || cuota.status || 'Pendiente'}</td>
+                </tr>
+            `;
+        }
+                                
+        htmlInfo += `
+                            </tbody>
+                        </table>
                     </div>
-                    ${ingreso.descripcion ? `
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <h6>Descripción:</h6>
-                                <p>${ingreso.descripcion}</p>
-                            </div>
-                        </div>
-                    ` : ''}
                 </div>
             </div>
         `;
         
-        // Construir HTML para la tarjeta de cliente/crédito si aplica
-        let clienteHTML = '';
-        if (ingreso.Cliente) {
-            clienteHTML = `
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">Información del Cliente</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Cliente:</strong> ${ingreso.Cliente.full_name}</p>
-                        <p><strong>Documento:</strong> ${ingreso.Cliente.identification}</p>
-                        ${ingreso.Cliente.phone ? `<p><strong>Teléfono:</strong> ${ingreso.Cliente.phone}</p>` : ''}
-                        
-                        ${ingreso.pagador ? `
-                            <hr>
-                            <h6>Datos del Pagador:</h6>
-                            <p><strong>Nombre:</strong> ${ingreso.pagador.nombre}</p>
-                            <p><strong>Documento:</strong> ${ingreso.pagador.tipo_documento} ${ingreso.pagador.documento}</p>
-                            ${ingreso.pagador.telefono ? `<p><strong>Teléfono:</strong> ${ingreso.pagador.telefono}</p>` : ''}
-                            ${ingreso.pagador.correo ? `<p><strong>Correo:</strong> ${ingreso.pagador.correo}</p>` : ''}
-                            ${ingreso.pagador.direccion ? `<p><strong>Dirección:</strong> ${ingreso.pagador.direccion}</p>` : ''}
-                        ` : ''}
-                        
-                        ${ingreso.Credito ? `
-                            <hr>
-                            <h6>Información del Crédito:</h6>
-                            <p><strong>Número de Crédito:</strong> ${ingreso.Credito.numero_credito || ingreso.Credito.loan_number || `CR-${ingreso.Credito.id}`}</p>
-                            <p><strong>Tipo de Crédito:</strong> ${ingreso.Credito.tipo || ingreso.Credito.type || 'No especificado'}</p>
-                            <p><strong>Tipo de Pago:</strong> ${ingreso.tipo_pago || 'No especificado'}</p>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-        }
+        // Actualizar el HTML
+        infoCredito.innerHTML = htmlInfo;
         
-        // Construir HTML para la tarjeta de asesor/comisión si aplica
-        let asesorHTML = '';
-        if (ingreso.Asesor) {
-            asesorHTML = `
-                <div class="card mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">Información de Comisión</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Asesor:</strong> ${ingreso.Asesor.full_name}</p>
-                        <p><strong>Documento:</strong> ${ingreso.Asesor.id_number}</p>
-                        <p><strong>Porcentaje de Comisión:</strong> ${ingreso.porcentaje_comision || 0}%</p>
-                        <p><strong>Valor de Comisión:</strong> ${valorComision}</p>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Construir HTML para la tarjeta de archivos adjuntos
-        const archivosCardHTML = `
-            <div class="card mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Archivos Adjuntos</h5>
-                </div>
-                <div class="card-body">
-                    ${archivosHTML}
-                </div>
-            </div>
-        `;
-        
-        // Construir HTML completo
-        container.innerHTML = `
-            ${infoHTML}
-            ${clienteHTML}
-            ${asesorHTML}
-            ${archivosCardHTML}
-        `;
-        
-        // Configurar botones de acción según el estado
-        const btnEditar = document.getElementById('btnEditarDesdeDetalle');
-        const btnAnular = document.getElementById('btnAnularDesdeDetalle');
-        
-        btnEditar.dataset.id = ingreso.id;
-        btnAnular.dataset.id = ingreso.id;
-        
-        if (ingreso.estado === 'anulado') {
-            btnEditar.style.display = 'none';
-            btnAnular.style.display = 'none';
-        } else {
-            btnEditar.style.display = 'inline-block';
-            btnAnular.style.display = 'inline-block';
+        // Cuando se selecciona un crédito, pre-seleccionar "Pago de cuota" por defecto
+        if (document.getElementById('tipoPagoCuota')) {
+            document.getElementById('tipoPagoCuota').checked = true;
+            
+            // Si estamos en modo de pago de cuota, usar el valor de la próxima cuota como valor del pago
+            if (proximaCuota) {
+                document.getElementById('valorBruto').value = proximaCuota.monto_cuota || proximaCuota.amount || 0;
+                
+                // Recalcular valores
+                calcularValores();
+                
+                // Agregar referencia a la cuota en un campo oculto
+                if (!document.getElementById('cuotaIdHidden')) {
+                    const hiddenField = document.createElement('input');
+                    hiddenField.type = 'hidden';
+                    hiddenField.id = 'cuotaIdHidden';
+                    hiddenField.name = 'cuota_id';
+                    document.getElementById('infoCredito').appendChild(hiddenField);
+                }
+                document.getElementById('cuotaIdHidden').value = proximaCuota.id;
+            }
         }
         
     } catch (error) {
-        console.error('Error al ver detalle del ingreso:', error);
-        
-        // Mostrar mensaje de error en el modal
-        const container = document.getElementById('detalleIngresoContent');
-        container.innerHTML = `
+        console.error('Error al cargar tabla de amortización:', error);
+        document.getElementById('infoCredito').innerHTML = `
             <div class="alert alert-danger">
-                <h5>Error al cargar los detalles</h5>
+                <h6>Error al cargar plan de pagos</h6>
                 <p>${error.message}</p>
             </div>
         `;
@@ -1918,4 +1411,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Implementar en próxima actualización
         alert('Funcionalidad en desarrollo');
     });
+    
+    // Evento para buscar cliente por documento
+    document.getElementById('btnBuscarCliente').addEventListener('click', buscarClientePorDocumento);
+    
+    // Evento para cargar lista completa de clientes
+    document.getElementById('btnCargarListaClientes').addEventListener('click', cargarListaClientes);
+    
+    // Evento para filtrar clientes en la tabla
+    document.getElementById('filtroBusquedaClientes').addEventListener('input', filtrarClientes);
 });

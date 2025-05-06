@@ -382,6 +382,61 @@
                         <!-- Sección Cliente y Crédito (condicional) -->
                         <div id="seccionCliente" style="display:none;" class="mb-3 border p-3 rounded bg-light">
                             <h5>Datos del Cliente</h5>
+                            
+                            <!-- Búsqueda de cliente por documento -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="tipoBusquedaCliente" class="form-label">Tipo de documento</label>
+                                    <select class="form-select" id="tipoBusquedaCliente">
+                                        <option value="CC">Cédula de Ciudadanía</option>
+                                        <option value="CE">Cédula de Extranjería</option>
+                                        <option value="NIT">NIT</option>
+                                        <option value="PASAPORTE">Pasaporte</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="documentoBusquedaCliente" class="form-label">Número de documento</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="documentoBusquedaCliente" placeholder="Ingrese número de documento">
+                                        <button class="btn btn-outline-primary" type="button" id="btnBuscarCliente">
+                                            <i class="fas fa-search"></i> Buscar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button class="btn btn-secondary w-100" type="button" id="btnSeleccionarCliente" data-bs-toggle="collapse" data-bs-target="#collapseClientes">
+                                        <i class="fas fa-list"></i> Listar clientes
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de clientes (colapsable) -->
+                            <div class="collapse mb-3" id="collapseClientes">
+                                <div class="card card-body">
+                                    <div class="row mb-2">
+                                        <div class="col-md-12">
+                                            <input type="text" class="form-control" id="filtroBusquedaClientes" placeholder="Buscar por nombre o documento...">
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nombre</th>
+                                                    <th>Documento</th>
+                                                    <th>Teléfono</th>
+                                                    <th>Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tablaClientes">
+                                                <!-- Se llena dinámicamente con JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Selector de cliente -->
                             <div class="row mb-3">
                                 <div class="col-md-12">
                                     <label for="clienteIngreso" class="form-label required-field">Cliente</label>
@@ -391,18 +446,85 @@
                                     <div class="invalid-feedback">Por favor seleccione un cliente</div>
                                 </div>
                             </div>
+                            
+                            <!-- Datos del pagador (se muestra para créditos) -->
+                            <div id="seccionDatosPagador" style="display:none;" class="border p-3 rounded mb-3">
+                                <h6 class="mb-3">Datos del Pagador</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="nombrePagador" class="form-label">Nombre completo</label>
+                                        <input type="text" class="form-control" id="nombrePagador" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="tipoPagador" class="form-label">Tipo de documento</label>
+                                        <select class="form-select" id="tipoPagador" required>
+                                            <option value="">Seleccione...</option>
+                                            <option value="CC">Cédula de Ciudadanía</option>
+                                            <option value="CE">Cédula de Extranjería</option>
+                                            <option value="NIT">NIT</option>
+                                            <option value="PASAPORTE">Pasaporte</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="documentoPagador" class="form-label">Número de documento</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="documentoPagador" required>
+                                            <button class="btn btn-outline-primary" type="button" id="btnBuscarPagador" title="Buscar pagador por documento">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="telefonoPagador" class="form-label">Teléfono</label>
+                                        <input type="tel" class="form-control" id="telefonoPagador">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="correoPagador" class="form-label">Correo electrónico</label>
+                                        <input type="email" class="form-control" id="correoPagador">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="direccionPagador" class="form-label">Dirección</label>
+                                        <input type="text" class="form-control" id="direccionPagador">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección de créditos -->
                             <div id="seccionCredito" style="display:none;">
                                 <div class="row mb-3">
                                     <div class="col-md-12">
-                                        <label for="creditoIngreso" class="form-label required-field">Crédito</label>
+                                        <label for="creditoIngreso" class="form-label required-field">Crédito Activo</label>
                                         <select class="form-select" id="creditoIngreso">
                                             <option value="">Seleccione un crédito</option>
                                         </select>
                                         <div class="invalid-feedback">Por favor seleccione un crédito</div>
                                     </div>
                                 </div>
-                                <div id="infoCredito" class="border p-2 rounded" style="display:none;">
-                                    <!-- Información del crédito seleccionado -->
+                                
+                                <!-- Tipo de Pago -->
+                                <div id="seccionTipoPago" class="mb-3 border p-2 rounded bg-light">
+                                    <h6 class="mb-3">Tipo de Pago</h6>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoPago" id="tipoPagoTotal" value="total" checked>
+                                        <label class="form-check-label" for="tipoPagoTotal">Pago total</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoPago" id="tipoPagoParcial" value="parcial">
+                                        <label class="form-check-label" for="tipoPagoParcial">Pago parcial</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="tipoPago" id="tipoPagoCuota" value="cuota">
+                                        <label class="form-check-label" for="tipoPagoCuota">Pago de cuota</label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Información del crédito seleccionado -->
+                                <div id="infoCredito" class="border p-3 rounded" style="display:none;">
+                                    <!-- Se completa dinámicamente con la información del crédito -->
                                 </div>
                             </div>
                         </div>
