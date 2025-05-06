@@ -139,6 +139,8 @@ function nuevoIngreso() {
 
 // Función para manejar cambios en la categoría seleccionada
 function manejarCambioCategoria() {
+    console.log('Función manejarCambioCategoria ejecutada');
+    
     const selectCategoria = document.getElementById('categoriaIngreso');
     const categoriaSeleccionada = selectCategoria.options[selectCategoria.selectedIndex];
     
@@ -161,10 +163,11 @@ function manejarCambioCategoria() {
             document.getElementById('seccionTipoPago').style.display = 'none';
         }
         
-        // Ocultar sección de búsqueda de cliente si existe
-        if (document.getElementById('seccionBusquedaCliente')) {
-            document.getElementById('seccionBusquedaCliente').style.display = 'none';
+        // Ocultar el botón de búsqueda de cliente de crédito
+        if (document.getElementById('btnBuscarClienteCredito')) {
+            document.getElementById('btnBuscarClienteCredito').style.display = 'none';
         }
+        
         return;
     }
     
@@ -173,13 +176,12 @@ function manejarCambioCategoria() {
     const categoriaNombre = categoriaSeleccionada.textContent.trim().toLowerCase();
     
     // Obtener atributos de datos
-    // Si el dataset no está configurado correctamente, usaremos el nombre como respaldo
     const porcentajeRetencion = categoriaSeleccionada.dataset.retencion || 0;
     const requiereCliente = categoriaSeleccionada.dataset.cliente === 'true' || false;
     const permiteComision = categoriaSeleccionada.dataset.comision === 'true' || false;
     const esCredito = categoriaSeleccionada.dataset.credito === 'true' || false;
     
-    // Verificar si es crédito de consumo por nombre (backup por si el dataset no está configurado)
+    // Verificar si es crédito de consumo por nombre (más confiable)
     const esCreditoConsumo = 
         categoriaNombre.includes('crédito') || 
         categoriaNombre.includes('credito') || 
@@ -187,9 +189,9 @@ function manejarCambioCategoria() {
         categoriaNombre.includes('libranza') ||
         categoriaNombre.includes('libre inversión') ||
         categoriaNombre.includes('libre inversion') ||
+        categoriaNombre.includes('intereses') ||
         esCredito;
     
-    // Registramos información para depuración
     console.log('DEBUG - Categoría seleccionada:', {
         id: categoriaId,
         nombre: categoriaNombre,
@@ -198,264 +200,93 @@ function manejarCambioCategoria() {
         requiereCliente: requiereCliente
     });
     
-    // FORZAR: Si el nombre incluye "libranza", considerarlo como crédito siempre
-    if (categoriaNombre.includes('libranza')) {
-        console.log('DEBUG - Forzando categoría como crédito (Libranza)');
-        esCreditoConsumo = true;
-    }
-    
     // Aplicar porcentaje de retención automático
     document.getElementById('porcentajeRetencion').value = porcentajeRetencion;
     
-    // Mostrar/ocultar sección de cliente
-    // Si requiere cliente O es crédito de consumo, mostrar sección de cliente
-    const mostrarCliente = requiereCliente || esCreditoConsumo;
-    console.log('DEBUG - Mostrar sección cliente:', mostrarCliente);
-    
-    // Asegurar que la sección de cliente esté visible
-    if (mostrarCliente) {
+    // Mostrar sección cliente en todos los casos que se requiera
+    if (requiereCliente && !esCreditoConsumo) {
+        // Para clientes sin crédito, mostrar la sección normal
         document.getElementById('seccionCliente').style.display = 'block';
-    } else {
-        document.getElementById('seccionCliente').style.display = 'none';
-    }
-    
-    // Sección de búsqueda de cliente - IMPLEMENTACIÓN DIRECTA
-    if (mostrarCliente && (esCreditoConsumo || categoriaNombre.includes('libranza'))) {
-        console.log('DEBUG - Debe mostrar sección de búsqueda de cliente');
         
-        // Crear o mostrar sección de búsqueda de cliente
-        if (!document.getElementById('seccionBusquedaCliente')) {
-            console.log('DEBUG - Creando sección de búsqueda de cliente');
-            
-            // Crear sección de búsqueda de cliente
-            const busquedaClienteHTML = `
-                <div id="seccionBusquedaCliente" class="card mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0">Búsqueda de Cliente por Documento</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row align-items-end mb-3">
-                            <div class="col-md-4">
-                                <label for="tipoBusquedaCliente" class="form-label">Tipo de documento</label>
-                                <select class="form-select" id="tipoBusquedaCliente">
-                                    <option value="CC">Cédula de Ciudadanía</option>
-                                    <option value="CE">Cédula de Extranjería</option>
-                                    <option value="NIT">NIT</option>
-                                    <option value="PASAPORTE">Pasaporte</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="documentoBusquedaCliente" class="form-label">Número de documento</label>
-                                <input type="text" class="form-control" id="documentoBusquedaCliente" placeholder="Ingrese número de documento">
-                            </div>
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-primary w-100" id="btnBuscarCliente">
-                                    <i class="fas fa-search"></i> Buscar
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12 text-center">
-                                <span>o</span>
-                                <button type="button" class="btn btn-outline-secondary ms-2" id="btnCargarListaClientes" data-bs-toggle="collapse" data-bs-target="#collapseClientes">
-                                    <i class="fas fa-list"></i> Ver lista de clientes
-                                </button>
-                            </div>
-                        </div>
-                        <div class="collapse mt-3" id="collapseClientes">
-                            <div class="card card-body">
-                                <div class="mb-3">
-                                    <input type="text" class="form-control" id="filtroBusquedaClientes" placeholder="Buscar cliente...">
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Nombre</th>
-                                                <th>Documento</th>
-                                                <th>Teléfono</th>
-                                                <th>Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tablaClientes">
-                                            <tr>
-                                                <td colspan="4" class="text-center">Cargue la lista de clientes</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Insertar al principio de la sección de cliente
-            const seccionCliente = document.getElementById('seccionCliente');
-            seccionCliente.insertAdjacentHTML('afterbegin', busquedaClienteHTML);
-            
-            // Añadir eventos a los botones
-            document.getElementById('btnBuscarCliente').addEventListener('click', buscarClientePorDocumento);
-            document.getElementById('btnCargarListaClientes').addEventListener('click', cargarListaClientes);
-            document.getElementById('filtroBusquedaClientes').addEventListener('input', filtrarClientes);
-            
-            console.log('DEBUG - Sección de búsqueda creada y eventos añadidos');
+        // Ocultar créditos y botón de crédito
+        document.getElementById('seccionCredito').style.display = 'none';
+        if (document.getElementById('btnBuscarClienteCredito')) {
+            document.getElementById('btnBuscarClienteCredito').style.display = 'none';
+        }
+        
+        // Llenar selectores de clientes
+        llenarSelectorClientes();
+    } 
+    else if (esCreditoConsumo) {
+        // Para créditos, mostrar sección cliente y botón de búsqueda de crédito
+        document.getElementById('seccionCliente').style.display = 'block';
+        
+        // Mostrar solo el botón de búsqueda de cliente de crédito
+        const btnBuscarClienteCredito = document.getElementById('btnBuscarClienteCredito');
+        if (btnBuscarClienteCredito) {
+            btnBuscarClienteCredito.style.display = 'block';
+            console.log('Botón de búsqueda de cliente de crédito MOSTRADO');
+            // Asegurarse que no haya estilos que oculten el botón
+            btnBuscarClienteCredito.style.visibility = 'visible';
+            btnBuscarClienteCredito.style.opacity = '1';
         } else {
-            // Ya existe, asegurarnos que esté visible
-            console.log('DEBUG - Mostrando sección de búsqueda existente');
-            document.getElementById('seccionBusquedaCliente').style.display = 'block';
+            console.error('El elemento btnBuscarClienteCredito no existe en el DOM');
         }
-    } else if (document.getElementById('seccionBusquedaCliente')) {
-        // No es crédito de consumo, ocultar sección de búsqueda
-        console.log('DEBUG - Ocultando sección de búsqueda');
-        document.getElementById('seccionBusquedaCliente').style.display = 'none';
-    }
-    
-    // Mostrar/ocultar sección de datos del pagador completos
-    if (document.getElementById('seccionDatosPagador')) {
-        document.getElementById('seccionDatosPagador').style.display = esCreditoConsumo ? 'block' : 'none';
-    } else {
-        // Si el elemento no existe y es un crédito de consumo, crearlo
-        if (esCreditoConsumo) {
-            const seccionCredito = document.getElementById('seccionCredito');
-            if (seccionCredito) {
-                const datosPagadorHTML = `
-                    <div id="seccionDatosPagador" class="mb-3">
-                        <h6 class="mb-3">Datos del Pagador</h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="nombrePagador" class="form-label">Nombre completo</label>
-                                <input type="text" class="form-control" id="nombrePagador" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="tipoPagador" class="form-label">Tipo de documento</label>
-                                <select class="form-select" id="tipoPagador" required>
-                                    <option value="">Seleccione...</option>
-                                    <option value="CC">Cédula de Ciudadanía</option>
-                                    <option value="CE">Cédula de Extranjería</option>
-                                    <option value="NIT">NIT</option>
-                                    <option value="PASAPORTE">Pasaporte</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="documentoPagador" class="form-label">Número de documento</label>
-                                <input type="text" class="form-control" id="documentoPagador" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="telefonoPagador" class="form-label">Teléfono</label>
-                                <input type="tel" class="form-control" id="telefonoPagador">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="correoPagador" class="form-label">Correo electrónico</label>
-                                <input type="email" class="form-control" id="correoPagador">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="direccionPagador" class="form-label">Dirección</label>
-                                <input type="text" class="form-control" id="direccionPagador">
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Insertar antes de la sección de crédito
-                seccionCredito.insertAdjacentHTML('beforebegin', datosPagadorHTML);
-            }
+        
+        // Ocultar secciones de cliente y crédito que ahora se manejan desde la modal
+        document.getElementById('seccionCredito').style.display = 'none';
+        if (document.getElementById('seccionDatosPagador')) {
+            document.getElementById('seccionDatosPagador').style.display = 'none';
+        }
+    } 
+    else {
+        // Para el resto de categorías, ocultar todo
+        document.getElementById('seccionCliente').style.display = 'none';
+        document.getElementById('seccionCredito').style.display = 'none';
+        if (document.getElementById('btnBuscarClienteCredito')) {
+            document.getElementById('btnBuscarClienteCredito').style.display = 'none';
         }
     }
-    
-    // Mostrar/ocultar sección de tipo de pago
-    if (document.getElementById('seccionTipoPago')) {
-        document.getElementById('seccionTipoPago').style.display = esCreditoConsumo ? 'block' : 'none';
-    } else {
-        // Si el elemento no existe y es un crédito de consumo, crearlo
-        if (esCreditoConsumo) {
-            const seccionCredito = document.getElementById('seccionCredito');
-            if (seccionCredito) {
-                const tipoPagoHTML = `
-                    <div id="seccionTipoPago" class="mb-3">
-                        <h6 class="mb-3">Tipo de Pago</h6>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="tipoPago" id="tipoPagoTotal" value="total" checked>
-                            <label class="form-check-label" for="tipoPagoTotal">Pago total</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="tipoPago" id="tipoPagoParcial" value="parcial">
-                            <label class="form-check-label" for="tipoPagoParcial">Pago parcial</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="tipoPago" id="tipoPagoCuota" value="cuota">
-                            <label class="form-check-label" for="tipoPagoCuota">Pago de cuota</label>
-                        </div>
-                    </div>
-                `;
-                
-                // Insertar después de la sección de crédito
-                seccionCredito.insertAdjacentHTML('afterend', tipoPagoHTML);
-                
-                // Agregar evento para manejar el cambio de tipo de pago
-                document.querySelectorAll('input[name="tipoPago"]').forEach(radio => {
-                    radio.addEventListener('change', manejarCambioTipoPago);
-                });
-            }
-        }
-    }
-    
-    // Mostrar/ocultar sección de crédito
-    const mostrarCredito = esCredito || esCreditoConsumo;
-    document.getElementById('seccionCredito').style.display = mostrarCredito ? 'block' : 'none';
     
     // Mostrar/ocultar sección de comisión
     document.getElementById('seccionComision').style.display = permiteComision ? 'block' : 'none';
     
-    // Si requiere cliente, llenar selector de clientes
-    if (mostrarCliente) {
-        const selectCliente = document.getElementById('clienteIngreso');
-        selectCliente.innerHTML = '<option value="">Seleccione un cliente</option>';
-        
-        clientes.forEach(cliente => {
-            // Usar full_name si está disponible, o combinar nombre y apellido si existen
-            const nombreCompleto = cliente.full_name || 
-                                  `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-            const documento = cliente.identification || cliente.id_number || 'Sin documento';
-            
-            selectCliente.innerHTML += `<option value="${cliente.id}">${nombreCompleto} - ${documento}</option>`;
-        });
-    }
-    
     // Si permite comisión, llenar selector de asesores
     if (permiteComision) {
-        const selectAsesor = document.getElementById('asesorIngreso');
-        selectAsesor.innerHTML = '<option value="">Seleccione un asesor</option>';
-        
-        asesores.forEach(asesor => {
-            // Usar full_name si está disponible, o combinar nombre y apellido si existen
-            const nombreCompleto = asesor.full_name || 
-                                 `${asesor.nombre || ''} ${asesor.apellido || ''}`.trim();
-            const documento = asesor.id_number || 'Sin documento';
-            
-            selectAsesor.innerHTML += `<option value="${asesor.id}">${nombreCompleto} - ${documento}</option>`;
-        });
+        llenarSelectorAsesores();
     }
     
     // Recalcular valores si ya hay un valor bruto
     calcularValores();
+}
+
+// Función auxiliar para llenar el selector de clientes
+function llenarSelectorClientes() {
+    const selectCliente = document.getElementById('clienteIngreso');
+    selectCliente.innerHTML = '<option value="">Seleccione un cliente</option>';
     
-    // Aplicar un timeout para asegurar que la interfaz se actualice correctamente
-    setTimeout(function() {
-        const estaVisible = document.getElementById('seccionBusquedaCliente') && 
-                          window.getComputedStyle(document.getElementById('seccionBusquedaCliente')).display !== 'none';
-        console.log('DEBUG - Estado final de sección búsqueda:', estaVisible ? 'VISIBLE' : 'OCULTA');
+    clientes.forEach(cliente => {
+        // Usar full_name si está disponible, o combinar nombre y apellido
+        const nombreCompleto = cliente.full_name || 
+                              `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+        const documento = cliente.identification || cliente.id_number || 'Sin documento';
         
-        // Si debería estar visible pero no lo está, forzar su visibilidad
-        if (esCreditoConsumo && !estaVisible && document.getElementById('seccionBusquedaCliente')) {
-            document.getElementById('seccionBusquedaCliente').style.display = 'block';
-            console.log('DEBUG - Forzando visibilidad de sección búsqueda');
-        }
-    }, 100);
+        selectCliente.innerHTML += `<option value="${cliente.id}">${nombreCompleto} - ${documento}</option>`;
+    });
+}
+
+// Función auxiliar para llenar el selector de asesores
+function llenarSelectorAsesores() {
+    const selectAsesor = document.getElementById('asesorIngreso');
+    selectAsesor.innerHTML = '<option value="">Seleccione un asesor</option>';
+    
+    asesores.forEach(asesor => {
+        const nombreCompleto = asesor.full_name || 
+                             `${asesor.nombre || ''} ${asesor.apellido || ''}`.trim();
+        const documento = asesor.id_number || 'Sin documento';
+        
+        selectAsesor.innerHTML += `<option value="${asesor.id}">${nombreCompleto} - ${documento}</option>`;
+    });
 }
 
 // Función para cargar ingresos con filtros
@@ -782,8 +613,245 @@ async function cargarAsesores() {
     }
 }
 
+// Funciones para la modal de búsqueda de cliente y selección de crédito
+async function buscarClientePorDocumentoModal() {
+    const tipoDocumento = document.getElementById('tipoBusquedaClienteModal').value;
+    const numeroDocumento = document.getElementById('documentoBusquedaClienteModal').value.trim();
+    
+    if (!numeroDocumento) {
+        showToast('Por favor ingrese un número de documento', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/clients/document/${tipoDocumento}/${numeroDocumento}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error('Cliente no encontrado');
+        }
+        
+        const cliente = result.data;
+        
+        // Llenar los campos con los datos del cliente
+        document.getElementById('nombrePagadorModal').value = cliente.full_name || 
+            `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+        document.getElementById('telefonoPagadorModal').value = cliente.telefono || cliente.phone || '';
+        document.getElementById('correoPagadorModal').value = cliente.correo || cliente.email || '';
+        document.getElementById('direccionPagadorModal').value = cliente.direccion || cliente.address || '';
+        
+        // Seleccionar el cliente en el selector de créditos
+        const selectClienteCredito = document.getElementById('clienteCreditoModal');
+        
+        // Verificar si el cliente ya existe en el selector
+        let existe = false;
+        for (let i = 0; i < selectClienteCredito.options.length; i++) {
+            if (selectClienteCredito.options[i].value == cliente.id) {
+                selectClienteCredito.selectedIndex = i;
+                existe = true;
+                break;
+            }
+        }
+        
+        // Si no existe, agregar el cliente al selector
+        if (!existe) {
+            const nombreCompleto = cliente.full_name || 
+                `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            const documento = cliente.id_number || cliente.identification || 'Sin documento';
+            
+            const option = new Option(`${nombreCompleto} - ${documento}`, cliente.id);
+            selectClienteCredito.add(option);
+            option.selected = true;
+        }
+        
+        // Cargar los créditos del cliente
+        cargarCreditosClienteModal(cliente.id);
+        
+    } catch (error) {
+        console.error('Error al buscar cliente:', error);
+        showToast(`No se encontró el cliente con documento ${numeroDocumento}`, 'error');
+    }
+}
+
+// Cargar créditos de un cliente en la modal
+async function cargarCreditosClienteModal(clienteId) {
+    if (!clienteId) return;
+    
+    try {
+        const response = await fetch(`/api/loans/client/${clienteId}?active=true`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        let creditos = [];
+        
+        // Determinar la estructura de la respuesta
+        if (Array.isArray(result)) {
+            creditos = result;
+        } else if (result.data && Array.isArray(result.data)) {
+            creditos = result.data;
+        } else if (result.loans && Array.isArray(result.loans)) {
+            creditos = result.loans;
+        } else if (!result.success) {
+            throw new Error(result.error || 'Error al cargar créditos');
+        }
+        
+        const tablaCreditos = document.getElementById('tablaCreditos');
+        
+        if (creditos.length === 0) {
+            tablaCreditos.innerHTML = '<tr><td colspan="6" class="text-center">Este cliente no tiene créditos activos</td></tr>';
+            return;
+        }
+        
+        let html = '';
+        creditos.forEach(credito => {
+            const numero = credito.loan_number || credito.numero || `CRED-${credito.id}`;
+            const tipo = credito.tipo || credito.type || 'No especificado';
+            const monto = formatCurrency(credito.monto || credito.amount || 0);
+            const saldo = formatCurrency(credito.saldo_actual || credito.current_balance || 0);
+            const estado = credito.estado || credito.status || 'Activo';
+            
+            html += `
+                <tr>
+                    <td>${numero}</td>
+                    <td>${tipo}</td>
+                    <td>${monto}</td>
+                    <td>${saldo}</td>
+                    <td>${estado}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="seleccionarCreditoModal(${credito.id}, '${numero}', '${tipo}', ${credito.saldo_actual || credito.current_balance || 0})">
+                            <i class="fas fa-check"></i> Seleccionar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tablaCreditos.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error al cargar créditos:', error);
+        showToast('Error al cargar créditos: ' + error.message, 'error');
+        document.getElementById('tablaCreditos').innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar créditos</td></tr>';
+    }
+}
+
+// Seleccionar un crédito en la modal
+function seleccionarCreditoModal(creditoId, numero, tipo, saldo) {
+    // Guardar el crédito seleccionado
+    creditoSeleccionado = {
+        id: creditoId,
+        numero: numero,
+        tipo: tipo,
+        saldo: saldo
+    };
+    
+    // Mostrar la sección de datos del pago
+    document.getElementById('datosPagoCredito').style.display = 'block';
+    
+    // Actualizar información del crédito seleccionado
+    document.getElementById('creditoSeleccionadoInfo').textContent = `Crédito seleccionado: ${numero} (${tipo})`;
+    
+    // Mostrar información detallada del crédito
+    document.getElementById('infoCreditoModal').innerHTML = `
+        <h6 class="mb-3">Información del Crédito</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Número:</strong> ${numero}</p>
+                <p><strong>Tipo:</strong> ${tipo}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Saldo actual:</strong> ${formatCurrency(saldo)}</p>
+            </div>
+        </div>
+    `;
+    
+    // Establecer valor por defecto en el campo de valor a pagar
+    document.getElementById('valorPagoModal').value = saldo;
+    
+    // Establecer fecha actual en el campo de fecha de pago
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaPagoModal').value = hoy;
+}
+
+// Confirmar el pago y transferir datos a la modal principal
+function confirmarPagoCredito() {
+    // Verificar que se haya seleccionado un crédito
+    if (!creditoSeleccionado) {
+        showToast('Debe seleccionar un crédito', 'error');
+        return;
+    }
+    
+    // Obtener datos del formulario
+    const valorPago = parseFloat(document.getElementById('valorPagoModal').value);
+    const fechaPago = document.getElementById('fechaPagoModal').value;
+    
+    // Validar datos
+    if (isNaN(valorPago) || valorPago <= 0) {
+        showToast('El valor a pagar debe ser mayor a cero', 'error');
+        return;
+    }
+    
+    if (!fechaPago) {
+        showToast('Debe seleccionar una fecha de pago', 'error');
+        return;
+    }
+    
+    // Obtener el tipo de pago seleccionado
+    let tipoPago = '';
+    const radiosTipoPago = document.getElementsByName('tipoPagoModal');
+    for (const radio of radiosTipoPago) {
+        if (radio.checked) {
+            tipoPago = radio.value;
+            break;
+        }
+    }
+    
+    // Transferir datos a la modal principal
+    
+    // 1. Establecer el valor bruto
+    document.getElementById('valorBruto').value = valorPago;
+    
+    // 2. Establecer la fecha
+    document.getElementById('fechaIngreso').value = fechaPago;
+    
+    // 3. Establecer el concepto con información del crédito
+    document.getElementById('conceptoIngreso').value = `Pago ${tipoPago} de crédito ${creditoSeleccionado.numero} (${creditoSeleccionado.tipo})`;
+    
+    // 4. Establecer descripción
+    const nombreCliente = document.getElementById('nombrePagadorModal').value;
+    document.getElementById('descripcionIngreso').value = `Pago realizado por ${nombreCliente}. Saldo anterior: ${formatCurrency(creditoSeleccionado.saldo)}`;
+    
+    // 5. Calcular valores
+    calcularValores();
+    
+    // Cerrar la modal de crédito
+    const clienteCreditoModal = bootstrap.Modal.getInstance(document.getElementById('clienteCreditoModal'));
+    clienteCreditoModal.hide();
+    
+    // Mostrar mensaje de éxito
+    showToast('Datos de pago configurados correctamente', 'success');
+}
+
+// Variable global para almacenar el crédito seleccionado
+let creditoSeleccionado = null;
+
 // Inicialización de componentes y manejadores de eventos
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Inicializando módulo de ingresos...');
+    
     // Verificar token
     if (!token) {
         window.location.href = '/login';
@@ -823,6 +891,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Cargar ingresos iniciales
     cargarIngresos();
+
+    // Inicializar evento para manejar cambio de categoría usando jQuery y Select2
+    $(document).ready(function() {
+        console.log('Inicializando eventos Select2...');
+        
+        // Usar evento select2:select para categorías
+        $('#categoriaIngreso').on('select2:select', function (e) {
+            console.log('Categoría seleccionada via select2:select');
+            manejarCambioCategoria();
+        });
+        
+        // También mantener el evento change normal para compatibilidad
+        $('#categoriaIngreso').on('change', function() {
+            console.log('Categoría cambiada via onChange');
+            manejarCambioCategoria();
+        });
+    });
     
     // Evento para buscar con filtros
     document.getElementById('btnBuscar').addEventListener('click', function() {
@@ -851,8 +936,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Evento para guardar ingreso
     document.getElementById('btnGuardarIngreso').addEventListener('click', guardarIngreso);
     
-    // Evento para manejar cambio de categoría
-    document.getElementById('categoriaIngreso').addEventListener('change', manejarCambioCategoria);
+    // Eventos para la modal de búsqueda de cliente y selección de crédito
+    document.getElementById('btnBuscarClienteModal').addEventListener('click', buscarClientePorDocumentoModal);
+    document.getElementById('btnConfirmarPagoCredito').addEventListener('click', confirmarPagoCredito);
+    
+    // Evento para cambiar de cliente en la modal de crédito
+    document.getElementById('clienteCreditoModal').addEventListener('change', function() {
+        const clienteId = this.value;
+        if (clienteId) {
+            cargarCreditosClienteModal(clienteId);
+        }
+    });
     
     // Evento para manejar cambio de valor bruto, porcentaje de retención o comisión
     document.getElementById('valorBruto').addEventListener('input', calcularValores);

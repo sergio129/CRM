@@ -383,6 +383,13 @@
                         <div id="seccionCliente" style="display:none;" class="mb-3 border p-3 rounded bg-light">
                             <h5>Datos del Cliente</h5>
                             
+                            <!-- Botón para buscar cliente de crédito (nuevo) -->
+                            <div id="btnBuscarClienteCredito" style="display:none;" class="mb-3">
+                                <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#clienteCreditoModal">
+                                    <i class="fas fa-search me-1"></i> Buscar Cliente y Seleccionar Crédito
+                                </button>
+                            </div>
+                            
                             <!-- Búsqueda de cliente por documento -->
                             <div class="row mb-3">
                                 <div class="col-md-4">
@@ -753,6 +760,147 @@
         </div>
     </div>
 
+    <!-- Modal para búsqueda de cliente y selección de crédito -->
+    <div class="modal fade higher-modal" id="clienteCreditoModal" tabindex="-1" aria-labelledby="clienteCreditoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="clienteCreditoModalLabel">Búsqueda de Cliente y Selección de Crédito</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Búsqueda de cliente -->
+                    <div class="mb-4 border p-3 rounded bg-light">
+                        <h5 class="mb-3">Datos del Pagador</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="tipoBusquedaClienteModal" class="form-label">Tipo de documento</label>
+                                <select class="form-select" id="tipoBusquedaClienteModal">
+                                    <option value="CC">Cédula de Ciudadanía</option>
+                                    <option value="CE">Cédula de Extranjería</option>
+                                    <option value="NIT">NIT</option>
+                                    <option value="PASAPORTE">Pasaporte</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="documentoBusquedaClienteModal" class="form-label">Número de documento</label>
+                                <input type="text" class="form-control" id="documentoBusquedaClienteModal" placeholder="Ingrese número de documento">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" type="button" id="btnBuscarClienteModal">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nombrePagadorModal" class="form-label">Nombre completo</label>
+                                <input type="text" class="form-control" id="nombrePagadorModal" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="telefonoPagadorModal" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="telefonoPagadorModal">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="correoPagadorModal" class="form-label">Correo electrónico</label>
+                                <input type="email" class="form-control" id="correoPagadorModal">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="direccionPagadorModal" class="form-label">Dirección</label>
+                                <input type="text" class="form-control" id="direccionPagadorModal">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Selección de crédito -->
+                    <div class="mb-4 border p-3 rounded">
+                        <h5 class="mb-3">Selección de Crédito</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="clienteCreditoModal" class="form-label">Cliente con créditos activos</label>
+                                <select class="form-select select2" id="clienteCreditoModal">
+                                    <option value="">Seleccione un cliente</option>
+                                    <!-- Se llenará dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="listaCreditosContainer" class="mt-3">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Número</th>
+                                            <th>Tipo</th>
+                                            <th>Monto</th>
+                                            <th>Saldo</th>
+                                            <th>Estado</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaCreditos">
+                                        <tr>
+                                            <td colspan="6" class="text-center">Seleccione un cliente para ver sus créditos</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Datos del pago -->
+                    <div id="datosPagoCredito" class="mb-4 border p-3 rounded bg-light" style="display:none;">
+                        <h5 class="mb-3">Datos del Pago</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <h6 id="creditoSeleccionadoInfo" class="fw-bold">Crédito seleccionado: [Número y tipo de crédito]</h6>
+                            </div>
+                        </div>
+                        
+                        <!-- Tipo de Pago -->
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Pago</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipoPagoModal" id="tipoPagoTotalModal" value="total" checked>
+                                <label class="form-check-label" for="tipoPagoTotalModal">Pago total</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipoPagoModal" id="tipoPagoParcialModal" value="parcial">
+                                <label class="form-check-label" for="tipoPagoParcialModal">Pago parcial</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipoPagoModal" id="tipoPagoCuotaModal" value="cuota">
+                                <label class="form-check-label" for="tipoPagoCuotaModal">Pago de cuota</label>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="valorPagoModal" class="form-label">Valor a pagar</label>
+                                <input type="number" class="form-control" id="valorPagoModal" min="0.01" step="0.01" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fechaPagoModal" class="form-label">Fecha de pago</label>
+                                <input type="date" class="form-control" id="fechaPagoModal" required>
+                            </div>
+                        </div>
+                        
+                        <div id="infoCreditoModal" class="mt-3 p-3 border rounded bg-light">
+                            <!-- Información detallada del crédito se mostrará aquí -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarPagoCredito">Confirmar Pago</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container">
         <!-- Los toasts se generan dinámicamente -->
@@ -783,6 +931,36 @@
             document.getElementById('sidebarCollapse').addEventListener('click', function() {
                 document.getElementById('sidebar').classList.toggle('active');
             });
+            
+            // Verificar la existencia del botón de buscar cliente de crédito
+            setTimeout(function() {
+                const btnBuscarClienteCredito = document.getElementById('btnBuscarClienteCredito');
+                if (!btnBuscarClienteCredito) {
+                    console.error("ADVERTENCIA: No se encontró el elemento 'btnBuscarClienteCredito'");
+                } else {
+                    console.log("El botón de búsqueda de cliente de crédito existe en el DOM");
+                    
+                    // Verificar que el botón no tenga estilos que lo oculten
+                    btnBuscarClienteCredito.style.display = 'block';
+                    btnBuscarClienteCredito.style.visibility = 'visible';
+                    btnBuscarClienteCredito.style.opacity = '1';
+                }
+            }, 1000);
+
+            // Prueba de cambio de categoría para depuración
+            setTimeout(function() {
+                $('#categoriaIngreso').on('select2:select', function(e) {
+                    console.log("Select2 selección detectada:", e.params.data.text);
+                    const categoriaText = e.params.data.text.toLowerCase();
+                    
+                    if (categoriaText.includes('credito') || categoriaText.includes('crédito') || categoriaText.includes('consumo')) {
+                        console.log("Categoría de crédito seleccionada, mostrando botón...");
+                        if (document.getElementById('btnBuscarClienteCredito')) {
+                            document.getElementById('btnBuscarClienteCredito').style.display = 'block';
+                        }
+                    }
+                });
+            }, 1500);
         });
     </script>
 </body>
