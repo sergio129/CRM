@@ -350,6 +350,7 @@ function manejarCambioCategoria() {
     const selectCategoria = document.getElementById('categoriaIngreso');
     const categoriaSeleccionada = selectCategoria.options[selectCategoria.selectedIndex];
     
+    // Si no hay categoría seleccionada, ocultar todas las secciones condicionales
     if (!categoriaSeleccionada || categoriaSeleccionada.value === '') {
         // Reset all sections
         document.getElementById('seccionCliente').style.display = 'none';
@@ -371,33 +372,46 @@ function manejarCambioCategoria() {
     }
     
     // Obtener datos de la categoría
+    const categoriaId = categoriaSeleccionada.value;
+    const categoriaNombre = categoriaSeleccionada.textContent.trim().toLowerCase();
+    
+    // Obtener atributos de datos
+    // Si el dataset no está configurado correctamente, usaremos el nombre como respaldo
     const porcentajeRetencion = categoriaSeleccionada.dataset.retencion || 0;
-    const requiereCliente = categoriaSeleccionada.dataset.cliente === 'true';
-    const permiteComision = categoriaSeleccionada.dataset.comision === 'true';
-    const esCredito = categoriaSeleccionada.dataset.credito === 'true';
+    const requiereCliente = categoriaSeleccionada.dataset.cliente === 'true' || false;
+    const permiteComision = categoriaSeleccionada.dataset.comision === 'true' || false;
+    const esCredito = categoriaSeleccionada.dataset.credito === 'true' || false;
     
     // Verificar si es crédito de consumo por nombre (backup por si el dataset no está configurado)
-    const nombreCategoria = categoriaSeleccionada.textContent.trim().toLowerCase();
-    const esCreditoConsumo = nombreCategoria.includes('crédito') || 
-                             nombreCategoria.includes('credito') || 
-                             nombreCategoria.includes('consumo') ||
-                             esCredito;
+    const esCreditoConsumo = 
+        categoriaNombre.includes('crédito') || 
+        categoriaNombre.includes('credito') || 
+        categoriaNombre.includes('consumo') ||
+        categoriaNombre.includes('libranza') ||
+        categoriaNombre.includes('libre inversión') ||
+        categoriaNombre.includes('libre inversion') ||
+        esCredito;
     
-    console.log('Categoría seleccionada:', nombreCategoria);
+    console.log('Categoría seleccionada ID:', categoriaId);
+    console.log('Categoría seleccionada nombre:', categoriaNombre);
     console.log('Es crédito de consumo:', esCreditoConsumo);
+    console.log('Requiere cliente:', requiereCliente);
     
     // Aplicar porcentaje de retención automático
     document.getElementById('porcentajeRetencion').value = porcentajeRetencion;
     
     // Mostrar/ocultar sección de cliente
+    // Si requiere cliente O es crédito de consumo, mostrar sección de cliente
     const mostrarCliente = requiereCliente || esCreditoConsumo;
+    console.log('Mostrar sección cliente:', mostrarCliente);
+    
     document.getElementById('seccionCliente').style.display = mostrarCliente ? 'block' : 'none';
     
     // Mostrar/ocultar sección de datos del pagador completos
     if (document.getElementById('seccionDatosPagador')) {
         document.getElementById('seccionDatosPagador').style.display = esCreditoConsumo ? 'block' : 'none';
     } else {
-        // Si el elemento no existe, vamos a crearlo y agregarlo
+        // Si el elemento no existe y es un crédito de consumo, crearlo
         if (esCreditoConsumo) {
             const seccionCredito = document.getElementById('seccionCredito');
             if (seccionCredito) {
