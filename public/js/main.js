@@ -35,23 +35,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
                 welcomeModal.show();
 
-                // Mensajes de carga para mostrar en diferentes etapas
+                // Mensajes de carga para mostrar en diferentes etapas (reducidos para mayor velocidad)
                 const loadingMessages = [
                     "Iniciando sistema...",
                     "Cargando módulos...",
-                    "Preparando datos...",
                     "Configurando interfaz...",
-                    "Sincronizando información...",
                     "¡Todo listo!"
                 ];
 
-                // Implementar una animación de carga más fluida
+                // Implementar una animación de carga más rápida
                 const loadingPercentage = document.getElementById('loadingPercentage');
                 const progressBar = document.getElementById('progressBar');
                 const loadingMessageEl = document.getElementById('loadingMessage');
                 let percentage = 0;
                 
-                // Usar requestAnimationFrame para animación más suave
+                // Usar requestAnimationFrame para animación más suave pero más rápida
                 let lastUpdate = Date.now();
                 let messageIndex = 0;
                 loadingMessageEl.textContent = loadingMessages[0];
@@ -60,12 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const now = Date.now();
                     const deltaTime = now - lastUpdate;
                     
-                    // Avanza más rápido al principio y más lento hacia el final
-                    let increment = deltaTime / 100;
-                    if (percentage > 80) {
-                        increment = increment * 0.5; // Más lento al final
-                    } else if (percentage < 30) {
-                        increment = increment * 1.2; // Más rápido al principio
+                    // Incremento acelerado - más rápido que antes
+                    let increment = deltaTime / 40; // Reducido de 100 a 40 para mayor velocidad
+                    
+                    // Ajustar la curva de velocidad para que sea aún más rápida
+                    if (percentage > 85) {
+                        increment = increment * 0.8; // Frena un poco al final, pero menos que antes
+                    } else if (percentage < 20) {
+                        increment = increment * 2.0; // Mucho más rápido al inicio (antes era 1.2)
+                    } else {
+                        increment = increment * 1.5; // Velocidad intermedia aumentada
                     }
                     
                     percentage = Math.min(percentage + increment, 100);
@@ -77,17 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     progressBar.style.width = `${percentage}%`;
                     progressBar.setAttribute('aria-valuenow', displayPercentage);
                     
-                    // Actualizar mensaje de carga según el porcentaje
-                    const newMessageIndex = Math.min(Math.floor(percentage / 20), loadingMessages.length - 1);
+                    // Actualizar mensaje de carga según el porcentaje (ajustado para mensajes reducidos)
+                    const newMessageIndex = Math.min(Math.floor(percentage / 25), loadingMessages.length - 1);
                     if (newMessageIndex > messageIndex) {
                         messageIndex = newMessageIndex;
                         
-                        // Animar el cambio de mensaje con desvanecimiento
+                        // Transición más rápida entre mensajes
                         loadingMessageEl.style.opacity = '0';
                         setTimeout(() => {
                             loadingMessageEl.textContent = loadingMessages[messageIndex];
                             loadingMessageEl.style.opacity = '1';
-                        }, 200);
+                        }, 100); // Reducido de 200ms a 100ms
                     }
                     
                     // Continuar la animación o terminar
@@ -99,11 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         loadingPercentage.className = 'badge bg-success mb-2';
                         progressBar.classList.remove('progress-bar-animated');
                         
-                        // Después de un breve momento, ocultamos el modal y redirigimos
+                        // Tiempo de espera reducido antes de redireccionar
                         setTimeout(() => {
                             welcomeModal.hide();
                             window.location.href = '/dashboard';
-                        }, 800);
+                        }, 400); // Reducido de 800ms a 400ms
                     }
                 };
                 

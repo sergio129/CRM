@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Ingresos</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
+    <!-- Datepicker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+    <style>
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 39px;
+        }
+        .badge.bg-confirmado {
+            background-color: #198754;
+        }
+        .badge.bg-pendiente {
+            background-color: #ffc107;
+        }
+        .badge.bg-anulado {
+            background-color: #dc3545;
+        }
+        .action-buttons {
+            white-space: nowrap;
+        }
+        .tab-content {
+            padding-top: 20px;
+        }
+        .form-control-sm {
+            height: calc(1.5em + 0.5rem + 2px);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+        }
+        .stats-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .categoria-chip {
+            border-radius: 16px;
+            padding: 5px 12px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            display: inline-block;
+            font-size: 0.85rem;
+            background-color: #e9ecef;
+        }
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+        .custom-file-input {
+            cursor: pointer;
+        }
+        .archivos-adjuntos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .archivo-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .archivo-item a {
+            margin-right: 5px;
+            text-decoration: none;
+        }
+        .archivo-item .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar - Importado con JavaScript -->
+            <div id="sidebar-container" class="col-lg-2 col-md-3 min-vh-100"></div>
+            
+            <!-- Contenido principal -->
+            <div class="col-lg-10 col-md-9 p-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Gestión de Ingresos</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group mr-2">
+                            <button id="btnNuevoIngreso" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus"></i> Nuevo Ingreso
+                            </button>
+                            <button id="btnAdministrarCategorias" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-cogs"></i> Administrar Categorías
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estadísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card bg-primary text-white p-3">
+                            <h5 class="card-title">Total Ingresos</h5>
+                            <h3 id="totalIngresos">$0.00</h3>
+                            <p class="mb-0">Total registrado</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card bg-success text-white p-3">
+                            <h5 class="card-title">Confirmados</h5>
+                            <h3 id="totalConfirmados">$0.00</h3>
+                            <p class="mb-0">Ingresos confirmados</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card bg-warning text-dark p-3">
+                            <h5 class="card-title">Pendientes</h5>
+                            <h3 id="totalPendientes">$0.00</h3>
+                            <p class="mb-0">Ingresos pendientes</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card bg-info text-white p-3">
+                            <h5 class="card-title">Valor Neto</h5>
+                            <h3 id="totalNeto">$0.00</h3>
+                            <p class="mb-0">Después de retenciones</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Filtros</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="filtroForm" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="fechaRango" class="form-label">Rango de fechas</label>
+                                <input type="text" class="form-control" id="fechaRango" placeholder="Seleccionar fechas">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="categoriaFiltro" class="form-label">Categoría</label>
+                                <select class="form-select select2" id="categoriaFiltro">
+                                    <option value="">Todas las categorías</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="estadoFiltro" class="form-label">Estado</label>
+                                <select class="form-select" id="estadoFiltro">
+                                    <option value="">Todos los estados</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="anulado">Anulado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="metodoFiltro" class="form-label">Método de pago</label>
+                                <select class="form-select" id="metodoFiltro">
+                                    <option value="">Todos los métodos</option>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="cheque">Cheque</option>
+                                    <option value="tarjeta">Tarjeta</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabla de Ingresos -->
+                <div class="card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="ingresoTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="lista-tab" data-bs-toggle="tab" data-bs-target="#lista" type="button" role="tab" aria-controls="lista" aria-selected="true">Lista de Ingresos</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="estadisticas-tab" data-bs-toggle="tab" data-bs-target="#estadisticas" type="button" role="tab" aria-controls="estadisticas" aria-selected="false">Estadísticas</button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="ingresoTabsContent">
+                            <!-- Tab: Lista de Ingresos -->
+                            <div class="tab-pane fade show active" id="lista" role="tabpanel" aria-labelledby="lista-tab">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Comprobante</th>
+                                                <th>Fecha</th>
+                                                <th>Categoría</th>
+                                                <th>Concepto</th>
+                                                <th class="text-end">Valor Bruto</th>
+                                                <th class="text-end">Valor Neto</th>
+                                                <th>Método de Pago</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tablaIngresos">
+                                            <tr>
+                                                <td colspan="9" class="text-center">Cargando datos...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Paginación -->
+                                <nav aria-label="Paginación de ingresos">
+                                    <ul class="pagination justify-content-center" id="paginacion">
+                                        <!-- Se genera dinámicamente -->
+                                    </ul>
+                                </nav>
+                            </div>
+                            
+                            <!-- Tab: Estadísticas -->
+                            <div class="tab-pane fade" id="estadisticas" role="tabpanel" aria-labelledby="estadisticas-tab">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="card h-100">
+                                            <div class="card-header bg-light">
+                                                <h5 class="card-title mb-0">Ingresos por Categoría</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <canvas id="categoriaChart" height="250"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100">
+                                            <div class="card-header bg-light">
+                                                <h5 class="card-title mb-0">Ingresos por Método de Pago</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <canvas id="metodoPagoChart" height="250"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="card">
+                                            <div class="card-header bg-light">
+                                                <h5 class="card-title mb-0">Ingresos Mensuales</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <canvas id="ingresosMensualesChart" height="150"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para crear/editar ingreso -->
+    <div class="modal fade" id="ingresoModal" tabindex="-1" aria-labelledby="ingresoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ingresoModalLabel">Nuevo Ingreso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ingresoForm">
+                        <input type="hidden" id="ingresoId">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="categoriaIngreso" class="form-label required-field">Categoría</label>
+                                <select class="form-select select2" id="categoriaIngreso" required>
+                                    <option value="">Seleccione una categoría</option>
+                                </select>
+                                <div class="invalid-feedback">Por favor seleccione una categoría</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fechaIngreso" class="form-label required-field">Fecha</label>
+                                <input type="date" class="form-control" id="fechaIngreso" required>
+                                <div class="invalid-feedback">Por favor ingrese la fecha</div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="conceptoIngreso" class="form-label required-field">Concepto</label>
+                                <input type="text" class="form-control" id="conceptoIngreso" required>
+                                <div class="invalid-feedback">Por favor ingrese el concepto</div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="descripcionIngreso" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcionIngreso" rows="2"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección Cliente y Crédito (condicional) -->
+                        <div id="seccionCliente" style="display:none;" class="mb-3 border p-3 rounded bg-light">
+                            <h5>Datos del Cliente</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="clienteIngreso" class="form-label required-field">Cliente</label>
+                                    <select class="form-select select2" id="clienteIngreso">
+                                        <option value="">Seleccione un cliente</option>
+                                    </select>
+                                    <div class="invalid-feedback">Por favor seleccione un cliente</div>
+                                </div>
+                            </div>
+                            <div id="seccionCredito" style="display:none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label for="creditoIngreso" class="form-label required-field">Crédito</label>
+                                        <select class="form-select" id="creditoIngreso">
+                                            <option value="">Seleccione un crédito</option>
+                                        </select>
+                                        <div class="invalid-feedback">Por favor seleccione un crédito</div>
+                                    </div>
+                                </div>
+                                <div id="infoCredito" class="border p-2 rounded" style="display:none;">
+                                    <!-- Información del crédito seleccionado -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección valores -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="valorBruto" class="form-label required-field">Valor Bruto</label>
+                                <input type="number" class="form-control" id="valorBruto" step="0.01" min="0.01" required>
+                                <div class="invalid-feedback">Por favor ingrese el valor</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="metodoPago" class="form-label required-field">Método de Pago</label>
+                                <select class="form-select" id="metodoPago" required>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="cheque">Cheque</option>
+                                    <option value="tarjeta">Tarjeta</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                                <div class="invalid-feedback">Por favor seleccione el método de pago</div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="referenciaPago" class="form-label">Referencia de Pago</label>
+                                <input type="text" class="form-control" id="referenciaPago" placeholder="Número de transacción, cheque, etc.">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="estadoIngreso" class="form-label">Estado</label>
+                                <select class="form-select" id="estadoIngreso">
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="pendiente">Pendiente</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección retención automática -->
+                        <div id="seccionRetencion" class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="porcentajeRetencion" class="form-label">Porcentaje Retención (%)</label>
+                                <input type="number" class="form-control" id="porcentajeRetencion" step="0.01" min="0" max="100" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="valorRetencion" class="form-label">Valor Retención</label>
+                                <input type="number" class="form-control" id="valorRetencion" step="0.01" min="0" readonly>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección comisión (condicional) -->
+                        <div id="seccionComision" style="display:none;" class="mb-3 border p-3 rounded bg-light">
+                            <h5>Comisión</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="asesorIngreso" class="form-label required-field">Asesor</label>
+                                    <select class="form-select select2" id="asesorIngreso">
+                                        <option value="">Seleccione un asesor</option>
+                                    </select>
+                                    <div class="invalid-feedback">Por favor seleccione un asesor</div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="porcentajeComision" class="form-label required-field">Porcentaje Comisión (%)</label>
+                                    <input type="number" class="form-control" id="porcentajeComision" step="0.01" min="0" max="100">
+                                    <div class="invalid-feedback">Por favor ingrese el porcentaje</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="valorComision" class="form-label">Valor Comisión</label>
+                                    <input type="number" class="form-control" id="valorComision" step="0.01" min="0" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Valor neto -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="valorNeto" class="form-label">Valor Neto</label>
+                                <input type="number" class="form-control" id="valorNeto" step="0.01" min="0" readonly>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección de archivos adjuntos -->
+                        <div class="row mb-3" id="seccionArchivos">
+                            <div class="col-md-12">
+                                <label for="archivoAdjunto" class="form-label">Archivo Adjunto</label>
+                                <input type="file" class="form-control" id="archivoAdjunto">
+                                <div class="form-text">Formatos permitidos: PDF, JPG, PNG, DOC, XLS (Max. 10MB)</div>
+                                <div id="archivosContainer" class="archivos-adjuntos">
+                                    <!-- Archivos adjuntos se mostrarán aquí -->
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarIngreso">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para administrar categorías -->
+    <div class="modal fade" id="categoriasModal" tabindex="-1" aria-labelledby="categoriasModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoriasModalLabel">Administrar Categorías de Ingresos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <button id="btnNuevaCategoria" class="btn btn-success mb-3">
+                        <i class="fas fa-plus"></i> Nueva Categoría
+                    </button>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Retención (%)</th>
+                                    <th>Propiedades</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaCategorias">
+                                <tr>
+                                    <td colspan="6" class="text-center">Cargando categorías...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para crear/editar categoría -->
+    <div class="modal fade" id="categoriaFormModal" tabindex="-1" aria-labelledby="categoriaFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoriaFormModalLabel">Nueva Categoría</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoriaForm">
+                        <input type="hidden" id="categoriaId">
+                        <div class="mb-3">
+                            <label for="nombreCategoria" class="form-label required-field">Nombre</label>
+                            <input type="text" class="form-control" id="nombreCategoria" required>
+                            <div class="invalid-feedback">Por favor ingrese el nombre de la categoría</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="descripcionCategoria" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcionCategoria" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="porcentajeRetencionCategoria" class="form-label">Porcentaje de Retención (%)</label>
+                            <input type="number" class="form-control" id="porcentajeRetencionCategoria" step="0.01" min="0" max="100" value="0">
+                            <div class="form-text">Porcentaje de retención en la fuente que se aplicará automáticamente</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="requiereCliente">
+                                <label class="form-check-label" for="requiereCliente">Requiere seleccionar cliente</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="permiteComision">
+                                <label class="form-check-label" for="permiteComision">Permite asignar comisión a asesor</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="esCredito">
+                                <label class="form-check-label" for="esCredito">Es pago de crédito</label>
+                                <div class="form-text">Conecta con la gestión de créditos para registrar pagos</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="esActivo" checked>
+                                <label class="form-check-label" for="esActivo">Categoría activa</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarCategoria">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para ver detalle de ingreso -->
+    <div class="modal fade" id="detalleIngresoModal" tabindex="-1" aria-labelledby="detalleIngresoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detalleIngresoModalLabel">Detalle de Ingreso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detalleIngresoContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p>Cargando información del ingreso...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalle" style="display:none;">Editar</button>
+                    <button type="button" class="btn btn-danger" id="btnAnularDesdeDetalle" style="display:none;">Anular</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/locale/es.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="js/ingresos.js"></script>
+    <script>
+        // Cargar el sidebar
+        $(document).ready(function() {
+            $("#sidebar-container").load("/templates/sidebar");
+        });
+    </script>
+</body>
+</html>

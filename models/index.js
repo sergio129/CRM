@@ -14,6 +14,8 @@ const CategoriaEgreso = require('./CategoriaEgreso'); // Importar modelo de Cate
 const Egreso = require('./Egreso'); // Importar modelo de Egresos
 const EgresoRecurrente = require('./EgresoRecurrente'); // Importar modelo de Egresos Recurrentes
 const Proveedor = require('./Proveedor'); // Importar modelo de Proveedores
+const CategoriaIngreso = require('./CategoriaIngreso'); // Importar modelo de Categoría de Ingresos
+const Ingreso = require('./Ingreso'); // Importar modelo de Ingresos
 
 // Establecer relaciones
 Payroll.belongsTo(Employee, { 
@@ -76,6 +78,7 @@ Client.associate({ Loan });
 Loan.associate({ Client });
 Egreso.associate({ CategoriaEgreso, EgresoRecurrente, User: require('./User') });
 EgresoRecurrente.associate({ Egreso });
+Ingreso.associate({ CategoriaIngreso, Client, Employee, Loan, User: require('./User') });
 
 module.exports = {
     sequelize,
@@ -90,5 +93,7 @@ module.exports = {
     CategoriaEgreso, // Exportar el modelo de Categoría de Egresos
     Egreso, // Exportar el modelo de Egresos
     EgresoRecurrente, // Exportar el modelo de Egresos Recurrentes
-    Proveedor // Exportar el modelo de Proveedores
+    Proveedor, // Exportar el modelo de Proveedores
+    CategoriaIngreso, // Exportar el modelo de Categoría de Ingresos
+    Ingreso // Exportar el modelo de Ingresos
 };
