@@ -44,6 +44,57 @@ function showToast(message, type = 'success') {
     });
 }
 
+// Función para abrir el modal de nuevo ingreso
+function nuevoIngreso() {
+    // Reiniciar el formulario
+    document.getElementById('formIngreso').reset();
+    
+    // Reiniciar campos adicionales
+    if (document.getElementById('infoCredito')) {
+        document.getElementById('infoCredito').style.display = 'none';
+    }
+    
+    // Ocultar secciones condicionales inicialmente
+    document.getElementById('seccionCliente').style.display = 'none';
+    document.getElementById('seccionCredito').style.display = 'none';
+    document.getElementById('seccionComision').style.display = 'none';
+    
+    // Ocultar secciones adicionales si existen
+    if (document.getElementById('seccionDatosPagador')) {
+        document.getElementById('seccionDatosPagador').style.display = 'none';
+    }
+    if (document.getElementById('seccionTipoPago')) {
+        document.getElementById('seccionTipoPago').style.display = 'none';
+    }
+    
+    // Establecer fecha actual
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaIngreso').value = hoy;
+    
+    // Cambiar título del modal
+    document.getElementById('ingresoModalLabel').textContent = 'Nuevo Ingreso';
+    
+    // Mostrar botón de guardar y ocultar botón de actualizar
+    document.getElementById('btnGuardarIngreso').style.display = 'block';
+    if (document.getElementById('btnActualizarIngreso')) {
+        document.getElementById('btnActualizarIngreso').style.display = 'none';
+    }
+    
+    // Eliminar ID existente si hay campo oculto
+    if (document.getElementById('ingresoIdHidden')) {
+        document.getElementById('ingresoIdHidden').value = '';
+    }
+    
+    // Establecer método de pago por defecto
+    if (document.getElementById('metodoPagoIngreso')) {
+        document.getElementById('metodoPagoIngreso').value = 'efectivo';
+    }
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('ingresoModal'));
+    modal.show();
+}
+
 // Función para cargar ingresos con filtros
 async function cargarIngresos(pagina = 1, filtros = {}) {
     try {
