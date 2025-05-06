@@ -860,6 +860,14 @@
                             </div>
                         </div>
                         
+                        <!-- Concepto específico (Nuevo campo) -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="conceptoEspecificoModal" class="form-label required-field">Concepto específico</label>
+                                <input type="text" class="form-control" id="conceptoEspecificoModal" required>
+                            </div>
+                        </div>
+                        
                         <!-- Tipo de Pago -->
                         <div class="mb-3">
                             <label class="form-label">Tipo de Pago</label>
@@ -879,12 +887,93 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="valorPagoModal" class="form-label">Valor a pagar</label>
+                                <label for="valorPagoModal" class="form-label required-field">Valor a pagar</label>
                                 <input type="number" class="form-control" id="valorPagoModal" min="0.01" step="0.01" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="fechaPagoModal" class="form-label">Fecha de pago</label>
+                                <label for="fechaPagoModal" class="form-label required-field">Fecha de pago</label>
                                 <input type="date" class="form-control" id="fechaPagoModal" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabla de amortización (Nueva sección) -->
+                        <div id="tablaAmortizacionContainer" class="mt-4 border p-3 rounded bg-white">
+                            <h6 class="mb-3">Tabla de Amortización</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Valor total del crédito:</span>
+                                                <strong id="valorTotalCredito">$0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Valor por cuota:</span>
+                                                <strong id="valorPorCuota">$0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Intereses generados:</span>
+                                                <strong id="interesesGenerados">$0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Cuotas pagadas:</span>
+                                                <strong id="cuotasPagadas">0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Cuotas por pagar:</span>
+                                                <strong id="cuotasPorPagar">0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Próximo vencimiento:</span>
+                                                <strong id="proximoVencimiento">--/--/----</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tabla de cuotas -->
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm table-bordered table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>N° Cuota</th>
+                                            <th>Fecha Vencimiento</th>
+                                            <th>Valor Cuota</th>
+                                            <th>Capital</th>
+                                            <th>Interés</th>
+                                            <th>Estado</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaCuotas">
+                                        <tr>
+                                            <td colspan="7" class="text-center">Seleccione un crédito para ver el detalle de cuotas</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         
