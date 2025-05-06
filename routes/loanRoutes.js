@@ -4,6 +4,9 @@ const loanController = require('../controllers/loanController');
 const Loan = require('../models/Loan'); // Importar el modelo Loan
 const Client = require('../models/Client'); // Importar el modelo Client si es necesario
 
+// Ruta para obtener préstamos por cliente (debe ir antes de la ruta /:id para evitar conflictos)
+router.get('/client/:clientId', loanController.getLoansByClientId);
+
 router.get('/', loanController.getLoans);
 router.post('/', loanController.createLoan);
 router.put('/:id', loanController.updateLoan);

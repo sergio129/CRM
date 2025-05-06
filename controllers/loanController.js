@@ -6,6 +6,7 @@ const ExternalApiService = require('../services/externalApiService');
 const { v4: uuidv4 } = require('uuid'); // Importar para generar un identificador único
 const NotificationService = require('../services/notificationService');
 const PaymentHistory = require('../models/PaymentHistory');
+const { Op } = require('sequelize'); // Import Sequelize operators
 
 exports.getLoans = async (req, res) => {
     try {
@@ -132,5 +133,55 @@ exports.deleteLoan = async (req, res) => {
   } catch (error) {
     console.error("Error al eliminar el préstamo:", error);
     res.status(500).json({ message: "Error al eliminar el préstamo", error });
+  }
+};
+
+// Nuevo método para obtener préstamos por cliente
+exports.getLoansByClientId = async (req, res) => {
+  try {
+    const clientId = req.params.clientId;
+    
+    // Obtener el cliente para verificar que existe
+    const client = await Client.findByPk(clientId);
+    if (!client) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Cliente no encontrado" 
+      });
+    }
+    
+    // Verificar si se solicitan solo los activos
+    const whereCondition = { client_id: clientId };
+    
+    // Si se solicitaron solo los préstamos activos
+    if (req.query.active === 'true') {
+      whereCondition.loan_status = { [Op.ne]: 'Pagado' }; // Usar loan_status en lugar de status
+    }
+    
+    // Obtener los préstamos del cliente
+    const loans = await Loan.findAll({
+      where: whereCondition,
+      include: [
+        { 
+          model: Client, 
+          as: 'Client', 
+          attributes: ['id', 'full_name', 'id_number', 'phone', 'email'] 
+        }
+      ],
+      order: [['createdAt', 'DESC']] // Ordenar por fecha de creación descendente
+    });
+    
+    // Devolver los préstamos encontrados
+    return res.status(200).json({
+      success: true,
+      data: loans
+    });
+  } catch (error) {
+    console.error("Error al obtener préstamos del cliente:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Error al obtener préstamos del cliente", 
+      error: error.message 
+    });
   }
 };
