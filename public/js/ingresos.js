@@ -47,7 +47,16 @@ function showToast(message, type = 'success') {
 // Función para abrir el modal de nuevo ingreso
 function nuevoIngreso() {
     // Reiniciar el formulario
-    document.getElementById('formIngreso').reset();
+    const formIngreso = document.getElementById('formIngreso');
+    if (formIngreso) {
+        formIngreso.reset();
+    } else {
+        // Si no encontramos el formulario con ID 'formIngreso', buscar por el ID 'ingresoForm'
+        const ingresoForm = document.getElementById('ingresoForm');
+        if (ingresoForm) {
+            ingresoForm.reset();
+        }
+    }
     
     // Reiniciar campos adicionales
     if (document.getElementById('infoCredito')) {
@@ -55,9 +64,15 @@ function nuevoIngreso() {
     }
     
     // Ocultar secciones condicionales inicialmente
-    document.getElementById('seccionCliente').style.display = 'none';
-    document.getElementById('seccionCredito').style.display = 'none';
-    document.getElementById('seccionComision').style.display = 'none';
+    if (document.getElementById('seccionCliente')) {
+        document.getElementById('seccionCliente').style.display = 'none';
+    }
+    if (document.getElementById('seccionCredito')) {
+        document.getElementById('seccionCredito').style.display = 'none';
+    }
+    if (document.getElementById('seccionComision')) {
+        document.getElementById('seccionComision').style.display = 'none';
+    }
     
     // Ocultar secciones adicionales si existen
     if (document.getElementById('seccionDatosPagador')) {
@@ -69,13 +84,19 @@ function nuevoIngreso() {
     
     // Establecer fecha actual
     const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('fechaIngreso').value = hoy;
+    if (document.getElementById('fechaIngreso')) {
+        document.getElementById('fechaIngreso').value = hoy;
+    }
     
     // Cambiar título del modal
-    document.getElementById('ingresoModalLabel').textContent = 'Nuevo Ingreso';
+    if (document.getElementById('ingresoModalLabel')) {
+        document.getElementById('ingresoModalLabel').textContent = 'Nuevo Ingreso';
+    }
     
     // Mostrar botón de guardar y ocultar botón de actualizar
-    document.getElementById('btnGuardarIngreso').style.display = 'block';
+    if (document.getElementById('btnGuardarIngreso')) {
+        document.getElementById('btnGuardarIngreso').style.display = 'block';
+    }
     if (document.getElementById('btnActualizarIngreso')) {
         document.getElementById('btnActualizarIngreso').style.display = 'none';
     }
@@ -84,15 +105,33 @@ function nuevoIngreso() {
     if (document.getElementById('ingresoIdHidden')) {
         document.getElementById('ingresoIdHidden').value = '';
     }
+    if (document.getElementById('ingresoId')) {
+        document.getElementById('ingresoId').value = '';
+    }
     
     // Establecer método de pago por defecto
     if (document.getElementById('metodoPagoIngreso')) {
         document.getElementById('metodoPagoIngreso').value = 'efectivo';
     }
+    if (document.getElementById('metodoPago')) {
+        document.getElementById('metodoPago').value = 'efectivo';
+    }
     
     // Abrir modal
-    const modal = new bootstrap.Modal(document.getElementById('ingresoModal'));
-    modal.show();
+    try {
+        const modalElement = document.getElementById('ingresoModal');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } catch (e) {
+        console.error("Error al abrir modal:", e);
+        // Intentar alternativa con jQuery
+        try {
+            $('#ingresoModal').modal('show');
+        } catch (e2) {
+            console.error("Error al abrir modal con jQuery:", e2);
+            alert("No se pudo abrir la modal. Por favor, revisa la consola para más detalles.");
+        }
+    }
 }
 
 // Función para cargar ingresos con filtros
