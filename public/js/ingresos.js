@@ -263,6 +263,204 @@ function llenarSelectorAsesores() {
     });
 }
 
+// Función para calcular valores (bruto, retención, comisión, neto)
+function calcularValores() {
+    // Valores iniciales
+    const valorBruto = parseFloat(document.getElementById('valorBruto').value) || 0;
+    const porcentajeRetencion = parseFloat(document.getElementById('porcentajeRetencion').value) || 0;
+    let porcentajeComision = 0;
+    
+    // Comisión (solo si la sección de comisión está visible)
+    if (document.getElementById('seccionComision').style.display === 'block') {
+        porcentajeComision = parseFloat(document.getElementById('porcentajeComision').value) || 0;
+    }
+    
+    // Calcular valores
+    const valorRetencion = (valorBruto * porcentajeRetencion) / 100;
+    const valorComision = (valorBruto * porcentajeComision) / 100;
+    const valorNeto = valorBruto - valorRetencion - valorComision;
+    
+    // Actualizar campos
+    document.getElementById('valorRetencion').value = valorRetencion.toFixed(2);
+    
+    // Actualizar comisión si está visible
+    if (document.getElementById('seccionComision').style.display === 'block') {
+        document.getElementById('valorComision').value = valorComision.toFixed(2);
+    }
+    
+    // Actualizar valor neto
+    document.getElementById('valorNeto').value = valorNeto.toFixed(2);
+}
+
+// Función para guardar un nuevo ingreso
+async function guardarIngreso() {
+    // Validar el formulario
+    const form = document.getElementById('ingresoForm');
+    
+    // Verificar campos requeridos
+    const categoriaIngreso = document.getElementById('categoriaIngreso').value;
+    const fechaIngreso = document.getElementById('fechaIngreso').value;
+    const conceptoIngreso = document.getElementById('conceptoIngreso').value;
+    const valorBruto = parseFloat(document.getElementById('valorBruto').value) || 0;
+    const metodoPago = document.getElementById('metodoPago').value;
+    
+    if (!categoriaIngreso || !fechaIngreso || !conceptoIngreso || valorBruto <= 0 || !metodoPago) {
+        showToast('Por favor complete todos los campos requeridos', 'error');
+        return;
+    }
+    
+    // Obtener todos los datos del formulario
+    const ingresoId = document.getElementById('ingresoId').value;
+    const descripcionIngreso = document.getElementById('descripcionIngreso').value;
+    const estadoIngreso = document.getElementById('estadoIngreso').value;
+    const porcentajeRetencion = parseFloat(document.getElementById('porcentajeRetencion').value) || 0;
+    const valorRetencion = parseFloat(document.getElementById('valorRetencion').value) || 0;
+    const referenciaPago = document.getElementById('referenciaPago').value;
+    const valorNeto = parseFloat(document.getElementById('valorNeto').value) || 0;
+    
+    // Datos opcionales que pueden estar presentes o no
+    let clienteId = null;
+    let creditoId = null;
+    let asesorId = null;
+    let porcentajeComision = 0;
+    let valorComision = 0;
+    
+    // Verificar si la sección cliente está visible
+    if (document.getElementById('seccionCliente').style.display === 'block') {
+        clienteId = document.getElementById('clienteIngreso').value;
+        
+        // Verificar si se requiere cliente
+        const categoriaSeleccionada = document.getElementById('categoriaIngreso').options[document.getElementById('categoriaIngreso').selectedIndex];
+        const requiereCliente = categoriaSeleccionada.dataset.cliente === 'true';
+        
+        if (requiereCliente && !clienteId) {
+            showToast('Por favor seleccione un cliente', 'error');
+            return;
+        }
+        
+        // Verificar si la sección crédito está visible
+        if (document.getElementById('seccionCredito').style.display === 'block') {
+            creditoId = document.getElementById('creditoIngreso').value;
+            
+            // Verificar si se requiere crédito
+            const esCredito = categoriaSeleccionada.dataset.credito === 'true' || 
+                              categoriaSeleccionada.textContent.toLowerCase().includes('crédito') ||
+                              categoriaSeleccionada.textContent.toLowerCase().includes('credito');
+            
+            if (esCredito && !creditoId) {
+                showToast('Por favor seleccione un crédito', 'error');
+                return;
+            }
+        }
+    }
+    
+    // Verificar si la sección comisión está visible
+    if (document.getElementById('seccionComision').style.display === 'block') {
+        asesorId = document.getElementById('asesorIngreso').value;
+        porcentajeComision = parseFloat(document.getElementById('porcentajeComision').value) || 0;
+        valorComision = parseFloat(document.getElementById('valorComision').value) || 0;
+        
+        // Verificar si se requiere asesor
+        if (!asesorId) {
+            showToast('Por favor seleccione un asesor', 'error');
+            return;
+        }
+    }
+    
+    // Crear objeto con los datos del ingreso
+    const ingresoData = {
+        categoria_id: categoriaIngreso,
+        fecha: fechaIngreso,
+        concepto: conceptoIngreso,
+        descripcion: descripcionIngreso,
+        valor_bruto: valorBruto,
+        metodo_pago: metodoPago,
+        referencia_pago: referenciaPago,
+        estado: estadoIngreso,
+        porcentaje_retencion: porcentajeRetencion,
+        valor_retencion: valorRetencion,
+        valor_neto: valorNeto
+    };
+    
+    // Agregar datos opcionales si existen
+    if (clienteId) ingresoData.cliente_id = clienteId;
+    if (creditoId) ingresoData.credito_id = creditoId;
+    if (asesorId) {
+        ingresoData.asesor_id = asesorId;
+        ingresoData.porcentaje_comision = porcentajeComision;
+        ingresoData.valor_comision = valorComision;
+    }
+    
+    try {
+        // Determinar si es creación o actualización
+        const method = ingresoId ? 'PUT' : 'POST';
+        const url = ingresoId ? `/api/ingresos/${ingresoId}` : '/api/ingresos';
+        
+        // Realizar la petición
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(ingresoData)
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Error al guardar el ingreso');
+        }
+        
+        // Procesar archivos adjuntos si hay alguno
+        const archivoAdjunto = document.getElementById('archivoAdjunto').files[0];
+        if (archivoAdjunto) {
+            await subirArchivoAdjunto(ingresoId || result.data.id, archivoAdjunto);
+        }
+        
+        // Mostrar mensaje de éxito
+        showToast(ingresoId ? 'Ingreso actualizado correctamente' : 'Ingreso registrado correctamente', 'success');
+        
+        // Cerrar modal
+        const modalElement = document.getElementById('ingresoModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+        
+        // Recargar lista de ingresos
+        cargarIngresos();
+        
+    } catch (error) {
+        console.error('Error al guardar ingreso:', error);
+        showToast('Error al guardar: ' + error.message, 'error');
+    }
+}
+
+// Función para subir archivo adjunto
+async function subirArchivoAdjunto(ingresoId, archivo) {
+    try {
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        
+        const response = await fetch(`/api/ingresos/${ingresoId}/adjuntos`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Error al subir archivo adjunto');
+        }
+        
+    } catch (error) {
+        console.error('Error al subir archivo adjunto:', error);
+        showToast('Error al subir archivo: ' + error.message, 'error');
+    }
+}
+
 // Función para cargar ingresos con filtros
 async function cargarIngresos(pagina = 1, filtros = {}) {
     try {
@@ -587,78 +785,14 @@ async function cargarAsesores() {
     }
 }
 
-// Funciones para la modal de búsqueda de cliente y selección de crédito
-async function buscarClientePorDocumentoModal() {
-    const tipoDocumento = document.getElementById('tipoBusquedaClienteModal').value;
-    const numeroDocumento = document.getElementById('documentoBusquedaClienteModal').value.trim();
-    
-    if (!numeroDocumento) {
-        showToast('Por favor ingrese un número de documento', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/clients/document/${tipoDocumento}/${numeroDocumento}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error('Cliente no encontrado');
-        }
-        
-        const cliente = result.data;
-        
-        // Llenar los campos con los datos del cliente
-        document.getElementById('nombrePagadorModal').value = cliente.full_name || 
-            `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-        document.getElementById('telefonoPagadorModal').value = cliente.telefono || cliente.phone || '';
-        document.getElementById('correoPagadorModal').value = cliente.correo || cliente.email || '';
-        document.getElementById('direccionPagadorModal').value = cliente.direccion || cliente.address || '';
-        
-        // Seleccionar el cliente en el selector de créditos
-        const selectClienteCredito = document.getElementById('clienteCreditoModal');
-        
-        // Verificar si el cliente ya existe en el selector
-        let existe = false;
-        for (let i = 0; i < selectClienteCredito.options.length; i++) {
-            if (selectClienteCredito.options[i].value == cliente.id) {
-                selectClienteCredito.selectedIndex = i;
-                existe = true;
-                break;
-            }
-        }
-        
-        // Si no existe, agregar el cliente al selector
-        if (!existe) {
-            const nombreCompleto = cliente.full_name || 
-                `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-            const documento = cliente.id_number || cliente.identification || 'Sin documento';
-            
-            const option = new Option(`${nombreCompleto} - ${documento}`, cliente.id);
-            selectClienteCredito.add(option);
-            option.selected = true;
-        }
-        
-        // Cargar los créditos del cliente
-        cargarCreditosClienteModal(cliente.id);
-        
-    } catch (error) {
-        console.error('Error al buscar cliente:', error);
-        showToast(`No se encontró el cliente con documento ${numeroDocumento}`, 'error');
-    }
-}
-
-// Cargar créditos de un cliente en la modal
-async function cargarCreditosClienteModal(clienteId) {
+// Función para cargar créditos de un cliente
+async function cargarCreditosCliente(clienteId) {
     if (!clienteId) return;
     
     try {
+        // Mostrar indicador de carga
+        document.getElementById('creditoIngreso').innerHTML = '<option value="">Cargando créditos...</option>';
+        
         const response = await fetch(`/api/loans/client/${clienteId}?active=true`, {
             method: 'GET',
             headers: {
@@ -682,10 +816,230 @@ async function cargarCreditosClienteModal(clienteId) {
             throw new Error(result.error || 'Error al cargar créditos');
         }
         
+        // Llenar selector de créditos
+        const selectCredito = document.getElementById('creditoIngreso');
+        selectCredito.innerHTML = '<option value="">Seleccione un crédito</option>';
+        
+        if (creditos.length === 0) {
+            selectCredito.innerHTML += '<option value="" disabled>El cliente no tiene créditos activos</option>';
+            return;
+        }
+        
+        creditos.forEach(credito => {
+            const numero = credito.loan_number || credito.numero || `CRED-${credito.id}`;
+            const tipo = credito.tipo || credito.type || 'No especificado';
+            const saldo = formatCurrency(credito.saldo_actual || credito.current_balance || 0);
+            
+            selectCredito.innerHTML += `<option value="${credito.id}" data-saldo="${credito.saldo_actual || credito.current_balance || 0}">${numero} - ${tipo} (${saldo})</option>`;
+        });
+        
+    } catch (error) {
+        console.error('Error al cargar créditos del cliente:', error);
+        showToast('Error al cargar créditos: ' + error.message, 'error');
+        document.getElementById('creditoIngreso').innerHTML = '<option value="">Error al cargar créditos</option>';
+    }
+}
+
+// Buscar cliente por documento
+async function buscarClientePorDocumento() {
+    const tipoDocumento = document.getElementById('tipoBusquedaCliente').value;
+    const numeroDocumento = document.getElementById('documentoBusquedaCliente').value.trim();
+    
+    if (!numeroDocumento) {
+        showToast('Por favor ingrese un número de documento', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/clients/document/${tipoDocumento}/${numeroDocumento}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error('Cliente no encontrado');
+        }
+        
+        const cliente = result.data;
+        
+        // Seleccionar el cliente encontrado
+        const selectCliente = document.getElementById('clienteIngreso');
+        
+        // Verificar si ya existe en la lista
+        let existe = false;
+        for (let i = 0; i < selectCliente.options.length; i++) {
+            if (selectCliente.options[i].value == cliente.id) {
+                selectCliente.selectedIndex = i;
+                existe = true;
+                break;
+            }
+        }
+        
+        // Si no existe, agregar a la lista
+        if (!existe) {
+            // Crear nombre completo
+            const nombreCompleto = cliente.full_name || 
+                `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            const documento = cliente.id_number || cliente.identification || 'Sin documento';
+            
+            const option = new Option(`${nombreCompleto} - ${documento}`, cliente.id);
+            selectCliente.add(option);
+            option.selected = true;
+        }
+        
+        // Trigger change event para cargar créditos si aplica
+        if (document.createEvent) {
+            var event = document.createEvent('HTMLEvents');
+            event.initEvent('change', true, false);
+            selectCliente.dispatchEvent(event);
+        } else {
+            selectCliente.fireEvent('onchange');
+        }
+        
+        showToast('Cliente encontrado', 'success');
+        
+    } catch (error) {
+        console.error('Error al buscar cliente:', error);
+        showToast(`No se encontró el cliente con documento ${numeroDocumento}`, 'error');
+    }
+}
+
+// Buscar cliente por documento en el modal de cliente/crédito
+async function buscarClientePorDocumentoModal() {
+    const tipoDocumento = document.getElementById('tipoBusquedaClienteModal').value;
+    const numeroDocumento = document.getElementById('documentoBusquedaClienteModal').value.trim();
+    
+    if (!numeroDocumento) {
+        showToast('Por favor ingrese un número de documento', 'error');
+        return;
+    }
+    
+    try {
+        // Mostrar indicador de carga o deshabilitar botón
+        const btnBuscar = document.getElementById('btnBuscarClienteModal');
+        const btnTextOriginal = btnBuscar.innerHTML;
+        btnBuscar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+        btnBuscar.disabled = true;
+        
+        const response = await fetch(`/api/clients/document/${tipoDocumento}/${numeroDocumento}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        // Restablecer el botón
+        btnBuscar.innerHTML = btnTextOriginal;
+        btnBuscar.disabled = false;
+        
+        if (!result.success) {
+            throw new Error('Cliente no encontrado');
+        }
+        
+        const cliente = result.data;
+        
+        // Llenar los campos del modal con la información del cliente
+        document.getElementById('nombrePagadorModal').value = cliente.full_name || 
+            `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+        document.getElementById('telefonoPagadorModal').value = cliente.telefono || cliente.phone || '';
+        document.getElementById('correoPagadorModal').value = cliente.email || cliente.correo || '';
+        document.getElementById('direccionPagadorModal').value = cliente.direccion || cliente.address || '';
+        
+        // Seleccionar el cliente en el dropdown de clientes con créditos
+        const selectClienteCredito = document.getElementById('clienteCreditoModal');
+        
+        // Verificar si ya existe en la lista
+        let existe = false;
+        for (let i = 0; i < selectClienteCredito.options.length; i++) {
+            if (selectClienteCredito.options[i].value == cliente.id) {
+                selectClienteCredito.selectedIndex = i;
+                existe = true;
+                break;
+            }
+        }
+        
+        // Si no existe, agregar a la lista
+        if (!existe) {
+            // Crear nombre completo
+            const nombreCompleto = cliente.full_name || 
+                `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            const documento = cliente.id_number || cliente.identification || 'Sin documento';
+            
+            const option = new Option(`${nombreCompleto} - ${documento}`, cliente.id);
+            selectClienteCredito.add(option);
+            option.selected = true;
+        }
+        
+        // Trigger change event para cargar créditos
+        if (document.createEvent) {
+            var event = document.createEvent('HTMLEvents');
+            event.initEvent('change', true, false);
+            selectClienteCredito.dispatchEvent(event);
+        } else {
+            selectClienteCredito.fireEvent('onchange');
+        }
+        
+        // Cargar los créditos del cliente
+        await cargarCreditosTabla(cliente.id);
+        
+        showToast('Cliente encontrado', 'success');
+        
+    } catch (error) {
+        console.error('Error al buscar cliente:', error);
+        showToast(`No se encontró el cliente con documento ${numeroDocumento}`, 'error');
+        
+        // Limpiar campos
+        document.getElementById('nombrePagadorModal').value = '';
+        document.getElementById('telefonoPagadorModal').value = '';
+        document.getElementById('correoPagadorModal').value = '';
+        document.getElementById('direccionPagadorModal').value = '';
+    }
+}
+
+// Función para cargar los créditos en la tabla del modal
+async function cargarCreditosTabla(clienteId) {
+    if (!clienteId) return;
+    
+    try {
+        // Mostrar indicador de carga
+        document.getElementById('tablaCreditos').innerHTML = '<tr><td colspan="6" class="text-center">Cargando créditos...</td></tr>';
+        
+        const response = await fetch(`/api/loans/client/${clienteId}?active=true`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        
+        let creditos = [];
+        
+        // Determinar la estructura de la respuesta
+        if (Array.isArray(result)) {
+            creditos = result;
+        } else if (result.data && Array.isArray(result.data)) {
+            creditos = result.data;
+        } else if (result.loans && Array.isArray(result.loans)) {
+            creditos = result.loans;
+        } else if (!result.success) {
+            throw new Error(result.error || 'Error al cargar créditos');
+        }
+        
+        // Mostrar los créditos en la tabla
         const tablaCreditos = document.getElementById('tablaCreditos');
         
         if (creditos.length === 0) {
-            tablaCreditos.innerHTML = '<tr><td colspan="6" class="text-center">Este cliente no tiene créditos activos</td></tr>';
+            tablaCreditos.innerHTML = '<tr><td colspan="6" class="text-center">El cliente no tiene créditos activos</td></tr>';
             return;
         }
         
@@ -705,7 +1059,7 @@ async function cargarCreditosClienteModal(clienteId) {
                     <td>${saldo}</td>
                     <td>${estado}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="seleccionarCreditoModal(${credito.id}, '${numero}', '${tipo}', ${credito.saldo_actual || credito.current_balance || 0})">
+                        <button class="btn btn-sm btn-primary" onclick="seleccionarCredito(${credito.id}, '${numero}', '${tipo}', ${credito.saldo_actual || credito.current_balance || 0})">
                             <i class="fas fa-check"></i> Seleccionar
                         </button>
                     </td>
@@ -716,406 +1070,132 @@ async function cargarCreditosClienteModal(clienteId) {
         tablaCreditos.innerHTML = html;
         
     } catch (error) {
-        console.error('Error al cargar créditos:', error);
+        console.error('Error al cargar créditos del cliente:', error);
         showToast('Error al cargar créditos: ' + error.message, 'error');
         document.getElementById('tablaCreditos').innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar créditos</td></tr>';
     }
 }
 
-// Seleccionar un crédito en la modal
-async function seleccionarCreditoModal(creditoId, numero, tipo, saldo) {
-    // Guardar el crédito seleccionado
-    creditoSeleccionado = {
-        id: creditoId,
-        numero: numero,
-        tipo: tipo,
-        saldo: saldo
-    };
-    
-    // Mostrar la sección de datos del pago
-    document.getElementById('datosPagoCredito').style.display = 'block';
-    
-    // Actualizar información del crédito seleccionado
-    document.getElementById('creditoSeleccionadoInfo').textContent = `Crédito seleccionado: ${numero} (${tipo})`;
-    
-    // Establecer valor predeterminado en el concepto específico
-    document.getElementById('conceptoEspecificoModal').value = `Pago de crédito ${numero}`;
-    
-    // Cargar tabla de amortización del crédito
-    await cargarTablaAmortizacion(creditoId);
-    
-    // Establecer valor por defecto en el campo de valor a pagar
-    document.getElementById('valorPagoModal').value = saldo;
-    
-    // Establecer fecha actual en el campo de fecha de pago
-    const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('fechaPagoModal').value = hoy;
-    
-    // Actualizar automáticamente cuando se cambia el tipo de pago
-    const radiosTipoPago = document.getElementsByName('tipoPagoModal');
-    for (const radio of radiosTipoPago) {
-        radio.addEventListener('change', function() {
-            actualizarValorPago(this.value);
-        });
-    }
-}
-
-// Cargar la tabla de amortización
-async function cargarTablaAmortizacion(creditoId) {
-    if (!creditoId) return;
-    
+// Cargar lista completa de clientes
+async function cargarListaClientes() {
     try {
-        const response = await fetch(`/api/loans/${creditoId}/amortization`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const tablaClientes = document.getElementById('tablaClientes');
+        tablaClientes.innerHTML = '<tr><td colspan="4" class="text-center">Cargando clientes...</td></tr>';
         
-        const result = await response.json();
-        
-        if (!result.success && !Array.isArray(result)) {
-            throw new Error(result.error || 'Error al cargar tabla de amortización');
+        // Si ya tenemos los clientes cargados, no hacer otra petición
+        if (clientes.length > 0) {
+            renderizarTablaClientes(clientes);
+            return;
         }
         
-        // Determinar el formato de respuesta
-        let amortizacion = [];
-        let detalleCredito = {};
-        
-        if (Array.isArray(result)) {
-            amortizacion = result;
-            // Intentar cargar los detalles del crédito en una llamada separada
-            await cargarDetalleCredito(creditoId);
-        } else if (result.data) {
-            if (Array.isArray(result.data)) {
-                amortizacion = result.data;
-            } else if (result.data.cuotas && Array.isArray(result.data.cuotas)) {
-                amortizacion = result.data.cuotas;
-                detalleCredito = result.data;
-            }
-        }
-        
-        // Actualizar resumen del crédito
-        actualizarResumenCredito(detalleCredito, amortizacion);
-        
-        // Renderizar tabla de cuotas
-        renderizarTablaCuotas(amortizacion);
+        await cargarClientes();
+        renderizarTablaClientes(clientes);
         
     } catch (error) {
-        console.error('Error al cargar tabla de amortización:', error);
-        showToast('Error al cargar tabla de amortización: ' + error.message, 'error');
-        document.getElementById('tablaCuotas').innerHTML = '<tr><td colspan="7" class="text-center">Error al cargar tabla de amortización</td></tr>';
+        console.error('Error al cargar lista de clientes:', error);
+        showToast('Error al cargar clientes: ' + error.message, 'error');
+        document.getElementById('tablaClientes').innerHTML = '<tr><td colspan="4" class="text-center">Error al cargar clientes</td></tr>';
     }
 }
 
-// Cargar detalles del crédito
-async function cargarDetalleCredito(creditoId) {
-    try {
-        const response = await fetch(`/api/loans/${creditoId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success && !result.id) {
-            throw new Error(result.error || 'Error al cargar detalles del crédito');
-        }
-        
-        // Determinar el formato de respuesta
-        let detalleCredito = {};
-        
-        if (result.id) {
-            detalleCredito = result;
-        } else if (result.data) {
-            detalleCredito = result.data;
-        }
-        
-        return detalleCredito;
-    } catch (error) {
-        console.error('Error al cargar detalles del crédito:', error);
-        return {};
-    }
-}
-
-// Actualizar resumen del crédito
-function actualizarResumenCredito(detalleCredito, amortizacion) {
-    // Calcular valores del resumen
-    let valorTotal = detalleCredito.monto || detalleCredito.amount || 0;
-    let valorCuota = 0;
-    let interesesGenerados = 0;
-    let cuotasPagadas = 0;
-    let cuotasPorPagar = 0;
-    let proximoVencimiento = null;
+// Renderizar tabla de clientes
+function renderizarTablaClientes(listaClientes) {
+    const tablaClientes = document.getElementById('tablaClientes');
     
-    // Si no tenemos el detalle, calcularlo desde la amortización
-    if (amortizacion && amortizacion.length > 0) {
-        // Valor por cuota (tomar el de la primera cuota pendiente)
-        const cuotaPendiente = amortizacion.find(c => c.estado === 'pendiente' || c.status === 'pending');
-        valorCuota = cuotaPendiente ? (cuotaPendiente.valor_cuota || cuotaPendiente.amount || 0) : 0;
-        
-        // Calcular intereses generados
-        interesesGenerados = amortizacion.reduce((sum, cuota) => {
-            return sum + (cuota.interes || cuota.interest || 0);
-        }, 0);
-        
-        // Contar cuotas pagadas y pendientes
-        cuotasPagadas = amortizacion.filter(c => 
-            c.estado === 'pagado' || c.status === 'paid' || c.status === 'completed'
-        ).length;
-        
-        cuotasPorPagar = amortizacion.filter(c => 
-            c.estado === 'pendiente' || c.status === 'pending'
-        ).length;
-        
-        // Encontrar próximo vencimiento
-        if (cuotasPorPagar > 0) {
-            const cuotasOrdenadas = [...amortizacion]
-                .filter(c => c.estado === 'pendiente' || c.status === 'pending')
-                .sort((a, b) => {
-                    const fechaA = new Date(a.fecha_vencimiento || a.due_date);
-                    const fechaB = new Date(b.fecha_vencimiento || b.due_date);
-                    return fechaA - fechaB;
-                });
-            
-            if (cuotasOrdenadas.length > 0) {
-                const fecha = cuotasOrdenadas[0].fecha_vencimiento || cuotasOrdenadas[0].due_date;
-                proximoVencimiento = new Date(fecha).toLocaleDateString('es-CO');
-            }
-        }
-    }
-    
-    // Actualizar valores en la interfaz
-    document.getElementById('valorTotalCredito').textContent = formatCurrency(valorTotal);
-    document.getElementById('valorPorCuota').textContent = formatCurrency(valorCuota);
-    document.getElementById('interesesGenerados').textContent = formatCurrency(interesesGenerados);
-    document.getElementById('cuotasPagadas').textContent = cuotasPagadas;
-    document.getElementById('cuotasPorPagar').textContent = cuotasPorPagar;
-    document.getElementById('proximoVencimiento').textContent = proximoVencimiento || '--/--/----';
-}
-
-// Renderizar la tabla de cuotas
-function renderizarTablaCuotas(amortizacion) {
-    const tablaCuotas = document.getElementById('tablaCuotas');
-    
-    if (!amortizacion || amortizacion.length === 0) {
-        tablaCuotas.innerHTML = '<tr><td colspan="7" class="text-center">No se encontraron cuotas para este crédito</td></tr>';
+    if (listaClientes.length === 0) {
+        tablaClientes.innerHTML = '<tr><td colspan="4" class="text-center">No se encontraron clientes</td></tr>';
         return;
     }
     
     let html = '';
-    amortizacion.forEach((cuota, index) => {
-        // Normalizar propiedades (diferentes API pueden tener diferentes nombres)
-        const numeroCuota = cuota.numero || cuota.number || (index + 1);
-        const fechaVencimiento = new Date(cuota.fecha_vencimiento || cuota.due_date).toLocaleDateString('es-CO');
-        const valorCuota = formatCurrency(cuota.valor_cuota || cuota.amount || 0);
-        const capital = formatCurrency(cuota.capital || 0);
-        const interes = formatCurrency(cuota.interes || cuota.interest || 0);
-        
-        // Determinar estado y clase CSS
-        let estado = cuota.estado || cuota.status || 'pendiente';
-        let estadoClass = '';
-        let estadoTexto = '';
-        
-        switch (estado.toLowerCase()) {
-            case 'pagado':
-            case 'paid':
-            case 'completed':
-                estadoClass = 'bg-success';
-                estadoTexto = 'Pagado';
-                break;
-            case 'pendiente':
-            case 'pending':
-                estadoClass = 'bg-warning';
-                estadoTexto = 'Pendiente';
-                break;
-            case 'vencido':
-            case 'overdue':
-                estadoClass = 'bg-danger';
-                estadoTexto = 'Vencido';
-                break;
-            default:
-                estadoClass = 'bg-secondary';
-                estadoTexto = 'Desconocido';
-        }
-        
-        // Botón de acción según el estado
-        let botonAccion = '';
-        if (estado.toLowerCase() === 'pendiente' || estado.toLowerCase() === 'pending') {
-            botonAccion = `
-                <button class="btn btn-sm btn-primary" onclick="seleccionarCuota(${numeroCuota}, ${cuota.valor_cuota || cuota.amount || 0})">
-                    <i class="fas fa-check"></i> Pagar
-                </button>
-            `;
-        } else {
-            botonAccion = `
-                <button class="btn btn-sm btn-secondary" disabled>
-                    <i class="fas fa-check"></i> Pagado
-                </button>
-            `;
-        }
+    listaClientes.forEach(cliente => {
+        // Crear nombre completo
+        const nombreCompleto = cliente.full_name || 
+            `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+        const documento = cliente.id_number || cliente.identification || 'Sin documento';
+        const telefono = cliente.telefono || cliente.phone || 'No especificado';
         
         html += `
             <tr>
-                <td>${numeroCuota}</td>
-                <td>${fechaVencimiento}</td>
-                <td>${valorCuota}</td>
-                <td>${capital}</td>
-                <td>${interes}</td>
-                <td><span class="badge ${estadoClass}">${estadoTexto}</span></td>
-                <td>${botonAccion}</td>
+                <td>${nombreCompleto}</td>
+                <td>${documento}</td>
+                <td>${telefono}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="seleccionarClienteTabla(${cliente.id}, '${nombreCompleto}', '${documento}')">
+                        <i class="fas fa-check"></i> Seleccionar
+                    </button>
+                </td>
             </tr>
         `;
     });
     
-    tablaCuotas.innerHTML = html;
+    tablaClientes.innerHTML = html;
 }
 
-// Seleccionar una cuota para pago
-function seleccionarCuota(numeroCuota, valorCuota) {
-    // Establecer radio button de pago de cuota
-    document.getElementById('tipoPagoCuotaModal').checked = true;
+// Seleccionar cliente desde la tabla
+function seleccionarClienteTabla(id, nombre, documento) {
+    // Seleccionar en el dropdown
+    const selectCliente = document.getElementById('clienteIngreso');
     
-    // Establecer valor de pago con el valor de la cuota
-    document.getElementById('valorPagoModal').value = valorCuota;
-    
-    // Actualizar concepto
-    document.getElementById('conceptoEspecificoModal').value = `Pago de cuota ${numeroCuota} - Crédito ${creditoSeleccionado.numero}`;
-    
-    // Mostrar mensaje
-    showToast(`Cuota ${numeroCuota} seleccionada para pago`, 'success');
-    
-    // Hacer scroll a la sección de datos del pago
-    document.getElementById('datosPagoCredito').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Actualizar valor de pago según tipo seleccionado
-function actualizarValorPago(tipoPago) {
-    if (!creditoSeleccionado) return;
-    
-    switch (tipoPago) {
-        case 'total':
-            // Pago total: valor total del saldo
-            document.getElementById('valorPagoModal').value = creditoSeleccionado.saldo;
-            document.getElementById('conceptoEspecificoModal').value = `Pago total - Crédito ${creditoSeleccionado.numero}`;
-            break;
-        case 'parcial':
-            // Pago parcial: permitir que el usuario ingrese el valor
-            document.getElementById('valorPagoModal').value = '';
-            document.getElementById('valorPagoModal').focus();
-            document.getElementById('conceptoEspecificoModal').value = `Pago parcial - Crédito ${creditoSeleccionado.numero}`;
-            break;
-        case 'cuota':
-            // Pago de cuota: mostrar mensaje para seleccionar cuota
-            Swal.fire({
-                title: 'Selección de cuota',
-                text: 'Por favor seleccione una cuota pendiente de la tabla de amortización para realizar el pago',
-                icon: 'info',
-                confirmButtonText: 'Entendido'
-            });
-            document.getElementById('conceptoEspecificoModal').value = `Pago de cuota - Crédito ${creditoSeleccionado.numero}`;
-            break;
-    }
-}
-
-// Confirmar el pago y transferir datos a la modal principal
-function confirmarPagoCredito() {
-    // Verificar que se haya seleccionado un crédito
-    if (!creditoSeleccionado) {
-        showToast('Debe seleccionar un crédito', 'error');
-        return;
-    }
-    
-    // Obtener datos del formulario
-    const conceptoEspecifico = document.getElementById('conceptoEspecificoModal').value;
-    const valorPago = parseFloat(document.getElementById('valorPagoModal').value);
-    const fechaPago = document.getElementById('fechaPagoModal').value;
-    
-    // Validar datos
-    if (!conceptoEspecifico) {
-        showToast('Debe ingresar un concepto específico', 'error');
-        return;
-    }
-    
-    if (isNaN(valorPago) || valorPago <= 0) {
-        showToast('El valor a pagar debe ser mayor a cero', 'error');
-        return;
-    }
-    
-    if (!fechaPago) {
-        showToast('Debe seleccionar una fecha de pago', 'error');
-        return;
-    }
-    
-    // Obtener el tipo de pago seleccionado
-    let tipoPago = '';
-    const radiosTipoPago = document.getElementsByName('tipoPagoModal');
-    for (const radio of radiosTipoPago) {
-        if (radio.checked) {
-            tipoPago = radio.value;
+    // Verificar si ya existe
+    let existe = false;
+    for (let i = 0; i < selectCliente.options.length; i++) {
+        if (selectCliente.options[i].value == id) {
+            selectCliente.selectedIndex = i;
+            existe = true;
             break;
         }
     }
     
-    // Validar pago de cuota completa (evitar duplicados)
-    if (tipoPago === 'cuota') {
-        // Verificar si el concepto indica un número de cuota
-        const regex = /cuota\s+(\d+)/i;
-        const match = conceptoEspecifico.match(regex);
+    // Si no existe, agregar
+    if (!existe) {
+        const option = new Option(`${nombre} - ${documento}`, id);
+        selectCliente.add(option);
+        option.selected = true;
+    }
+    
+    // Ocultar tabla de clientes
+    const collapseClientes = document.getElementById('collapseClientes');
+    const bsCollapse = bootstrap.Collapse.getInstance(collapseClientes);
+    if (bsCollapse) {
+        bsCollapse.hide();
+    } else {
+        $(collapseClientes).collapse('hide');
+    }
+    
+    // Trigger change event para cargar créditos
+    if (document.createEvent) {
+        var event = document.createEvent('HTMLEvents');
+        event.initEvent('change', true, false);
+        selectCliente.dispatchEvent(event);
+    } else {
+        selectCliente.fireEvent('onchange');
+    }
+    
+    showToast('Cliente seleccionado', 'success');
+}
+
+// Filtrar clientes en la tabla
+function filtrarClientes() {
+    const filtro = document.getElementById('filtroBusquedaClientes').value.toLowerCase();
+    
+    // Si no hay filtro, mostrar todos
+    if (!filtro) {
+        renderizarTablaClientes(clientes);
+        return;
+    }
+    
+    // Filtrar clientes
+    const clientesFiltrados = clientes.filter(cliente => {
+        const nombreCompleto = cliente.full_name || 
+            `${cliente.nombre || ''} ${cliente.apellido || ''}`.toLowerCase();
+        const documento = (cliente.id_number || cliente.identification || '').toLowerCase();
         
-        if (!match) {
-            Swal.fire({
-                title: '¿Confirmar pago?',
-                text: 'No se ha especificado un número de cuota. ¿Desea continuar con el pago?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, continuar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    transferirDatosPago(conceptoEspecifico, valorPago, fechaPago, tipoPago);
-                }
-            });
-            return;
-        }
-    }
+        return nombreCompleto.includes(filtro) || documento.includes(filtro);
+    });
     
-    // Proceder con la transferencia de datos
-    transferirDatosPago(conceptoEspecifico, valorPago, fechaPago, tipoPago);
+    renderizarTablaClientes(clientesFiltrados);
 }
-
-// Transferir datos del pago a la modal principal
-function transferirDatosPago(concepto, valor, fecha, tipoPago) {
-    // 1. Establecer el valor bruto
-    document.getElementById('valorBruto').value = valor;
-    
-    // 2. Establecer la fecha
-    document.getElementById('fechaIngreso').value = fecha;
-    
-    // 3. Establecer el concepto con información del crédito
-    document.getElementById('conceptoIngreso').value = concepto;
-    
-    // 4. Establecer descripción
-    const nombreCliente = document.getElementById('nombrePagadorModal').value;
-    document.getElementById('descripcionIngreso').value = `Pago ${tipoPago} realizado por ${nombreCliente}. Crédito: ${creditoSeleccionado.numero}. Saldo anterior: ${formatCurrency(creditoSeleccionado.saldo)}`;
-    
-    // 5. Calcular valores
-    calcularValores();
-    
-    // Cerrar la modal de crédito
-    const clienteCreditoModal = bootstrap.Modal.getInstance(document.getElementById('clienteCreditoModal'));
-    clienteCreditoModal.hide();
-    
-    // Mostrar mensaje de éxito
-    showToast('Datos de pago configurados correctamente', 'success');
-}
-
-// Variable global para almacenar el crédito seleccionado
-let creditoSeleccionado = null;
 
 // Inicialización de componentes y manejadores de eventos
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1205,62 +1285,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Evento para guardar ingreso
     document.getElementById('btnGuardarIngreso').addEventListener('click', guardarIngreso);
     
-    // Eventos para la modal de búsqueda de cliente y selección de crédito
-    document.getElementById('btnBuscarClienteModal').addEventListener('click', buscarClientePorDocumentoModal);
-    document.getElementById('btnConfirmarPagoCredito').addEventListener('click', confirmarPagoCredito);
-    
-    // Evento para cambiar de cliente en la modal de crédito
-    document.getElementById('clienteCreditoModal').addEventListener('change', function() {
-        const clienteId = this.value;
-        if (clienteId) {
-            cargarCreditosClienteModal(clienteId);
-        }
-    });
-    
-    // Evento para manejar cambio de valor bruto, porcentaje de retención o comisión
-    document.getElementById('valorBruto').addEventListener('input', calcularValores);
-    document.getElementById('porcentajeRetencion').addEventListener('input', calcularValores);
-    document.getElementById('porcentajeComision').addEventListener('input', calcularValores);
-    
-    // Evento para manejar cambio de cliente
-    document.getElementById('clienteIngreso').addEventListener('change', function() {
-        const clienteId = this.value;
-        cargarCreditosCliente(clienteId);
-    });
-    
-    // Evento para manejar cambio de crédito
-    document.getElementById('creditoIngreso').addEventListener('change', function() {
-        const creditoId = this.value;
-        cargarDetalleCredito(creditoId);
-    });
-    
-    // Evento para editar desde modal de detalle
-    document.getElementById('btnEditarDesdeDetalle').addEventListener('click', function() {
-        const id = this.dataset.id;
-        
-        // Cerrar modal de detalle
-        const modalElement = document.getElementById('detalleIngresoModal');
-        const modal = bootstrap.Modal.getInstance(modalElement);
-        modal.hide();
-        
-        // Abrir modal de edición
-        editarIngreso(id);
-    });
-    
-    // Evento para anular desde modal de detalle
-    document.getElementById('btnAnularDesdeDetalle').addEventListener('click', function() {
-        const id = this.dataset.id;
-        anularIngreso(id);
-    });
-    
-    // Evento para abrir modal de administrar categorías
-    document.getElementById('btnAdministrarCategorias').addEventListener('click', function() {
-        // Implementar en próxima actualización
-        alert('Funcionalidad en desarrollo');
-    });
-    
     // Evento para buscar cliente por documento
     document.getElementById('btnBuscarCliente').addEventListener('click', buscarClientePorDocumento);
+    
+    // Evento para buscar cliente por documento en el modal
+    document.getElementById('btnBuscarClienteModal').addEventListener('click', buscarClientePorDocumentoModal);
     
     // Evento para cargar lista completa de clientes
     document.getElementById('btnCargarListaClientes').addEventListener('click', cargarListaClientes);
