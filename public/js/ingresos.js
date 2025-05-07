@@ -1705,19 +1705,13 @@ async function buscarClientePorDocumentoModal() {
         btnBuscar.innerHTML = btnTextOriginal;
         btnBuscar.disabled = false;
         
-        // Siempre obtener el JSON de la respuesta, incluso si hay un error HTTP
-        const responseText = await response.text();
-        console.log('Respuesta texto completo:', responseText);
-        
-        // Intentar parsear como JSON
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            console.error('Error al parsear respuesta JSON:', e);
-            throw new Error('Error al procesar la respuesta del servidor');
+        // MODIFICADO: Verificar si la respuesta no es exitosa
+        if (!response.ok) {
+            throw new Error(`No se encontró el cliente con documento ${numeroDocumento}`);
         }
         
+        // Obtener los datos JSON de la respuesta
+        const result = await response.json();
         console.log('Respuesta parseada:', result);
         
         // Verificar si la respuesta tiene datos válidos
@@ -1726,31 +1720,27 @@ async function buscarClientePorDocumentoModal() {
         if (result.success === true && result.data) {
             // Formato estándar de la API
             cliente = result.data;
-            console.log('Cliente encontrado en result.data:', cliente);
-        } else if (result.id && (result.identification || result.id_number)) {
-            // Formato alternativo de datos directamente en el resultado
+        } else if (result.id) {
+            // Formato alternativo donde los datos vienen directamente
             cliente = result;
-            console.log('Cliente encontrado en result:', cliente);
         } else {
-            console.error('Formato de respuesta no válido o cliente no encontrado');
-            throw new Error('No se encontró el cliente');
+            throw new Error('Formato de respuesta no válido o cliente no encontrado');
         }
         
-        // Verificar que tenemos un cliente válido con ID y nombre
+        // Verificar que tenemos un cliente válido con ID
         if (!cliente || !cliente.id) {
             throw new Error('Datos del cliente incompletos');
         }
         
-        // Log del cliente encontrado
         console.log('Cliente encontrado exitosamente:', cliente);
         
-        // Ocultar TODOS los mensajes de error, ya sea en alertas o en otro lugar
+        // Ocultar TODOS los mensajes de error
         document.querySelectorAll('.alert-danger').forEach(el => {
             el.style.display = 'none';
         });
         
         // Asegurarse de que NO se muestre el error en el modal
-        const errorContainer = document.getElementById('clienteCreditoModal').querySelector('.error');
+        const errorContainer = document.querySelector('#clienteCreditoModal .error');
         if (errorContainer) {
             errorContainer.style.display = 'none';
             errorContainer.textContent = '';
@@ -1770,6 +1760,32 @@ async function buscarClientePorDocumentoModal() {
             document.getElementById('direccionPagadorModal').value = cliente.address || '';
         }
         
+        // CORREGIDO: Actualizar correctamente el selector de clientes
+        // Usar la clase select2 para identificar el elemento correcto
+        const selectClienteCredito = document.querySelector('#clienteCreditoModal.form-select.select2');
+        
+        if (selectClienteCredito) {
+            // Crear nombre completo
+            const nombreCompleto = cliente.full_name || 
+                `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            const documento = cliente.id_number || cliente.identification || 'Sin documento';
+            
+            // Método 1: Usando directamente innerHTML para actualizar las opciones
+            selectClienteCredito.innerHTML = '';
+            selectClienteCredito.innerHTML += `<option value="">Seleccione un cliente</option>`;
+            selectClienteCredito.innerHTML += `<option value="${cliente.id}">${nombreCompleto} - ${documento}</option>`;
+            selectClienteCredito.value = cliente.id;
+            
+            // Si está usando Select2, actualizar la interfaz
+            if (window.jQuery && $.fn.select2) {
+                $(selectClienteCredito).val(cliente.id).trigger('change');
+            }
+            
+            console.log(`Cliente ${nombreCompleto} agregado al selector de créditos`);
+        } else {
+            console.error('No se encontró el selector de clientes en el modal');
+        }
+        
         // Mostrar sección de datos del pago si existe
         if (document.getElementById('datosPagoCredito')) {
             document.getElementById('datosPagoCredito').style.display = 'block';
@@ -1784,7 +1800,7 @@ async function buscarClientePorDocumentoModal() {
         
     } catch (error) {
         console.error('Error al buscar cliente:', error);
-        showToast(`No se encontró el cliente con documento ${numeroDocumento}`, 'error');
+        showToast(`${error.message}`, 'error');
         
         // Crear o actualizar mensaje de error en el modal
         let errorDiv = document.querySelector('#clienteCreditoModal .error');
@@ -1799,7 +1815,7 @@ async function buscarClientePorDocumentoModal() {
         
         // Asegurar que el mensaje de error se muestra
         if (errorDiv) {
-            errorDiv.textContent = `No se encontró el cliente con documento ${numeroDocumento}`;
+            errorDiv.textContent = `${error.message}`;
             errorDiv.style.display = 'block';
         }
         
