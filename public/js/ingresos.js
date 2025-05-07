@@ -840,6 +840,420 @@ async function cargarCreditosCliente(clienteId) {
     }
 }
 
+// Función para seleccionar un crédito de la tabla
+async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoActual) {
+    try {
+        console.log(`Seleccionando crédito: ID=${creditoId}, Número=${numeroCredito}, Tipo=${tipoCredito}, Saldo=${saldoActual}`);
+        
+        // Primero guardamos referencia al botón para poder restaurarlo después
+        const btnSeleccionar = event ? event.currentTarget : null;
+        let btnTextOriginal = '';
+        
+        // Mostrar indicador de carga solo si tenemos el botón
+        if (btnSeleccionar) {
+            btnTextOriginal = btnSeleccionar.innerHTML;
+            btnSeleccionar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+            btnSeleccionar.disabled = true;
+        }
+        
+        // Actualizar información visible en la modal
+        try {
+            // Mostrar sección para configurar el pago
+            const seccionPago = document.getElementById('seccionConfiguracionPago');
+            if (seccionPago) {
+                seccionPago.style.display = 'block';
+            }
+            
+            // Actualizar datos del crédito en la sección de pago
+            const creditoInfo = document.getElementById('creditoInfoPago');
+            if (creditoInfo) {
+                creditoInfo.innerHTML = `
+                    <strong>Crédito seleccionado:</strong> ${numeroCredito} - ${tipoCredito}<br>
+                    <strong>Saldo actual:</strong> ${formatCurrency(saldoActual)}
+                `;
+            }
+            
+            // Establecer valor por defecto en el campo de monto a pagar (si existe)
+            const montoPago = document.getElementById('montoPago');
+            if (montoPago) {
+                montoPago.value = saldoActual;
+                montoPago.max = saldoActual;
+            }
+            
+            // Guardar ID del crédito en campo oculto para su uso posterior
+            const creditoIdInput = document.getElementById('creditoIdSeleccionado');
+            if (creditoIdInput) {
+                creditoIdInput.value = creditoId;
+            }
+            
+            // Mostrar botón de confirmación
+            const btnConfirmar = document.getElementById('btnConfirmarSeleccion');
+            if (btnConfirmar) {
+                btnConfirmar.style.display = 'block';
+                // Asegurarnos que el botón tenga el evento click asociado
+                btnConfirmar.onclick = confirmarSeleccionCredito;
+            }
+            
+            // Ocultar la tabla de créditos para mostrar solo la sección de pago
+            const tablaContainer = document.getElementById('tablaCreditosContainer');
+            if (tablaContainer) {
+                tablaContainer.style.display = 'none';
+            }
+            
+            // Ocultar el botón de búsqueda de cliente
+            const seccionBusqueda = document.getElementById('seccionBusquedaCliente');
+            if (seccionBusqueda) {
+                seccionBusqueda.style.display = 'none';
+            }
+        } catch (uiError) {
+            console.error('Error al actualizar UI con información de crédito seleccionado:', uiError);
+        }
+        
+        try {
+            // Obtener los detalles del crédito seleccionado
+            const response = await fetch(`/api/loans/${creditoId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            console.log('Respuesta de API de detalles del préstamo:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`Error al obtener detalles del crédito: ${response.status}`);
+            }
+            
+            const responseText = await response.text();
+            console.log('Respuesta texto completo:', responseText);
+            
+            // Intentar parsear como JSON con manejo de errores
+            let detallesCredito;
+            try {
+                detallesCredito = JSON.parse(responseText);
+                console.log('Detalles del crédito recibidos:', detallesCredito);
+            } catch (parseError) {
+                console.error('Error al parsear respuesta JSON:', parseError);
+                throw new Error('Error al procesar la respuesta del servidor');
+            }
+            
+            // Actualizar la tabla de amortización con los datos detallados del crédito
+            // con protección adicional contra errores
+            if (detallesCredito) {
+                try {
+                    // Actualizar tabla general de amortización
+                    actualizarTablaAmortizacion(detallesCredito);
+                    
+                    // También guardar los detalles completos del crédito en variable global o en un campo oculto
+                    window.creditoDetallesCompletos = detallesCredito;
+                    
+                    // Mostrar sección de tabla de amortización si existe
+                    const seccionAmortizacion = document.getElementById('seccionTablaAmortizacion');
+                    if (seccionAmortizacion) {
+                        seccionAmortizacion.style.display = 'block';
+                    }
+                    
+                    // Cargar detalle de cuotas del crédito
+                    cargarDetalleCuotasCredito(creditoId);
+                } catch (amortizacionError) {
+                    console.error('Error al actualizar tabla de amortización:', amortizacionError);
+                    // No propagar este error para no bloquear el flujo
+                }
+            }
+        } catch (apiError) {
+            console.error('Error al obtener detalles del crédito:', apiError);
+            // Mostrar mensaje de error en la UI pero mantener el modal abierto
+            const errorMsg = document.getElementById('errorCreditoMsg');
+            if (errorMsg) {
+                errorMsg.textContent = 'Error al cargar detalles del crédito. Por favor, inténtelo de nuevo.';
+                errorMsg.style.display = 'block';
+            }
+        }
+        
+        // Siempre restaurar el botón, incluso si hay error
+        if (btnSeleccionar) {
+            btnSeleccionar.innerHTML = btnTextOriginal;
+            btnSeleccionar.disabled = false;
+        }
+        
+        // Mostrar mensaje de éxito
+        showToast('Crédito seleccionado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error general en seleccionarCredito:', error);
+        showToast('Ha ocurrido un error al seleccionar el crédito', 'error');
+        
+        // Asegurarse de restaurar cualquier UI que pueda haber quedado en estado incompleto
+        const btnSeleccionar = event ? event.currentTarget : null;
+        if (btnSeleccionar) {
+            btnSeleccionar.innerHTML = '<i class="fas fa-check"></i> Seleccionar';
+            btnSeleccionar.disabled = false;
+        }
+    }
+}
+
+// Función para cargar el detalle de cuotas de un crédito
+async function cargarDetalleCuotasCredito(creditoId) {
+    try {
+        console.log(`Cargando detalle de cuotas para el crédito ID=${creditoId}`);
+        
+        // Mostrar mensaje de carga en la tabla de cuotas
+        const tablaCuotas = document.querySelector('.tabla-cuotas tbody') || document.getElementById('tablaCuotas');
+        if (tablaCuotas) {
+            tablaCuotas.innerHTML = '<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando detalle de cuotas...</td></tr>';
+        }
+        
+        // Hacer la petición a la API para obtener el detalle de cuotas
+        const response = await fetch(`/api/loans/${creditoId}/installments`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        console.log('Respuesta de API de cuotas:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`Error al obtener cuotas del crédito: ${response.status}`);
+        }
+        
+        const responseText = await response.text();
+        console.log('Respuesta de cuotas (texto):', responseText);
+        
+        // Intentar parsear el JSON
+        let cuotas;
+        try {
+            const result = JSON.parse(responseText);
+            
+            // Determinar la estructura de la respuesta
+            if (Array.isArray(result)) {
+                cuotas = result;
+            } else if (result.data && Array.isArray(result.data)) {
+                cuotas = result.data;
+            } else if (result.installments && Array.isArray(result.installments)) {
+                cuotas = result.installments;
+            } else {
+                console.warn('Formato de respuesta no reconocido:', result);
+                cuotas = [];
+            }
+            
+            console.log('Cuotas obtenidas:', cuotas);
+        } catch (parseError) {
+            console.error('Error al parsear respuesta de cuotas:', parseError);
+            throw new Error('Error al procesar la respuesta del servidor');
+        }
+        
+        // Si no hay cuotas, mostrar mensaje
+        if (!cuotas || cuotas.length === 0) {
+            if (tablaCuotas) {
+                tablaCuotas.innerHTML = '<tr><td colspan="7" class="text-center">No se encontraron cuotas para este crédito</td></tr>';
+            }
+            return;
+        }
+        
+        // Generar HTML para las cuotas
+        let html = '';
+        cuotas.forEach((cuota, index) => {
+            // Formatear fecha
+            let fechaVencimiento = '--/--/----';
+            if (cuota.due_date || cuota.fecha_vencimiento) {
+                try {
+                    const fecha = new Date(cuota.due_date || cuota.fecha_vencimiento);
+                    if (!isNaN(fecha.getTime())) {
+                        fechaVencimiento = fecha.toLocaleDateString('es-CO');
+                    }
+                } catch (e) {
+                    console.warn('Error al formatear fecha de cuota:', e);
+                }
+            }
+            
+            // Valores monetarios
+            const valorCuota = formatCurrency(cuota.amount || cuota.valor || 0);
+            const valorCapital = formatCurrency(cuota.principal || cuota.capital || 0);
+            const valorInteres = formatCurrency(cuota.interest || cuota.interes || 0);
+            
+            // Estado con estilo
+            let estadoClass = '';
+            let estadoTexto = cuota.status || cuota.estado || 'Pendiente';
+            
+            switch (estadoTexto.toLowerCase()) {
+                case 'pagado':
+                case 'pagada':
+                case 'paid':
+                    estadoClass = 'bg-success';
+                    estadoTexto = 'Pagado';
+                    break;
+                case 'pendiente':
+                case 'pending':
+                    estadoClass = 'bg-warning';
+                    estadoTexto = 'Pendiente';
+                    break;
+                case 'vencido':
+                case 'vencida':
+                case 'late':
+                case 'overdue':
+                    estadoClass = 'bg-danger';
+                    estadoTexto = 'Vencido';
+                    break;
+                default:
+                    estadoClass = 'bg-secondary';
+            }
+            
+            // Construir fila
+            html += `
+                <tr>
+                    <td>${cuota.installment_number || cuota.numero || (index + 1)}</td>
+                    <td>${fechaVencimiento}</td>
+                    <td>${valorCuota}</td>
+                    <td>${valorCapital}</td>
+                    <td>${valorInteres}</td>
+                    <td><span class="badge ${estadoClass}">${estadoTexto}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="seleccionarCuota(${creditoId}, ${cuota.id || cuota.installment_number || (index + 1)}, ${cuota.amount || cuota.valor || 0})">
+                            Pagar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        // Actualizar la tabla
+        if (tablaCuotas) {
+            tablaCuotas.innerHTML = html;
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar detalle de cuotas:', error);
+        
+        // Mostrar mensaje de error en la tabla
+        const tablaCuotas = document.querySelector('.tabla-cuotas tbody') || document.getElementById('tablaCuotas');
+        if (tablaCuotas) {
+            tablaCuotas.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error al cargar cuotas: ${error.message}</td></tr>`;
+        }
+    }
+}
+
+// Función para seleccionar una cuota específica para pago
+function seleccionarCuota(creditoId, cuotaId, valorCuota) {
+    try {
+        console.log(`Seleccionando cuota: CréditoID=${creditoId}, CuotaID=${cuotaId}, Valor=${valorCuota}`);
+        
+        // Establecer valor en el campo de monto a pagar
+        const montoPago = document.getElementById('montoPago');
+        if (montoPago) {
+            montoPago.value = valorCuota;
+        }
+        
+        // Seleccionar opción de "Pago de cuota" en tipo de pago
+        const radioPagoCuota = document.getElementById('pagoCuota');
+        if (radioPagoCuota) {
+            radioPagoCuota.checked = true;
+        }
+        
+        // Actualizar concepto específico si existe
+        const conceptoEspecifico = document.getElementById('conceptoEspecifico');
+        if (conceptoEspecifico) {
+            conceptoEspecifico.value = `Pago cuota ${cuotaId} de crédito`;
+        }
+        
+        // Guardar ID de cuota en campo oculto si existe
+        const cuotaIdInput = document.getElementById('cuotaIdSeleccionada');
+        if (cuotaIdInput) {
+            cuotaIdInput.value = cuotaId;
+        } else {
+            // Si no existe el campo, crear uno oculto
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.id = 'cuotaIdSeleccionada';
+            input.name = 'cuotaIdSeleccionada';
+            input.value = cuotaId;
+            document.body.appendChild(input);
+        }
+        
+        // Hacer scroll hasta la sección de configuración de pago
+        const seccionPago = document.getElementById('seccionConfiguracionPago');
+        if (seccionPago) {
+            seccionPago.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Mostrar mensaje de selección
+        showToast(`Cuota ${cuotaId} seleccionada para pago`, 'success');
+        
+    } catch (error) {
+        console.error('Error al seleccionar cuota:', error);
+        showToast('Error al seleccionar cuota', 'error');
+    }
+}
+
+// Función para confirmar la selección del crédito y cerrar el modal
+function confirmarSeleccionCredito() {
+    try {
+        console.log('Confirmando selección de crédito');
+        
+        // Obtener valores de los campos
+        const creditoId = document.getElementById('creditoIdSeleccionado').value;
+        const montoPago = parseFloat(document.getElementById('montoPago').value) || 0;
+        
+        if (!creditoId) {
+            showToast('Por favor seleccione un crédito primero', 'error');
+            return;
+        }
+        
+        if (montoPago <= 0) {
+            showToast('Por favor ingrese un monto válido para el pago', 'error');
+            return;
+        }
+        
+        // Recuperar información del crédito
+        const detallesCredito = window.creditoDetallesCompletos || {};
+        const numeroCredito = detallesCredito.loan_number || '';
+        const tipoCredito = detallesCredito.interest_type || '';
+        
+        // Actualizar la información básica en el formulario principal
+        actualizarInfoCreditoSeleccionado(creditoId, numeroCredito, tipoCredito, montoPago);
+        
+        // Ahora sí cerrar el modal
+        const creditoModal = document.getElementById('clienteCreditoModal');
+        if (creditoModal) {
+            const bsModal = bootstrap.Modal.getInstance(creditoModal);
+            if (bsModal) {
+                bsModal.hide();
+            } else {
+                // Alternativa si no se obtiene la instancia
+                $(creditoModal).modal('hide');
+            }
+        }
+        
+        // Asegurarse de que cualquier modal backdrop se elimine
+        document.querySelectorAll('.modal-backdrop').forEach(el => {
+            el.remove();
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        // Mostrar mensaje de éxito
+        showToast('Pago configurado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al confirmar selección:', error);
+        showToast('Error al configurar el pago', 'error');
+    }
+}
+
+// Añadir inicialización para confirmar pago cuando el documento esté cargado
+document.addEventListener('DOMContentLoaded', function() {
+    // Buscar el botón de confirmar pago y asignarle el evento
+    const btnConfirmarPago = document.getElementById('btnConfirmarPago');
+    if (btnConfirmarPago) {
+        btnConfirmarPago.addEventListener('click', confirmarSeleccionCredito);
+    }
+});
+
 // Buscar cliente por documento
 async function buscarClientePorDocumento() {
     const tipoDocumento = document.getElementById('tipoBusquedaCliente').value;
@@ -1167,243 +1581,6 @@ async function cargarCreditosTabla(clienteId) {
     }
 }
 
-// Función para seleccionar un crédito de la tabla
-async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoActual) {
-    try {
-        console.log(`Seleccionando crédito: ID=${creditoId}, Número=${numeroCredito}, Tipo=${tipoCredito}, Saldo=${saldoActual}`);
-        
-        // Primero guardamos referencia al botón para poder restaurarlo después
-        const btnSeleccionar = event ? event.currentTarget : null;
-        let btnTextOriginal = '';
-        
-        // Mostrar indicador de carga solo si tenemos el botón
-        if (btnSeleccionar) {
-            btnTextOriginal = btnSeleccionar.innerHTML;
-            btnSeleccionar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
-            btnSeleccionar.disabled = true;
-        }
-        
-        // Primero actualizar la información básica antes de hacer la petición
-        // para que el usuario vea una respuesta inmediata
-        actualizarInfoCreditoSeleccionado(creditoId, numeroCredito, tipoCredito, saldoActual);
-        
-        try {
-            // Obtener los detalles del crédito seleccionado (en segundo plano)
-            const response = await fetch(`/api/loans/${creditoId}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    'Cache-Control': 'no-cache'
-                }
-            });
-            
-            console.log('Respuesta de API de detalles del préstamo:', response.status);
-            
-            if (!response.ok) {
-                throw new Error(`Error al obtener detalles del crédito: ${response.status}`);
-            }
-            
-            const detallesCredito = await response.json();
-            console.log('Detalles del crédito recibidos:', detallesCredito);
-            
-            // Actualizar la tabla de amortización con los datos detallados del crédito
-            actualizarTablaAmortizacion(detallesCredito);
-            
-        } catch (apiError) {
-            console.error('Error al obtener detalles del crédito:', apiError);
-            // No mostrar error al usuario, ya que la info básica ya se actualizó
-            // Solo logear el error para debugging
-        }
-        
-        // Siempre intentar cerrar el modal, incluso si hay error en la API
-        try {
-            const creditoModal = bootstrap.Modal.getInstance(document.getElementById('clienteCreditoModal'));
-            if (creditoModal) {
-                creditoModal.hide();
-            }
-        } catch (modalError) {
-            console.error('Error al cerrar modal:', modalError);
-        }
-        
-        // Siempre restaurar el botón, incluso si hay error
-        if (btnSeleccionar) {
-            btnSeleccionar.innerHTML = btnTextOriginal;
-            btnSeleccionar.disabled = false;
-        }
-        
-        // Mostrar mensaje de éxito
-        showToast('Crédito seleccionado correctamente', 'success');
-        
-    } catch (error) {
-        console.error('Error general en seleccionarCredito:', error);
-        showToast('Ha ocurrido un error al seleccionar el crédito', 'error');
-        
-        // Asegurarse de restaurar cualquier UI que pueda haber quedado en estado incompleto
-        const btnSeleccionar = event ? event.currentTarget : null;
-        if (btnSeleccionar) {
-            btnSeleccionar.innerHTML = '<i class="fas fa-check"></i> Seleccionar';
-            btnSeleccionar.disabled = false;
-        }
-    }
-}
-
-// Función para actualizar la información básica del crédito seleccionado
-function actualizarInfoCreditoSeleccionado(creditoId, numeroCredito, tipoCredito, saldoActual) {
-    console.log('Actualizando información básica del crédito seleccionado');
-    
-    // Actualizar la información del crédito en el formulario principal
-    try {
-        // Guardar el creditoId en un campo oculto si existe
-        const creditoIdHidden = document.getElementById('creditoIdHidden');
-        if (creditoIdHidden) {
-            creditoIdHidden.value = creditoId;
-        }
-        
-        // Actualizar el concepto del ingreso
-        if (document.getElementById('conceptoIngreso')) {
-            document.getElementById('conceptoIngreso').value = `Pago crédito ${numeroCredito}`;
-        }
-        
-        // Actualizar el valor a pagar con el saldo actual
-        if (document.getElementById('valorBruto')) {
-            document.getElementById('valorBruto').value = saldoActual;
-            try {
-                // Disparar el evento change para recalcular valores
-                document.getElementById('valorBruto').dispatchEvent(new Event('change'));
-                // Llamar a la función de calcular valores si existe
-                if (typeof calcularValores === 'function') {
-                    calcularValores();
-                }
-            } catch (e) {
-                console.warn('Error al recalcular valores:', e);
-            }
-        }
-        
-        // Actualizar el texto del crédito seleccionado si existe el elemento
-        const creditoSeleccionadoEl = document.getElementById('creditoSeleccionado');
-        if (creditoSeleccionadoEl) {
-            creditoSeleccionadoEl.textContent = `${numeroCredito} - ${tipoCredito}`;
-        }
-        
-        // Mostrar las secciones relevantes
-        const infoCreditoEl = document.getElementById('infoCredito');
-        if (infoCreditoEl) {
-            infoCreditoEl.style.display = 'block';
-        }
-        
-        const datosPagoEl = document.getElementById('datosPago');
-        if (datosPagoEl) {
-            datosPagoEl.style.display = 'block';
-        }
-        
-    } catch (error) {
-        console.error('Error al actualizar información básica del crédito:', error);
-        // No lanzar el error para que el flujo pueda continuar
-    }
-}
-
-// Función para actualizar la tabla de amortización con los datos del crédito
-function actualizarTablaAmortizacion(credito) {
-    console.log('Actualizando tabla de amortización con datos:', credito);
-    
-    try {
-        // Verificar si el objeto crédito tiene datos válidos
-        if (!credito || typeof credito !== 'object') {
-            console.error('Datos de crédito inválidos:', credito);
-            return;
-        }
-        
-        // Extraer los valores del crédito, con valores por defecto si no existen
-        const montoTotal = parseFloat(credito.amount_requested || 0);
-        const saldoActual = parseFloat(credito.total_due || 0);
-        const totalCuotas = parseInt(credito.payment_term || 0);
-        const cuotasPendientes = parseInt(credito.remaining_installments || 0);
-        const cuotasPagadas = totalCuotas > cuotasPendientes ? totalCuotas - cuotasPendientes : 0;
-        
-        // Calcular valor de la cuota si no existe
-        let valorCuota = parseFloat(credito.installment_amount || 0);
-        if (!valorCuota && montoTotal > 0 && totalCuotas > 0) {
-            // Cálculo simple de cuota: monto / cuotas totales
-            valorCuota = montoTotal / totalCuotas;
-        }
-        
-        // Calcular intereses si no existen
-        const tasaInteres = parseFloat(credito.interest_rate || 0);
-        let interesesGenerados = parseFloat(credito.interest_amount || 0);
-        if (!interesesGenerados && montoTotal > 0 && tasaInteres > 0) {
-            // Cálculo simple de interés total
-            interesesGenerados = (montoTotal * tasaInteres) / 100;
-        }
-        
-        // Próximo vencimiento (usar fecha actual + 30 días si no existe)
-        let proximoVencimiento = credito.next_payment_date || '';
-        if (!proximoVencimiento) {
-            const hoy = new Date();
-            hoy.setDate(hoy.getDate() + 30);
-            proximoVencimiento = hoy.toISOString().split('T')[0];
-        }
-        
-        // Formatear la fecha de próximo vencimiento para mostrar
-        let fechaFormateada = '--/--/----';
-        if (proximoVencimiento) {
-            try {
-                const fecha = new Date(proximoVencimiento);
-                if (!isNaN(fecha.getTime())) { // Verificar que la fecha sea válida
-                    fechaFormateada = fecha.toLocaleDateString('es-CO');
-                }
-            } catch (e) {
-                console.error('Error al formatear fecha:', e);
-            }
-        }
-        
-        // Actualizar los campos de la tabla de amortización, verificando que existan antes
-        const elementoValorTotal = document.getElementById('valorTotalCredito');
-        if (elementoValorTotal) {
-            elementoValorTotal.textContent = formatCurrency(montoTotal);
-        }
-        
-        const elementoCuotasPagadas = document.getElementById('cuotasPagadas');
-        if (elementoCuotasPagadas) {
-            elementoCuotasPagadas.textContent = cuotasPagadas;
-        }
-        
-        const elementoValorCuota = document.getElementById('valorCuota');
-        if (elementoValorCuota) {
-            elementoValorCuota.textContent = formatCurrency(valorCuota);
-        }
-        
-        const elementoCuotasPendientes = document.getElementById('cuotasPendientes');
-        if (elementoCuotasPendientes) {
-            elementoCuotasPendientes.textContent = cuotasPendientes;
-        }
-        
-        const elementoInteresesGenerados = document.getElementById('interesesGenerados');
-        if (elementoInteresesGenerados) {
-            elementoInteresesGenerados.textContent = formatCurrency(interesesGenerados);
-        }
-        
-        const elementoProximoVencimiento = document.getElementById('proximoVencimiento');
-        if (elementoProximoVencimiento) {
-            elementoProximoVencimiento.textContent = fechaFormateada;
-        }
-        
-        console.log('Tabla de amortización actualizada con éxito con los siguientes valores:', {
-            montoTotal,
-            saldoActual,
-            cuotasPagadas,
-            cuotasPendientes,
-            valorCuota,
-            interesesGenerados,
-            proximoVencimiento: fechaFormateada
-        });
-        
-    } catch (error) {
-        console.error('Error al actualizar tabla de amortización:', error);
-        // No lanzar el error para no bloquear la aplicación, solo registrarlo
-    }
-}
-
 // Cargar lista completa de clientes
 async function cargarListaClientes() {
     try {
@@ -1625,3 +1802,92 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Evento para filtrar clientes en la tabla
     document.getElementById('filtroBusquedaClientes').addEventListener('input', filtrarClientes);
 });
+
+// Función para actualizar la tabla de amortización con los detalles del crédito
+function actualizarTablaAmortizacion(detallesCredito) {
+    try {
+        console.log('Actualizando tabla de amortización con datos:', detallesCredito);
+
+        // Actualizar los campos de la sección "Tabla de Amortización"
+        document.getElementById('valorTotalCredito').innerText = formatCurrency(detallesCredito.amount_requested || 0);
+        
+        // Calcular valor por cuota si está disponible, o usar null
+        const valorCuota = detallesCredito.installment_amount || 
+                        (detallesCredito.total_due && detallesCredito.remaining_installments ? 
+                        detallesCredito.total_due / detallesCredito.remaining_installments : 0);
+        
+        document.getElementById('valorPorCuota').innerText = formatCurrency(valorCuota);
+        
+        // Calcular intereses generados (o usar 0 si no está disponible)
+        const intereses = detallesCredito.amount_requested ? 
+                        (detallesCredito.total_due - detallesCredito.amount_requested) : 0;
+        
+        document.getElementById('interesesGenerados').innerText = formatCurrency(intereses);
+        
+        // Cuotas pagadas y por pagar
+        const cuotasTotales = detallesCredito.payment_term || 0;
+        const cuotasPendientes = detallesCredito.remaining_installments || 0;
+        const cuotasPagadas = cuotasTotales - cuotasPendientes;
+        
+        document.getElementById('cuotasPagadas').innerText = cuotasPagadas;
+        document.getElementById('cuotasPorPagar').innerText = cuotasPendientes;
+        
+        // Próximo vencimiento (si está disponible)
+        // Intentar diferentes formatos de fechas en la respuesta
+        let proximoVencimiento = '--/--/----';
+        
+        if (detallesCredito.next_payment_date) {
+            const fecha = new Date(detallesCredito.next_payment_date);
+            if (!isNaN(fecha.getTime())) {
+                proximoVencimiento = fecha.toLocaleDateString('es-CO');
+            }
+        }
+        
+        document.getElementById('proximoVencimiento').innerText = proximoVencimiento;
+        
+        // Mostrar sección de tabla de amortización
+        document.querySelector('.tabla-amortizacion').style.display = 'block';
+        
+        console.log('Tabla de amortización actualizada correctamente');
+        
+    } catch (error) {
+        console.error('Error al actualizar tabla de amortización:', error);
+        // No lanzar excepción para evitar que se detenga el flujo
+    }
+}
+
+// Función para actualizar la información del crédito seleccionado en el formulario principal
+function actualizarInfoCreditoSeleccionado(creditoId, numeroCredito, tipoCredito, montoPago) {
+    try {
+        console.log(`Actualizando información de crédito seleccionado: ID=${creditoId}, Número=${numeroCredito}, Monto=${montoPago}`);
+        
+        // Mostrar sección de crédito
+        document.getElementById('seccionCredito').style.display = 'block';
+        document.getElementById('infoCredito').style.display = 'block';
+        
+        // Actualizar campos visibles
+        document.getElementById('infoCredito').innerHTML = `
+            <div class="alert alert-info">
+                <strong>Crédito seleccionado:</strong> ${numeroCredito} - ${tipoCredito}<br>
+                <strong>Monto a pagar:</strong> ${formatCurrency(montoPago)}
+            </div>
+        `;
+        
+        // Actualizar campo oculto si existe
+        if (document.getElementById('creditoIdInput')) {
+            document.getElementById('creditoIdInput').value = creditoId;
+        }
+        
+        // Actualizar campo de valor bruto con el monto a pagar
+        document.getElementById('valorBruto').value = montoPago;
+        
+        // Trigger el cálculo de valores
+        calcularValores();
+        
+        // Establecer concepto apropiado
+        document.getElementById('conceptoIngreso').value = `Pago de crédito ${numeroCredito}`;
+        
+    } catch (error) {
+        console.error('Error al actualizar info de crédito seleccionado:', error);
+    }
+}
