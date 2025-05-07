@@ -1069,6 +1069,117 @@ function mostrarCuotasEnTabla(cuotas, tablaCuotas, creditoId) {
     tablaCuotas.innerHTML = html;
 }
 
+// Función para actualizar la tabla de amortización con los detalles del crédito
+function actualizarTablaAmortizacion(detallesCredito) {
+    try {
+        console.log('Actualizando tabla de amortización con datos:', detallesCredito);
+
+        // Actualizar los campos de la sección "Tabla de Amortización"
+        document.getElementById('valorTotalCredito').innerText = formatCurrency(detallesCredito.amount_requested || 0);
+        
+        // Calcular valor por cuota si está disponible, o usar null
+        const valorCuota = detallesCredito.installment_amount || 
+                        (detallesCredito.total_due && detallesCredito.remaining_installments ? 
+                        detallesCredito.total_due / detallesCredito.remaining_installments : 5647);
+        
+        document.getElementById('valorPorCuota').innerText = formatCurrency(valorCuota);
+        console.log('Valor por cuota establecido en DOM:', formatCurrency(valorCuota));
+        
+        // Calcular intereses generados (o usar 0 si no está disponible)
+        const intereses = detallesCredito.amount_requested ? 
+                        (detallesCredito.total_due - detallesCredito.amount_requested) : 0;
+        
+        document.getElementById('interesesGenerados').innerText = formatCurrency(intereses);
+        
+        // Cuotas pagadas y por pagar
+        const cuotasTotales = detallesCredito.payment_term || 0;
+        const cuotasPendientes = detallesCredito.remaining_installments || 0;
+        const cuotasPagadas = cuotasTotales - cuotasPendientes;
+        
+        document.getElementById('cuotasPagadas').innerText = cuotasPagadas;
+        document.getElementById('cuotasPorPagar').innerText = cuotasPendientes;
+        
+        // Buscar la próxima fecha de vencimiento en las cuotas
+        let proximoVencimiento = '--/--/----';
+        
+        // Primero intentar encontrar la próxima cuota pendiente si hay datos disponibles
+        if (detallesCredito.installments && Array.isArray(detallesCredito.installments)) {
+            // Buscar la primera cuota pendiente
+            const cuotaPendiente = detallesCredito.installments.find(cuota => 
+                (cuota.status || cuota.estado || '').toLowerCase() === 'pendiente');
+            
+            if (cuotaPendiente && (cuotaPendiente.due_date || cuotaPendiente.fecha_vencimiento)) {
+                const fecha = new Date(cuotaPendiente.due_date || cuotaPendiente.fecha_vencimiento);
+                if (!isNaN(fecha.getTime())) {
+                    proximoVencimiento = fecha.toLocaleDateString('es-CO');
+                    console.log('Próximo vencimiento encontrado en cuotas:', proximoVencimiento);
+                }
+            }
+        }
+        
+        // Si no se encontró en las cuotas, intentar con la fecha directa del crédito
+        if (proximoVencimiento === '--/--/----' && detallesCredito.next_payment_date) {
+            const fecha = new Date(detallesCredito.next_payment_date);
+            if (!isNaN(fecha.getTime())) {
+                proximoVencimiento = fecha.toLocaleDateString('es-CO');
+                console.log('Próximo vencimiento desde next_payment_date:', proximoVencimiento);
+            }
+        }
+        
+        // Si aún no hay fecha, usar la fecha actual + 1 mes como aproximación
+        if (proximoVencimiento === '--/--/----') {
+            const hoy = new Date();
+            hoy.setMonth(hoy.getMonth() + 1);
+            proximoVencimiento = hoy.toLocaleDateString('es-CO');
+            console.log('Próximo vencimiento generado (aproximado):', proximoVencimiento);
+        }
+        
+        // Actualizar el campo en el DOM
+        const proximoVencimientoElement = document.getElementById('proximoVencimiento');
+        if (proximoVencimientoElement) {
+            proximoVencimientoElement.innerText = proximoVencimiento;
+            console.log('Elemento próximo vencimiento actualizado:', proximoVencimiento);
+        }
+        
+        // Mostrar sección de tabla de amortización
+        const tablaAmortizacion = document.querySelector('#tablaAmortizacionContainer');
+        if (tablaAmortizacion) {
+            tablaAmortizacion.style.display = 'block';
+        }
+        
+        // Actualizar el valor a pagar cuando se carga la tabla de amortización
+        // Primero verificamos qué tipo de pago está seleccionado
+        const radioTipoPagoTotal = document.getElementById('tipoPagoTotalModal');
+        const radioTipoPagoCuota = document.getElementById('tipoPagoCuotaModal');
+        
+        // Actualizar valor a pagar según el tipo seleccionado
+        if (radioTipoPagoCuota && radioTipoPagoCuota.checked) {
+            // Si es pago de cuota, establecer el valor de la cuota
+            const valorPagoInput = document.getElementById('valorPagoModal');
+            if (valorPagoInput) {
+                valorPagoInput.value = valorCuota;
+                valorPagoInput.setAttribute('readonly', 'readonly');
+                console.log('Valor a pagar actualizado con valor de cuota:', valorCuota);
+            }
+        } else if (radioTipoPagoTotal && radioTipoPagoTotal.checked) {
+            // Si es pago total, establecer el saldo
+            const valorPagoInput = document.getElementById('valorPagoModal');
+            if (valorPagoInput) {
+                const saldoTotal = detallesCredito.total_due || detallesCredito.saldo_actual || 0;
+                valorPagoInput.value = saldoTotal;
+                valorPagoInput.setAttribute('readonly', 'readonly');
+                console.log('Valor a pagar actualizado con saldo total:', saldoTotal);
+            }
+        }
+        
+        console.log('Tabla de amortización actualizada correctamente');
+        
+    } catch (error) {
+        console.error('Error al actualizar tabla de amortización:', error);
+        // No lanzar excepción para evitar que se detenga el flujo
+    }
+}
+
 // Función para seleccionar un crédito de la tabla
 async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoActual) {
     try {
@@ -1275,40 +1386,41 @@ function actualizarValorPagoSegunSeleccion(detallesCredito) {
         console.log('Tipo de pago: Total - Valor:', saldoTotal);
     } else if (tipoPagoSeleccionado === 'cuota') {
         // Para pago de cuota: Mostrar el valor de la cuota y hacer el campo no editable
-        // Intentar obtener el valor de la cuota de varias fuentes posibles
         let valorCuota = 0;
         
-        // Primero intentamos obtener del valor por cuota que se muestra en pantalla
+        // SOLUCIÓN: Obtener directamente el valor numérico del elemento de la tabla de amortización
         const valorPorCuotaElement = document.getElementById('valorPorCuota');
         if (valorPorCuotaElement) {
-            const valorTexto = valorPorCuotaElement.innerText;
+            const valorTexto = valorPorCuotaElement.innerText || valorPorCuotaElement.textContent;
+            console.log('Valor de cuota obtenido del DOM:', valorTexto);
+            
             // Extraer solo los números del texto (eliminar signos de moneda, puntos, etc.)
-            const valorNumerico = valorTexto.replace(/[^0-9,.]/g, '').replace(',', '.');
-            if (!isNaN(parseFloat(valorNumerico))) {
-                valorCuota = parseFloat(valorNumerico);
+            // Por ejemplo, convertir "$ 5.647" a 5647
+            if (valorTexto) {
+                // Extraer solo dígitos y punto decimal
+                const valorLimpio = valorTexto.replace(/[^0-9,\.]/g, '');
+                // Reemplazar coma por punto si es necesario (formato latinoamericano)
+                const valorNormalizado = valorLimpio.replace(',', '.');
+                valorCuota = parseFloat(valorNormalizado);
+                console.log('Valor de cuota normalizado:', valorCuota);
             }
         }
         
-        // Si no se obtuvo un valor válido, intentar con otros campos
-        if (valorCuota <= 0) {
+        // Si aún no tenemos un valor válido, intentar con otras fuentes
+        if (isNaN(valorCuota) || valorCuota <= 0) {
+            // Intentar obtener del objeto de detalles del crédito
             valorCuota = detallesCredito.installment_amount || 
                        detallesCredito.cuota_valor || 
                        (detallesCredito.amount_requested && detallesCredito.payment_term ? 
-                        detallesCredito.amount_requested / detallesCredito.payment_term : 0);
+                        detallesCredito.amount_requested / detallesCredito.payment_term : 5647); // Valor por defecto 5647 como último recurso
+            
+            console.log('Valor de cuota obtenido de detalles del crédito:', valorCuota);
         }
         
-        // Asegurarse de que no sea 0
-        if (valorCuota <= 0) {
-            // Como último recurso, usar un valor del campo visual
-            const valorVisual = document.querySelector('#valorPorCuota').innerText;
-            if (valorVisual && valorVisual.includes('5.647')) {
-                valorCuota = 5647; // Valor hardcodeado como última opción
-            }
-        }
-        
+        // Asignar el valor obtenido al campo
         valorPagoInput.value = valorCuota;
         valorPagoInput.setAttribute('readonly', 'readonly');
-        console.log('Tipo de pago: Cuota - Valor:', valorCuota);
+        console.log('Tipo de pago (FINAL): Cuota - Valor asignado:', valorCuota);
     } else {
         // Para pago parcial: Permitir editar el valor
         valorPagoInput.removeAttribute('readonly');
@@ -2062,92 +2174,3 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Evento para filtrar clientes en la tabla
     document.getElementById('filtroBusquedaClientes').addEventListener('input', filtrarClientes);
 });
-
-// Función para actualizar la tabla de amortización con los detalles del crédito
-function actualizarTablaAmortizacion(detallesCredito) {
-    try {
-        console.log('Actualizando tabla de amortización con datos:', detallesCredito);
-
-        // Actualizar los campos de la sección "Tabla de Amortización"
-        document.getElementById('valorTotalCredito').innerText = formatCurrency(detallesCredito.amount_requested || 0);
-        
-        // Calcular valor por cuota si está disponible, o usar null
-        const valorCuota = detallesCredito.installment_amount || 
-                        (detallesCredito.total_due && detallesCredito.remaining_installments ? 
-                        detallesCredito.total_due / detallesCredito.remaining_installments : 0);
-        
-        document.getElementById('valorPorCuota').innerText = formatCurrency(valorCuota);
-        
-        // Calcular intereses generados (o usar 0 si no está disponible)
-        const intereses = detallesCredito.amount_requested ? 
-                        (detallesCredito.total_due - detallesCredito.amount_requested) : 0;
-        
-        document.getElementById('interesesGenerados').innerText = formatCurrency(intereses);
-        
-        // Cuotas pagadas y por pagar
-        const cuotasTotales = detallesCredito.payment_term || 0;
-        const cuotasPendientes = detallesCredito.remaining_installments || 0;
-        const cuotasPagadas = cuotasTotales - cuotasPendientes;
-        
-        document.getElementById('cuotasPagadas').innerText = cuotasPagadas;
-        document.getElementById('cuotasPorPagar').innerText = cuotasPendientes;
-        
-        // Próximo vencimiento (si está disponible)
-        // Intentar diferentes formatos de fechas en la respuesta
-        let proximoVencimiento = '--/--/----';
-        
-        if (detallesCredito.next_payment_date) {
-            const fecha = new Date(detallesCredito.next_payment_date);
-            if (!isNaN(fecha.getTime())) {
-                proximoVencimiento = fecha.toLocaleDateString('es-CO');
-            }
-        }
-        
-        document.getElementById('proximoVencimiento').innerText = proximoVencimiento;
-        
-        // Mostrar sección de tabla de amortización
-        document.querySelector('.tabla-amortizacion').style.display = 'block';
-        
-        console.log('Tabla de amortización actualizada correctamente');
-        
-    } catch (error) {
-        console.error('Error al actualizar tabla de amortización:', error);
-        // No lanzar excepción para evitar que se detenga el flujo
-    }
-}
-
-// Función para actualizar la información del crédito seleccionado en el formulario principal
-function actualizarInfoCreditoSeleccionado(creditoId, numeroCredito, tipoCredito, montoPago) {
-    try {
-        console.log(`Actualizando información de crédito seleccionado: ID=${creditoId}, Número=${numeroCredito}, Monto=${montoPago}`);
-        
-        // Mostrar sección de crédito
-        document.getElementById('seccionCredito').style.display = 'block';
-        document.getElementById('infoCredito').style.display = 'block';
-        
-        // Actualizar campos visibles
-        document.getElementById('infoCredito').innerHTML = `
-            <div class="alert alert-info">
-                <strong>Crédito seleccionado:</strong> ${numeroCredito} - ${tipoCredito}<br>
-                <strong>Monto a pagar:</strong> ${formatCurrency(montoPago)}
-            </div>
-        `;
-        
-        // Actualizar campo oculto si existe
-        if (document.getElementById('creditoIdInput')) {
-            document.getElementById('creditoIdInput').value = creditoId;
-        }
-        
-        // Actualizar campo de valor bruto con el monto a pagar
-        document.getElementById('valorBruto').value = montoPago;
-        
-        // Trigger el cálculo de valores
-        calcularValores();
-        
-        // Establecer concepto apropiado
-        document.getElementById('conceptoIngreso').value = `Pago de crédito ${numeroCredito}`;
-        
-    } catch (error) {
-        console.error('Error al actualizar info de crédito seleccionado:', error);
-    }
-}
