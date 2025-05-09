@@ -1101,11 +1101,20 @@ function actualizarTablaAmortizacion(detallesCredito) {
 
         // Actualizar los campos de la sección "Tabla de Amortización"
         document.getElementById('valorTotalCredito').innerText = formatCurrency(detallesCredito.amount_requested || 0);
+          // Calcular valor por cuota usando la fórmula financiera estándar
+        let valorCuota = detallesCredito.installment_amount;
         
-        // Calcular valor por cuota si está disponible, o usar null
-        const valorCuota = detallesCredito.installment_amount || 
-                        (detallesCredito.total_due && detallesCredito.remaining_installments ? 
-                        detallesCredito.total_due / detallesCredito.remaining_installments : 5647);
+        if (!valorCuota) {
+            // Si no está disponible, calcular usando la misma fórmula que en la tabla de amortización
+            const montoTotal = detallesCredito.amount_requested || 0;
+            const totalCuotas = detallesCredito.payment_term || 36;
+            const tasaInteres = detallesCredito.interest_rate || 1.6; // porcentaje mensual
+            const tasaMensual = tasaInteres / 100; // convertir a decimal
+            
+            valorCuota = (montoTotal * tasaMensual * Math.pow(1 + tasaMensual, totalCuotas)) / 
+                        (Math.pow(1 + tasaMensual, totalCuotas) - 1);
+            console.log('Valor cuota calculado con fórmula financiera:', valorCuota);
+        }
         
         document.getElementById('valorPorCuota').innerText = formatCurrency(valorCuota);
         console.log('Valor por cuota establecido en DOM:', formatCurrency(valorCuota));
