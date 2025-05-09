@@ -1428,28 +1428,35 @@ function actualizarValorPagoSegunSeleccion(detallesCredito) {
 }
 
 // Función para seleccionar una cuota específica para pago
-function seleccionarCuota(creditoId, cuotaId, valorCuota) {
+async function seleccionarCuota(creditoId, cuotaId, valorCuota) {
     try {
         console.log(`Seleccionando cuota: CréditoID=${creditoId}, CuotaID=${cuotaId}, Valor=${valorCuota}`);
-        
-        // Primero cerrar cualquier modal que pudiera estar abierta
+          // Primero cerrar cualquier modal que pudiera estar abierta
         // Cerrar la modal de búsqueda de cliente si está abierta
         const clienteModal = document.getElementById('clienteCreditoModal');
         if (clienteModal) {
+            console.log('Cerrando modal de búsqueda de cliente/crédito');
             const bsClienteModal = bootstrap.Modal.getInstance(clienteModal);
             if (bsClienteModal) {
                 bsClienteModal.hide();
+                bsClienteModal.dispose();
             } else if (window.jQuery) {
                 $(clienteModal).modal('hide');
             }
         }
-        
-        // Asegurar que se eliminen todos los backdrops y clases modal
-        setTimeout(() => {
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+          // Esperar un momento para asegurar que la modal anterior se cierre completamente
+        await new Promise(resolve => setTimeout(resolve, 800));
+          // Asegurar que se eliminen todos los backdrops y clases modal
+        setTimeout(() => {            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
             document.body.classList.remove('modal-open');
             document.body.style.removeProperty('padding-right');
             document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('position');
+            document.body.style.removeProperty('top');
+            document.body.style.removeProperty('width');
+            
+            // Remover cualquier estilo inline que Bootstrap pueda haber agregado
+            document.body.removeAttribute('style');
             
             // Guardar datos en variables globales o campos ocultos
             window.cuotaSeleccionada = {
@@ -1480,16 +1487,42 @@ function seleccionarCuota(creditoId, cuotaId, valorCuota) {
             } else {
                 document.getElementById('creditoIdSeleccionado').value = creditoId;
             }
-            
-            // Abrir modal de Nuevo Ingreso de manera forzada
+              // Abrir modal de Nuevo Ingreso de manera forzada
             const ingresoModalEl = document.getElementById('ingresoModal');
-            // Crear nueva instancia para forzar apertura
-            const ingresoModal = new bootstrap.Modal(ingresoModalEl, {backdrop: 'static', keyboard: false});
             
-            // Mostrar el modal forzadamente
-            ingresoModal.show();
-          // Remover cualquier manejador de evento anterior para evitar duplicación
-        $('#ingresoModal').off('shown.bs.modal');
+            // Verificar que el modal existe
+            if (!ingresoModalEl) {
+                throw new Error("No se encontró el modal de ingreso con ID 'ingresoModal'");
+            }
+            
+            // Asegurar que no haya otra instancia activa del modal
+            if (bootstrap.Modal.getInstance(ingresoModalEl)) {
+                bootstrap.Modal.getInstance(ingresoModalEl).dispose();
+            }
+            
+            // Remover cualquier manejador de evento anterior para evitar duplicación
+            $(ingresoModalEl).off('shown.bs.modal');
+              // Crear nueva instancia para forzar apertura
+            const ingresoModal = new bootstrap.Modal(ingresoModalEl, {
+                backdrop: 'static', 
+                keyboard: false,
+                focus: true
+            });
+            
+            // Asegurarse de que el DOM esté listo para mostrar la modal
+            setTimeout(() => {
+                // Mostrar el modal forzadamente
+                console.log('Abriendo modal de nuevo ingreso con cuota seleccionada');
+                ingresoModal.show();
+                
+                // Verificar visibilidad del modal
+                setTimeout(() => {
+                    if (!ingresoModalEl.classList.contains('show')) {
+                        console.log('Modal no se mostró correctamente, reintentando...');
+                        ingresoModal.show();
+                    }
+                }, 300);
+            }, 100);
         
         // Una vez que se muestre el modal, actualizar los valores - usar setTimeout para dar tiempo al DOM
         ingresoModalEl.addEventListener('shown.bs.modal', function modalShownHandler() {
@@ -1701,7 +1734,7 @@ function seleccionarCuota(creditoId, cuotaId, valorCuota) {
             }
         });
         
-        }, 100); // Fin del setTimeout para limpieza de modales
+        }, 200); // Tiempo de espera para limpiar los elementos del DOM
         
     } catch (error) {
         console.error('Error al seleccionar cuota:', error);
