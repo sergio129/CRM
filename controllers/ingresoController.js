@@ -433,11 +433,10 @@ exports.createIngreso = async (req, res) => {
       cliente_id,
       credito_id,
       asesor_id,
-      metodo_pago,
-      referencia_pago,
+      metodo_pago,      referencia_pago,
       estado: estado || 'confirmado',
       archivos_adjuntos: archivosAdjuntos.length > 0 ? JSON.stringify(archivosAdjuntos) : null,
-      usuario_id: req.usuario.id
+      usuario_id: req.user ? req.user.id : null
     });
       // Si es un pago de crédito, actualizar el crédito
     if ((categoria.es_credito || categoria.nombre.toLowerCase().includes('crédito') || categoria.nombre.toLowerCase().includes('credito')) && credito_id) {
@@ -471,7 +470,7 @@ exports.createIngreso = async (req, res) => {
               payment_date: new Date(fecha),
               amount_paid: valor_bruto,
               payment_method: metodo_pago,
-              notes: `Ingreso #${nuevoIngreso.id} - ${referencia_pago || ''}`
+              notes: nuevoIngreso && nuevoIngreso.id ? `Ingreso #${nuevoIngreso.id} - ${referencia_pago || ''}` : `Pago de crédito - ${referencia_pago || ''}`
             });
             console.log('Historial de pago registrado correctamente');
           } catch (historyError) {
