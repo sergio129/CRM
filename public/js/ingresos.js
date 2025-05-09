@@ -1054,12 +1054,11 @@ function mostrarCuotasEnTabla(cuotas, tablaCuotas, creditoId) {
                 <td>${fechaVencimiento}</td>
                 <td>${valorCuota}</td>
                 <td>${valorCapital}</td>
-                <td>${valorInteres}</td>
-                <td><span class="badge ${estadoClass}">${estadoTexto}</span></td>
+                <td>${valorInteres}</td>                <td><span class="badge ${estadoClass}">${estadoTexto}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="seleccionarCuota(${creditoId}, ${cuota.id || cuota.installment_number || (index + 1)}, ${parseFloat(cuota.amount || cuota.valor || 0)})">
-                        Pagar
-                    </button>
+                    ${estadoTexto.toLowerCase() === 'pagado' ? 
+                    `<button class="btn btn-sm btn-secondary" style="opacity: 0.65; box-shadow: 0 0 5px rgba(0,0,0,0.2); cursor: not-allowed;" disabled>Pagar</button>` : 
+                    `<button class="btn btn-sm btn-primary" onclick="seleccionarCuota(${creditoId}, ${cuota.id || cuota.installment_number || (index + 1)}, ${parseFloat(cuota.amount || cuota.valor || 0)})">Pagar</button>`}
                 </td>
             </tr>
         `;
