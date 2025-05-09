@@ -1,0 +1,27 @@
+/* Ocultar la sección "Datos del Cliente" cuando estamos pagando una cuota específica */
+/* Selectores más directos y específicos para el problema */
+#ingresoModal .card:has(h5:contains("Datos del Cliente")),
+#ingresoModal .card:has(.card-header:contains("Datos del Cliente")),
+#ingresoModal .card:has(.card-title:contains("Datos del Cliente")),
+#ingresoModal .card:has(button[data-bs-target="#clienteCreditoModal"]),
+#ingresoModal .card:has(button[data-target="#clienteCreditoModal"]),
+#ingresoModal .section-client-data,
+#ingresoModal #seccionDatosCliente,
+#ingresoModal #seccionBusquedaCliente,
+#ingresoModal .section-client-search {
+    display: none !important;
+}
+
+/* Ocultar botones específicos */
+#ingresoModal [data-bs-target="#clienteCreditoModal"],
+#ingresoModal [data-target="#clienteCreditoModal"],
+#ingresoModal .btn-buscar-cliente,
+#ingresoModal .btn-purple {
+    display: none !important;
+}
+
+/* Selectores directos para la imagen */
+#ingresoModal .card:first-of-type,
+#ingresoModal .card:first-child {
+    display: none !important;
+}
