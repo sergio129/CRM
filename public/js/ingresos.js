@@ -317,39 +317,52 @@ async function guardarIngreso() {
     const valorRetencion = parseFloat(document.getElementById('valorRetencion').value) || 0;
     const referenciaPago = document.getElementById('referenciaPago').value;
     const valorNeto = parseFloat(document.getElementById('valorNeto').value) || 0;
-    
-    // Datos opcionales que pueden estar presentes o no
+      // Datos opcionales que pueden estar presentes o no
     let clienteId = null;
     let creditoId = null;
     let asesorId = null;
     let porcentajeComision = 0;
     let valorComision = 0;
     
-    // Verificar si la sección cliente está visible
-    if (document.getElementById('seccionCliente').style.display === 'block') {
-        clienteId = document.getElementById('clienteIngreso').value;
+    // Verificar si es un pago de cuota
+    const cuotaSeleccionada = window.cuotaSeleccionada;
+    if (cuotaSeleccionada) {
+        // Si hay una cuota seleccionada, obtener el cliente del campo oculto o del selector
+        clienteId = document.getElementById('clienteIngreso')?.value;
+        creditoId = cuotaSeleccionada.creditoId;
+        console.log('Pago de cuota detectado:', { clienteId, creditoId, cuotaSeleccionada });
         
-        // Verificar si se requiere cliente
-        const categoriaSeleccionada = document.getElementById('categoriaIngreso').options[document.getElementById('categoriaIngreso').selectedIndex];
-        const requiereCliente = categoriaSeleccionada.dataset.cliente === 'true';
-        
-        if (requiereCliente && !clienteId) {
-            showToast('Por favor seleccione un cliente', 'error');
-            return;
+        // Si no hay clienteId pero hay creditoId, no es problema porque el backend lo manejará
+        if (!clienteId) {
+            console.log('No hay clienteId en el frontend, el backend lo obtendrá del creditoId');
         }
-        
-        // Verificar si la sección crédito está visible
-        if (document.getElementById('seccionCredito').style.display === 'block') {
-            creditoId = document.getElementById('creditoIngreso').value;
+    } else {
+        // Verificar si la sección cliente está visible
+        if (document.getElementById('seccionCliente').style.display === 'block') {
+            clienteId = document.getElementById('clienteIngreso').value;
             
-            // Verificar si se requiere crédito
-            const esCredito = categoriaSeleccionada.dataset.credito === 'true' || 
-                              categoriaSeleccionada.textContent.toLowerCase().includes('crédito') ||
-                              categoriaSeleccionada.textContent.toLowerCase().includes('credito');
+            // Verificar si se requiere cliente
+            const categoriaSeleccionada = document.getElementById('categoriaIngreso').options[document.getElementById('categoriaIngreso').selectedIndex];
+            const requiereCliente = categoriaSeleccionada.dataset.cliente === 'true';
             
-            if (esCredito && !creditoId) {
-                showToast('Por favor seleccione un crédito', 'error');
+            if (requiereCliente && !clienteId) {
+                showToast('Por favor seleccione un cliente', 'error');
                 return;
+            }
+            
+            // Verificar si la sección crédito está visible
+            if (document.getElementById('seccionCredito').style.display === 'block') {
+                creditoId = document.getElementById('creditoIngreso').value;
+                
+                // Verificar si se requiere crédito
+                const esCredito = categoriaSeleccionada.dataset.credito === 'true' || 
+                                categoriaSeleccionada.textContent.toLowerCase().includes('crédito') ||
+                                categoriaSeleccionada.textContent.toLowerCase().includes('credito');
+                
+                if (esCredito && !creditoId) {
+                    showToast('Por favor seleccione un crédito', 'error');
+                    return;
+                }
             }
         }
     }
@@ -383,7 +396,10 @@ async function guardarIngreso() {
     };
     
     // Agregar datos opcionales si existen
-    if (clienteId) ingresoData.cliente_id = clienteId;
+    if (clienteId) {
+        console.log('Agregando cliente_id al ingreso:', clienteId);
+        ingresoData.cliente_id = clienteId;
+    }
     if (creditoId) ingresoData.credito_id = creditoId;
     if (asesorId) {
         ingresoData.asesor_id = asesorId;
@@ -395,6 +411,7 @@ async function guardarIngreso() {
         // Determinar si es creación o actualización
         const method = ingresoId ? 'PUT' : 'POST';
         const url = ingresoId ? `/api/ingresos/${ingresoId}` : '/api/ingresos';
+          console.log('Enviando datos de ingreso:', ingresoData);
         
         // Realizar la petición
         const response = await fetch(url, {
@@ -406,7 +423,16 @@ async function guardarIngreso() {
             body: JSON.stringify(ingresoData)
         });
         
-        const result = await response.json();
+        console.log('Respuesta HTTP:', response.status, response.statusText);
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+            console.log('Respuesta del servidor:', result);
+        } catch (e) {
+            console.error('Error al parsear respuesta JSON:', responseText);
+            throw new Error('Error al procesar la respuesta del servidor');
+        }
         
         if (!result.success) {
             throw new Error(result.error || 'Error al guardar el ingreso');

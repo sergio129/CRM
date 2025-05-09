@@ -313,8 +313,7 @@ exports.createIngreso = async (req, res) => {
     referencia_pago,
     estado
   } = req.body;
-  
-  try {
+    try {
     // Verificar que la categoría exista
     const categoria = await CategoriaIngreso.findByPk(categoria_id);
     if (!categoria) {
@@ -323,9 +322,30 @@ exports.createIngreso = async (req, res) => {
         error: 'La categoría de ingreso no existe'
       });
     }
+      // Si hay un crédito_id pero no cliente_id, intentar obtener el cliente del crédito directamente con SQL
+    let clienteVerificado = cliente_id;
+    if (credito_id && !cliente_id) {
+      console.log('Buscando cliente asociado al crédito ID:', credito_id);
+      try {
+        // Usar una consulta SQL directa para evitar problemas con las relaciones
+        const [resultados] = await sequelize.query(
+          `SELECT client_id FROM loans WHERE id = ?`,
+          { replacements: [credito_id] }
+        );
+        
+        if (resultados && resultados.length > 0 && resultados[0].client_id) {
+          clienteVerificado = resultados[0].client_id;
+          console.log(`Cliente ID ${clienteVerificado} encontrado para el crédito ID ${credito_id}`);
+        } else {
+          console.log('No se encontró el cliente para el crédito ID:', credito_id);
+        }
+      } catch (loanError) {
+        console.error('Error al buscar el crédito:', loanError);
+      }
+    }
     
     // Verificar si la categoría requiere cliente y si se proporcionó
-    if (categoria.requiere_cliente && !cliente_id) {
+    if (categoria.requiere_cliente && !clienteVerificado) {
       return res.status(400).json({
         success: false,
         error: 'Esta categoría requiere seleccionar un cliente'
@@ -333,14 +353,16 @@ exports.createIngreso = async (req, res) => {
     }
     
     // Verificar cliente si se proporciona
-    if (cliente_id) {
-      const cliente = await Client.findByPk(cliente_id);
+    if (clienteVerificado) {
+      const cliente = await Client.findByPk(clienteVerificado);
       if (!cliente) {
         return res.status(400).json({
           success: false,
           error: 'El cliente seleccionado no existe'
         });
       }
+      // Actualizar cliente_id con el valor verificado para usarlo más adelante
+      cliente_id = clienteVerificado;
     }
     
     // Verificar asesor si se proporciona
@@ -462,8 +484,7 @@ exports.updateIngreso = async (req, res) => {
       errors: errors.array()
     });
   }
-  
-  // Extraer datos del request
+    // Extraer datos del request
   const {
     categoria_id,
     concepto,
@@ -483,6 +504,18 @@ exports.updateIngreso = async (req, res) => {
     estado
   } = req.body;
   
+  // Registrar los datos recibidos para depuración
+  console.log('Datos de ingreso recibidos:', { 
+    categoria_id, 
+    concepto, 
+    fecha,
+    valor_bruto,
+    valor_neto,
+    cliente_id,
+    credito_id,
+    metodo_pago
+  });
+  
   try {
     // Buscar el ingreso
     const ingreso = await Ingreso.findByPk(req.params.id);
@@ -500,8 +533,7 @@ exports.updateIngreso = async (req, res) => {
         error: 'No se puede modificar un ingreso anulado'
       });
     }
-    
-    // Verificar que la categoría exista
+      // Verificar que la categoría exista
     const categoria = await CategoriaIngreso.findByPk(categoria_id);
     if (!categoria) {
       return res.status(400).json({
@@ -509,9 +541,30 @@ exports.updateIngreso = async (req, res) => {
         error: 'La categoría de ingreso no existe'
       });
     }
+      // Si hay un crédito_id pero no cliente_id, intentar obtener el cliente del crédito directamente con SQL
+    let clienteVerificado = cliente_id;
+    if (credito_id && !cliente_id) {
+      console.log('Actualizando ingreso: Buscando cliente asociado al crédito ID:', credito_id);
+      try {
+        // Usar una consulta SQL directa para evitar problemas con las relaciones
+        const [resultados] = await sequelize.query(
+          `SELECT client_id FROM loans WHERE id = ?`,
+          { replacements: [credito_id] }
+        );
+        
+        if (resultados && resultados.length > 0 && resultados[0].client_id) {
+          clienteVerificado = resultados[0].client_id;
+          console.log(`Cliente ID ${clienteVerificado} encontrado para el crédito ID ${credito_id}`);
+        } else {
+          console.log('No se encontró el cliente para el crédito ID:', credito_id);
+        }
+      } catch (loanError) {
+        console.error('Error al buscar el crédito:', loanError);
+      }
+    }
     
     // Verificar si la categoría requiere cliente y si se proporcionó
-    if (categoria.requiere_cliente && !cliente_id) {
+    if (categoria.requiere_cliente && !clienteVerificado) {
       return res.status(400).json({
         success: false,
         error: 'Esta categoría requiere seleccionar un cliente'
@@ -519,14 +572,16 @@ exports.updateIngreso = async (req, res) => {
     }
     
     // Verificar cliente si se proporciona
-    if (cliente_id) {
-      const cliente = await Client.findByPk(cliente_id);
+    if (clienteVerificado) {
+      const cliente = await Client.findByPk(clienteVerificado);
       if (!cliente) {
         return res.status(400).json({
           success: false,
           error: 'El cliente seleccionado no existe'
         });
       }
+      // Actualizar cliente_id con el valor verificado para usarlo más adelante
+      cliente_id = clienteVerificado;
     }
     
     // Verificar asesor si se proporciona
