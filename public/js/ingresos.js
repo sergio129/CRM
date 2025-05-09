@@ -1432,46 +1432,276 @@ function seleccionarCuota(creditoId, cuotaId, valorCuota) {
     try {
         console.log(`Seleccionando cuota: CréditoID=${creditoId}, CuotaID=${cuotaId}, Valor=${valorCuota}`);
         
-        // Establecer valor en el campo de monto a pagar
-        const montoPago = document.getElementById('montoPago');
-        if (montoPago) {
-            montoPago.value = valorCuota;
+        // Primero cerrar cualquier modal que pudiera estar abierta
+        // Cerrar la modal de búsqueda de cliente si está abierta
+        const clienteModal = document.getElementById('clienteCreditoModal');
+        if (clienteModal) {
+            const bsClienteModal = bootstrap.Modal.getInstance(clienteModal);
+            if (bsClienteModal) {
+                bsClienteModal.hide();
+            } else if (window.jQuery) {
+                $(clienteModal).modal('hide');
+            }
         }
         
-        // Seleccionar opción de "Pago de cuota" en tipo de pago
-        const radioPagoCuota = document.getElementById('pagoCuota');
-        if (radioPagoCuota) {
-            radioPagoCuota.checked = true;
-        }
+        // Asegurar que se eliminen todos los backdrops y clases modal
+        setTimeout(() => {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('padding-right');
+            document.body.style.removeProperty('overflow');
+            
+            // Guardar datos en variables globales o campos ocultos
+            window.cuotaSeleccionada = {
+                creditoId: creditoId,
+                cuotaId: cuotaId,
+                valorCuota: valorCuota
+            };
+            
+            // Crear campos ocultos si no existen
+            if (!document.getElementById('cuotaIdSeleccionada')) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.id = 'cuotaIdSeleccionada';
+                input.name = 'cuotaIdSeleccionada';
+                input.value = cuotaId;
+                document.body.appendChild(input);
+            } else {
+                document.getElementById('cuotaIdSeleccionada').value = cuotaId;
+            }
+            
+            if (!document.getElementById('creditoIdSeleccionado')) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.id = 'creditoIdSeleccionado';
+                input.name = 'creditoIdSeleccionado';
+                input.value = creditoId;
+                document.body.appendChild(input);
+            } else {
+                document.getElementById('creditoIdSeleccionado').value = creditoId;
+            }
+            
+            // Abrir modal de Nuevo Ingreso de manera forzada
+            const ingresoModalEl = document.getElementById('ingresoModal');
+            // Crear nueva instancia para forzar apertura
+            const ingresoModal = new bootstrap.Modal(ingresoModalEl, {backdrop: 'static', keyboard: false});
+            
+            // Mostrar el modal forzadamente
+            ingresoModal.show();
+          // Remover cualquier manejador de evento anterior para evitar duplicación
+        $('#ingresoModal').off('shown.bs.modal');
         
-        // Actualizar concepto específico si existe
-        const conceptoEspecifico = document.getElementById('conceptoEspecifico');
-        if (conceptoEspecifico) {
-            conceptoEspecifico.value = `Pago cuota ${cuotaId} de crédito`;
-        }
+        // Una vez que se muestre el modal, actualizar los valores - usar setTimeout para dar tiempo al DOM
+        ingresoModalEl.addEventListener('shown.bs.modal', function modalShownHandler() {
+            // Solo ejecutar una vez y luego remover el listener
+            ingresoModalEl.removeEventListener('shown.bs.modal', modalShownHandler);
+            
+            console.log('Modal de Nuevo Ingreso mostrada correctamente - actualizando valores...');
+            
+            // Obtener detalles del crédito y cliente desde la variable global
+            const detallesCredito = window.creditoDetallesCompletos || {};
+              // Buscar la categoría de tipo crédito y seleccionarla
+            const categoriasSelect = document.getElementById('categoriaIngreso');
+            if (categoriasSelect) {
+                // Buscar una categoría que sea de tipo crédito
+                let creditCategoryFound = false;
+                for (let i = 0; i < categoriasSelect.options.length; i++) {
+                    const option = categoriasSelect.options[i];
+                    if (option.dataset.credito === 'true' || 
+                        option.textContent.toLowerCase().includes('crédito') || 
+                        option.textContent.toLowerCase().includes('credito')) {
+                        categoriasSelect.selectedIndex = i;
+                        categoriasSelect.value = option.value;
+                        
+                        // Para select2, actualizar también visualmente
+                        if (window.jQuery && $.fn.select2) {
+                            $(categoriasSelect).val(option.value).trigger('change');
+                        } else {
+                            // Disparar el evento change para activar manejarCambioCategoria
+                            const event = new Event('change');
+                            categoriasSelect.dispatchEvent(event);
+                        }
+                        
+                        creditCategoryFound = true;
+                        console.log('Categoría de crédito seleccionada:', option.textContent);
+                        break;
+                    }
+                }
+                  if (!creditCategoryFound) {
+                    console.warn('No se encontró una categoría de tipo crédito. Usando la primera categoría disponible.');
+                    // Si no encontramos una categoría de crédito, usar la primera disponible
+                    if (categoriasSelect.options.length > 1) {
+                        categoriasSelect.selectedIndex = 1; // La primera opción real (no el placeholder)
+                        
+                        // Para select2, actualizar también visualmente
+                        if (window.jQuery && $.fn.select2) {
+                            $(categoriasSelect).val(categoriasSelect.options[1].value).trigger('change');
+                        } else {
+                            // Disparar el evento change
+                            categoriasSelect.dispatchEvent(new Event('change'));
+                        }
+                    }
+                }
+            }
+            
+            // Asegurarse de que la sección de crédito esté visible si existe
+            if (document.getElementById('seccionCredito')) {
+                document.getElementById('seccionCredito').style.display = 'block';
+                
+                // Si hay un select de crédito, llenar con el crédito seleccionado
+                const creditoSelect = document.getElementById('creditoIngreso');
+                if (creditoSelect && creditoId) {
+                    // Primero, asegurarse que tengamos un option para este crédito
+                    let creditoEncontrado = false;
+                    
+                    for (let i = 0; i < creditoSelect.options.length; i++) {
+                        if (creditoSelect.options[i].value == creditoId) {
+                            creditoSelect.selectedIndex = i;
+                            creditoEncontrado = true;
+                            break;
+                        }
+                    }
+                    
+                    // Si no encontramos el crédito en las opciones, agregarlo
+                    if (!creditoEncontrado) {
+                        const detallesCredito = window.creditoDetallesCompletos || {};
+                        const option = document.createElement('option');
+                        option.value = creditoId;
+                        const loanNumber = detallesCredito.loan_number || `CRED-${creditoId}`;
+                        const loanType = detallesCredito.interest_type || 'Crédito';
+                        option.textContent = `${loanNumber} - ${loanType}`;
+                        creditoSelect.appendChild(option);
+                        option.selected = true;
+                    }
+                    
+                    // Actualizar Select2 si está en uso
+                    if (window.jQuery && $.fn.select2) {
+                        $(creditoSelect).trigger('change');
+                    }
+                }
+            }
+            
+            // Establecer valores en el formulario
+            // Valor Bruto (monto de la cuota)
+            const valorBrutoInput = document.getElementById('valorBruto');
+            if (valorBrutoInput) {
+                valorBrutoInput.value = valorCuota;
+                // Disparar evento input para recalcular valores derivados
+                valorBrutoInput.dispatchEvent(new Event('input'));
+            }
+            
+            // Valor Neto (automáticamente se calculará en función del bruto)
+            const valorNetoInput = document.getElementById('valorNeto');
+            if (valorNetoInput) {
+                valorNetoInput.value = valorCuota;
+            }
+              // Concepto (descripción del pago)
+            const conceptoInput = document.getElementById('conceptoIngreso');
+            if (conceptoInput) {
+                // Create a descriptive concept based on the installment information
+                const concepto = `Pago cuota ${cuotaId} de crédito`;
+                conceptoInput.value = concepto;
+                console.log('Concepto de pago establecido:', concepto);
+            }
+            
+            // Descripción adicional si existe el campo
+            const descripcionInput = document.getElementById('descripcionIngreso');
+            if (descripcionInput) {
+                const creditInfo = window.creditoDetallesCompletos || {};
+                const loanNumber = creditInfo.loan_number || '';
+                descripcionInput.value = `Pago correspondiente a cuota ${cuotaId} del crédito ${loanNumber || 'seleccionado'}`;
+            }
+              // Actualizar campos con información del cliente si está disponible
+            if (detallesCredito.client) {
+                const cliente = detallesCredito.client;
+                
+                // Rellenar campos del cliente/pagador
+                if (document.getElementById('nombrePagador')) {
+                    document.getElementById('nombrePagador').value = cliente.full_name || cliente.nombre || '';
+                }
+                
+                if (document.getElementById('telefonoPagador')) {
+                    document.getElementById('telefonoPagador').value = cliente.phone || cliente.telefono || '';
+                }
+                
+                if (document.getElementById('correoPagador')) {
+                    document.getElementById('correoPagador').value = cliente.email || '';
+                }
+                
+                if (document.getElementById('direccionPagador')) {
+                    document.getElementById('direccionPagador').value = cliente.address || cliente.direccion || '';
+                }
+                
+                if (document.getElementById('documentoPagador')) {
+                    document.getElementById('documentoPagador').value = cliente.id_number || cliente.identification || '';
+                }
+                
+                if (document.getElementById('tipoPagador') && cliente.identification_type) {
+                    // Intentar encontrar el tipo de documento correcto
+                    const tipoDoc = cliente.identification_type.toUpperCase();
+                    const tipoDocSelect = document.getElementById('tipoPagador');
+                    
+                    for (let i = 0; i < tipoDocSelect.options.length; i++) {
+                        if (tipoDocSelect.options[i].value.toUpperCase() === tipoDoc) {
+                            tipoDocSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+                  // Si el modal tiene sección de cliente, mostrarla y seleccionar el cliente
+                if (document.getElementById('seccionCliente')) {
+                    document.getElementById('seccionCliente').style.display = 'block';
+                    
+                    // También mostrar la sección de datos del pagador
+                    if (document.getElementById('seccionDatosPagador')) {
+                        document.getElementById('seccionDatosPagador').style.display = 'block';
+                    }
+                    
+                    // Seleccionar cliente en el dropdown si existe
+                    const clienteSelect = document.getElementById('clienteIngreso');
+                    if (clienteSelect) {
+                        let clienteEncontrado = false;
+                        
+                        // Buscar si el cliente ya está en la lista
+                        for (let i = 0; i < clienteSelect.options.length; i++) {
+                            if (clienteSelect.options[i].value == cliente.id) {
+                                clienteSelect.selectedIndex = i;
+                                clienteEncontrado = true;
+                                break;
+                            }
+                        }
+                        
+                        // Si no está, agregarlo
+                        if (!clienteEncontrado && cliente.id) {
+                            const option = document.createElement('option');
+                            option.value = cliente.id;
+                            option.textContent = `${cliente.full_name || cliente.nombre || 'Cliente'} - ${cliente.id_number || cliente.identification || 'Sin documento'}`;
+                            clienteSelect.appendChild(option);
+                            option.selected = true;
+                        }
+                        
+                        // Actualizar Select2 si está en uso
+                        if (window.jQuery && $.fn.select2) {
+                            $(clienteSelect).trigger('change');
+                        }
+                    }
+                }
+            }
+              // Mostrar mensaje de selección
+            showToast(`Configurando pago para cuota ${cuotaId}`, 'success');
+            
+            // Forzar recálculo de valores
+            if (window.calcularValores) {
+                calcularValores();
+            }
+              // Cambiar el título del modal para indicar que es un pago de cuota
+            const modalTitle = document.getElementById('ingresoModalLabel');
+            if (modalTitle) {
+                modalTitle.textContent = `Pago de Cuota ${cuotaId} - Nuevo Ingreso`;
+            }
+        });
         
-        // Guardar ID de cuota en campo oculto si existe
-        const cuotaIdInput = document.getElementById('cuotaIdSeleccionada');
-        if (cuotaIdInput) {
-            cuotaIdInput.value = cuotaId;
-        } else {
-            // Si no existe el campo, crear uno oculto
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.id = 'cuotaIdSeleccionada';
-            input.name = 'cuotaIdSeleccionada';
-            input.value = cuotaId;
-            document.body.appendChild(input);
-        }
-        
-        // Hacer scroll hasta la sección de configuración de pago
-        const seccionPago = document.getElementById('seccionConfiguracionPago');
-        if (seccionPago) {
-            seccionPago.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Mostrar mensaje de selección
-        showToast(`Cuota ${cuotaId} seleccionada para pago`, 'success');
+        }, 100); // Fin del setTimeout para limpieza de modales
         
     } catch (error) {
         console.error('Error al seleccionar cuota:', error);
@@ -2106,8 +2336,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     $('#fechaRango').on('cancel.daterangepicker', function(ev, picker) {
         $(this).val('');
     });
-    
-    // Cargar datos iniciales
+      // Cargar datos iniciales
     await Promise.all([
         cargarCategorias(),
         cargarClientes(),
@@ -2116,6 +2345,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Cargar ingresos iniciales
     cargarIngresos();
+    
+    // Agregar evento de cálculo automático al campo de valor bruto
+    const valorBrutoInput = document.getElementById('valorBruto');
+    if (valorBrutoInput) {
+        valorBrutoInput.addEventListener('input', function() {
+            console.log('Valor bruto cambiado, recalculando valores...');
+            calcularValores();
+        });
+    }
+    
+    // Agregar evento de cálculo automático al campo de porcentaje de comisión
+    const porcentajeComisionInput = document.getElementById('porcentajeComision');
+    if (porcentajeComisionInput) {
+        porcentajeComisionInput.addEventListener('input', calcularValores);
+    }
 
     // Inicializar evento para manejar cambio de categoría usando jQuery y Select2
     $(document).ready(function() {
