@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Client = require('../models/Client');
 const Employee = require('../models/Employee');
 const Sequelize = require('sequelize');
+const sequelize = require('../config/database');
 const Op = Sequelize.Op;
 const fs = require('fs');
 const path = require('path');
@@ -304,14 +305,18 @@ exports.createIngreso = async (req, res) => {
     valor_neto,
     porcentaje_retencion,
     valor_retencion,
+    metodo_pago,
+    referencia_pago,
+    estado
+  } = req.body;
+  
+  // Extraer valores que pueden necesitar ser modificados usando let en lugar de const
+  let {
     cliente_id,
     credito_id,
     asesor_id,
     porcentaje_comision,
-    valor_comision,
-    metodo_pago,
-    referencia_pago,
-    estado
+    valor_comision
   } = req.body;
     try {
     // Verificar que la categoría exista
@@ -321,8 +326,7 @@ exports.createIngreso = async (req, res) => {
         success: false,
         error: 'La categoría de ingreso no existe'
       });
-    }
-      // Si hay un crédito_id pero no cliente_id, intentar obtener el cliente del crédito directamente con SQL
+    }    // Si hay un crédito_id pero no cliente_id, intentar obtener el cliente del crédito directamente con SQL
     let clienteVerificado = cliente_id;
     if (credito_id && !cliente_id) {
       console.log('Buscando cliente asociado al crédito ID:', credito_id);
@@ -435,11 +439,54 @@ exports.createIngreso = async (req, res) => {
       archivos_adjuntos: archivosAdjuntos.length > 0 ? JSON.stringify(archivosAdjuntos) : null,
       usuario_id: req.usuario.id
     });
-    
-    // Si es un pago de crédito, actualizar el crédito
-    if (categoria.es_credito && credito_id) {
-      // Aquí iría la lógica para actualizar el pago del crédito
-      // Esto dependerá de la estructura de la entidad de créditos
+      // Si es un pago de crédito, actualizar el crédito
+    if ((categoria.es_credito || categoria.nombre.toLowerCase().includes('crédito') || categoria.nombre.toLowerCase().includes('credito')) && credito_id) {
+      try {
+        console.log(`Actualizando crédito ID ${credito_id} con abono de ${valor_bruto}`);
+        
+        // Importar modelo Loan
+        const Loan = require('../models/Loan');
+        
+        // Buscar el crédito
+        const credito = await Loan.findByPk(credito_id);
+        
+        if (credito) {
+          // Obtener valores actuales
+          const saldoActual = parseFloat(credito.total_due) || 0;
+          const nuevoSaldo = Math.max(0, saldoActual - valor_bruto);
+          
+          console.log(`Crédito encontrado: ${credito.loan_number}. Saldo actual: ${saldoActual}. Nuevo saldo: ${nuevoSaldo}`);
+            // Actualizar saldo
+          await credito.update({
+            total_due: nuevoSaldo,
+            // Si el saldo llega a cero, actualizar estado a "Pagado"
+            loan_status: nuevoSaldo <= 0 ? 'Pagado' : credito.loan_status
+          });
+          
+          // Registrar historial de pago si existe el modelo correspondiente
+          try {
+            const PaymentHistory = require('../models/PaymentHistory');
+            await PaymentHistory.create({
+              loan_id: credito_id,
+              payment_date: new Date(fecha),
+              amount_paid: valor_bruto,
+              payment_method: metodo_pago,
+              notes: `Ingreso #${nuevoIngreso.id} - ${referencia_pago || ''}`
+            });
+            console.log('Historial de pago registrado correctamente');
+          } catch (historyError) {
+            console.error('Error al registrar historial de pago:', historyError);
+            // No interrumpimos el flujo por un error en el historial
+          }
+          
+          console.log(`Crédito ID ${credito_id} actualizado correctamente`);
+        } else {
+          console.error(`No se encontró el crédito con ID ${credito_id}`);
+        }
+      } catch (creditoError) {
+        console.error('Error al actualizar crédito:', creditoError);
+        // No interrumpimos el flujo principal por un error en la actualización del crédito
+      }
     }
     
     res.status(201).json({
@@ -484,7 +531,7 @@ exports.updateIngreso = async (req, res) => {
       errors: errors.array()
     });
   }
-    // Extraer datos del request
+  // Extraer datos del request
   const {
     categoria_id,
     concepto,
@@ -494,14 +541,18 @@ exports.updateIngreso = async (req, res) => {
     valor_neto,
     porcentaje_retencion,
     valor_retencion,
+    metodo_pago,
+    referencia_pago,
+    estado
+  } = req.body;
+  
+  // Extraer valores que pueden necesitar ser modificados usando let en lugar de const
+  let {
     cliente_id,
     credito_id,
     asesor_id,
     porcentaje_comision,
-    valor_comision,
-    metodo_pago,
-    referencia_pago,
-    estado
+    valor_comision
   } = req.body;
   
   // Registrar los datos recibidos para depuración
@@ -654,10 +705,61 @@ exports.updateIngreso = async (req, res) => {
       estado: estado || ingreso.estado,
       archivos_adjuntos: archivosAdjuntos.length > 0 ? JSON.stringify(archivosAdjuntos) : null
     });
-    
-    // Si es un pago de crédito, actualizar el crédito si es necesario
-    if (categoria.es_credito && credito_id) {
-      // Aquí iría la lógica para actualizar el pago del crédito
+      // Si es un pago de crédito, actualizar el crédito si es necesario
+    if ((categoria.es_credito || categoria.nombre.toLowerCase().includes('crédito') || categoria.nombre.toLowerCase().includes('credito')) && credito_id) {
+      try {
+        console.log(`Actualizando crédito ID ${credito_id} con abono de ${valor_bruto} (actualización de ingreso)`);
+        
+        // Obtener los valores originales del ingreso para calcular la diferencia
+        const ingresoAnterior = await Ingreso.findByPk(req.params.id);
+        const valorAnterior = ingresoAnterior ? parseFloat(ingresoAnterior.valor_bruto) || 0 : 0;
+        
+        // Calcular diferencia (podría ser positiva o negativa)
+        const diferencia = valor_bruto - valorAnterior;
+        
+        if (diferencia !== 0) {
+          // Importar modelo Loan
+          const Loan = require('../models/Loan');
+          
+          // Buscar el crédito
+          const credito = await Loan.findByPk(credito_id);
+          
+          if (credito) {
+            // Obtener valores actuales
+            const saldoActual = parseFloat(credito.total_due) || 0;
+            const nuevoSaldo = Math.max(0, saldoActual - diferencia);
+            
+            console.log(`Actualización: Crédito ${credito.loan_number}. Saldo actual: ${saldoActual}. Diferencia: ${diferencia}. Nuevo saldo: ${nuevoSaldo}`);
+              // Actualizar saldo
+            await credito.update({
+              total_due: nuevoSaldo,
+              loan_status: nuevoSaldo <= 0 ? 'Pagado' : credito.loan_status
+            });
+            
+            // Registrar actualización en historial
+            try {
+                const PaymentHistory = require('../models/PaymentHistory');
+                await PaymentHistory.create({
+                  loan_id: credito_id,
+                  payment_date: new Date(),
+                  amount_paid: diferencia,
+                  payment_method: 'Ajuste',
+                  notes: `Actualización de ingreso #${ingresoAnterior.id}`
+                });
+              } catch (historyError) {
+                console.error('Error al registrar historial de ajuste:', historyError);
+              }
+            
+            console.log(`Crédito ID ${credito_id} actualizado correctamente`);
+          } else {
+            console.error(`No se encontró el crédito con ID ${credito_id}`);
+          }
+        } else {
+          console.log('No hay cambios en el valor del pago, no se actualiza el crédito');
+        }
+      } catch (creditoError) {
+        console.error('Error al actualizar crédito:', creditoError);
+      }
     }
     
     res.json({
