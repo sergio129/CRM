@@ -449,20 +449,38 @@ exports.createIngreso = async (req, res) => {
         // Buscar el crédito
         const credito = await Loan.findByPk(credito_id);
         
-        if (credito) {
-          // Obtener valores actuales
+        if (credito) {          // Obtener valores actuales
           const saldoActual = parseFloat(credito.total_due) || 0;
           const nuevoSaldo = Math.max(0, saldoActual - valor_bruto);
           
           console.log(`Crédito encontrado: ${credito.loan_number}. Saldo actual: ${saldoActual}. Nuevo saldo: ${nuevoSaldo}`);
-            // Actualizar saldo
+          
+          // Recalcular cuotas pendientes 
+          let cuotasPendientes = credito.remaining_installments;
+          
+          if (nuevoSaldo <= 0) {
+            // Si el saldo es cero, no quedan cuotas pendientes
+            cuotasPendientes = 0;
+          } else {
+            // Recalcular cuotas pendientes si el saldo no es 0
+            const tasaMensual = credito.interest_rate / 100 / 12;
+            const valorCuota = credito.installment_amount || 
+              (credito.amount_requested * tasaMensual) / (1 - Math.pow(1 + tasaMensual, -credito.payment_term));
+            
+            // Calcular cuotas pendientes basado en el nuevo saldo
+            cuotasPendientes = Math.ceil(nuevoSaldo / valorCuota);
+          }
+          
+          console.log(`Actualizando cuotas pendientes: ${credito.remaining_installments} -> ${cuotasPendientes}`);
+          
+          // Actualizar saldo y cuotas pendientes
           await credito.update({
             total_due: nuevoSaldo,
+            remaining_installments: cuotasPendientes,
             // Si el saldo llega a cero, actualizar estado a "Pagado"
             loan_status: nuevoSaldo <= 0 ? 'Pagado' : credito.loan_status
           });
-          
-          // Registrar historial de pago si existe el modelo correspondiente
+            // Registrar historial de pago si existe el modelo correspondiente
           try {
             const PaymentHistory = require('../models/PaymentHistory');
             await PaymentHistory.create({
@@ -470,6 +488,7 @@ exports.createIngreso = async (req, res) => {
               payment_date: new Date(fecha),
               amount_paid: valor_bruto,
               payment_method: metodo_pago,
+              payment_type: 'Abono a Capital',
               notes: nuevoIngreso && nuevoIngreso.id ? `Ingreso #${nuevoIngreso.id} - ${referencia_pago || ''}` : `Pago de crédito - ${referencia_pago || ''}`
             });
             console.log('Historial de pago registrado correctamente');
@@ -723,26 +742,45 @@ exports.updateIngreso = async (req, res) => {
           // Buscar el crédito
           const credito = await Loan.findByPk(credito_id);
           
-          if (credito) {
-            // Obtener valores actuales
+          if (credito) {            // Obtener valores actuales
             const saldoActual = parseFloat(credito.total_due) || 0;
             const nuevoSaldo = Math.max(0, saldoActual - diferencia);
             
             console.log(`Actualización: Crédito ${credito.loan_number}. Saldo actual: ${saldoActual}. Diferencia: ${diferencia}. Nuevo saldo: ${nuevoSaldo}`);
-              // Actualizar saldo
+            
+            // Recalcular cuotas pendientes 
+            let cuotasPendientes = credito.remaining_installments;
+            
+            if (nuevoSaldo <= 0) {
+              // Si el saldo es cero, no quedan cuotas pendientes
+              cuotasPendientes = 0;
+            } else {
+              // Recalcular cuotas pendientes si el saldo no es 0
+              const tasaMensual = credito.interest_rate / 100 / 12;
+              const valorCuota = credito.installment_amount || 
+                (credito.amount_requested * tasaMensual) / (1 - Math.pow(1 + tasaMensual, -credito.payment_term));
+              
+              // Calcular cuotas pendientes basado en el nuevo saldo
+              cuotasPendientes = Math.ceil(nuevoSaldo / valorCuota);
+            }
+            
+            console.log(`Actualizando cuotas pendientes: ${credito.remaining_installments} -> ${cuotasPendientes}`);
+              
+            // Actualizar saldo y cuotas pendientes
             await credito.update({
               total_due: nuevoSaldo,
+              remaining_installments: cuotasPendientes,
               loan_status: nuevoSaldo <= 0 ? 'Pagado' : credito.loan_status
             });
             
             // Registrar actualización en historial
             try {
-                const PaymentHistory = require('../models/PaymentHistory');
-                await PaymentHistory.create({
+                const PaymentHistory = require('../models/PaymentHistory');                await PaymentHistory.create({
                   loan_id: credito_id,
                   payment_date: new Date(),
                   amount_paid: diferencia,
                   payment_method: 'Ajuste',
+                  payment_type: 'Ajuste',
                   notes: `Actualización de ingreso #${ingresoAnterior.id}`
                 });
               } catch (historyError) {
