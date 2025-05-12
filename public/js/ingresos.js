@@ -18,6 +18,26 @@ function formatCurrency(amount) {
     }).format(amount);
 }
 
+// Formatear tamaño de archivo en KB, MB, etc.
+function formatFileSize(bytes) {
+    if (!bytes || isNaN(bytes)) return '0 Bytes';
+    
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+}
+
+// Determinar la clase CSS para el badge de estado
+function getEstadoBadgeClass(estado) {
+    switch(estado.toLowerCase()) {
+        case 'confirmado': return 'bg-success';
+        case 'pendiente': return 'bg-warning';
+        case 'anulado': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
 // Función para mostrar notificaciones toast
 function showToast(message, type = 'success') {
     const toastId = 'toast-' + Date.now();
@@ -895,96 +915,217 @@ async function verDetalleIngreso(id) {
         
         const ingreso = result.data;
         
-        // Llenar el modal con los datos del ingreso
-        document.getElementById('detalleNumeroComprobante').textContent = ingreso.numero_comprobante || `ING-${ingreso.id}`;
-        document.getElementById('detalleFecha').textContent = new Date(ingreso.fecha).toLocaleDateString('es-CO');
-        document.getElementById('detalleCategoria').textContent = ingreso.categoria ? ingreso.categoria.nombre : 'Sin categoría';
-        document.getElementById('detalleConcepto').textContent = ingreso.concepto;
-        document.getElementById('detalleDescripcion').textContent = ingreso.descripcion || 'Sin descripción';
-        document.getElementById('detalleValorBruto').textContent = formatCurrency(ingreso.valor_bruto);
-        document.getElementById('detalleValorRetencion').textContent = formatCurrency(ingreso.valor_retencion);
-        document.getElementById('detallePorcentajeRetencion').textContent = `${ingreso.porcentaje_retencion}%`;
-        document.getElementById('detalleValorNeto').textContent = formatCurrency(ingreso.valor_neto);
-        document.getElementById('detalleMetodoPago').textContent = ingreso.metodo_pago || 'No especificado';
-        document.getElementById('detalleReferenciaPago').textContent = ingreso.referencia_pago || 'No especificado';
+        // Preparar el contenido del modal
+        const modalContent = document.getElementById('detalleIngresoContent');
         
-        // Establecer clase para el estado
-        let estadoClass = '';
-        switch (ingreso.estado) {
-            case 'confirmado': estadoClass = 'bg-success'; break;
-            case 'pendiente': estadoClass = 'bg-warning'; break;
-            case 'anulado': estadoClass = 'bg-danger'; break;
-            default: estadoClass = 'bg-secondary';
-        }
-        
-        document.getElementById('detalleEstado').className = `badge ${estadoClass}`;
-        document.getElementById('detalleEstado').textContent = ingreso.estado;
+        // Construir HTML para mostrar todos los detalles
+        let html = `
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Información General</h6>
+                    <table class="table table-sm table-striped">
+                        <tr>
+                            <th>Número:</th>
+                            <td>${ingreso.numero_comprobante || `ING-${ingreso.id}`}</td>
+                        </tr>
+                        <tr>
+                            <th>Fecha:</th>
+                            <td>${new Date(ingreso.fecha).toLocaleDateString('es-CO')}</td>
+                        </tr>
+                        <tr>
+                            <th>Categoría:</th>
+                            <td>${ingreso.Categoria ? ingreso.Categoria.nombre : 'Sin categoría'}</td>
+                        </tr>
+                        <tr>
+                            <th>Concepto:</th>
+                            <td>${ingreso.concepto}</td>
+                        </tr>
+                        <tr>
+                            <th>Descripción:</th>
+                            <td>${ingreso.descripcion || 'Sin descripción'}</td>
+                        </tr>
+                        <tr>
+                            <th>Estado:</th>
+                            <td><span class="badge ${getEstadoBadgeClass(ingreso.estado)}">${ingreso.estado}</span></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Información Financiera</h6>
+                    <table class="table table-sm table-striped">
+                        <tr>
+                            <th>Valor Bruto:</th>
+                            <td>${formatCurrency(ingreso.valor_bruto)}</td>
+                        </tr>
+                        <tr>
+                            <th>Retención:</th>
+                            <td>${formatCurrency(ingreso.valor_retencion)} (${ingreso.porcentaje_retencion}%)</td>
+                        </tr>
+                        ${ingreso.valor_comision ? `
+                        <tr>
+                            <th>Comisión:</th>
+                            <td>${formatCurrency(ingreso.valor_comision)} (${ingreso.porcentaje_comision}%)</td>
+                        </tr>` : ''}
+                        <tr>
+                            <th>Valor Neto:</th>
+                            <td class="fw-bold">${formatCurrency(ingreso.valor_neto)}</td>
+                        </tr>
+                        <tr>
+                            <th>Método de Pago:</th>
+                            <td>${ingreso.metodo_pago || 'No especificado'}</td>
+                        </tr>
+                        <tr>
+                            <th>Referencia:</th>
+                            <td>${ingreso.referencia_pago || 'No especificado'}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `;
         
         // Información del cliente si existe
-        const detalleClienteElement = document.getElementById('detalleCliente');
-        if (detalleClienteElement) {
-            if (ingreso.cliente) {
-                const nombreCliente = ingreso.cliente.full_name || 
-                                     `${ingreso.cliente.nombre || ''} ${ingreso.cliente.apellido || ''}`.trim();
-                detalleClienteElement.textContent = nombreCliente;
-                
-                // Mostrar sección de cliente
-                document.getElementById('seccionDetalleCliente').style.display = 'block';
-            } else {
-                document.getElementById('seccionDetalleCliente').style.display = 'none';
-            }
+        if (ingreso.Cliente) {
+            html += `
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6>Información del Cliente</h6>
+                        <table class="table table-sm table-striped">
+                            <tr>
+                                <th>Nombre:</th>
+                                <td>${ingreso.Cliente.full_name}</td>
+                            </tr>
+                            <tr>
+                                <th>Identificación:</th>
+                                <td>${ingreso.Cliente.identification || 'No disponible'}</td>
+                            </tr>
+                            <tr>
+                                <th>Teléfono:</th>
+                                <td>${ingreso.Cliente.phone || 'No disponible'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
         }
         
-        // Información del crédito si existe
-        const detalleCreditoElement = document.getElementById('detalleCredito');
-        if (detalleCreditoElement) {
-            if (ingreso.credito) {
-                detalleCreditoElement.textContent = ingreso.credito.numero || `CR-${ingreso.credito.id}`;
-                
-                // Mostrar sección de crédito
-                document.getElementById('seccionDetalleCredito').style.display = 'block';
-            } else {
-                document.getElementById('seccionDetalleCredito').style.display = 'none';
-            }
+        // Información del asesor si existe
+        if (ingreso.Asesor) {
+            html += `
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6>Información del Asesor</h6>
+                        <table class="table table-sm table-striped">
+                            <tr>
+                                <th>Nombre:</th>
+                                <td>${ingreso.Asesor.full_name}</td>
+                            </tr>
+                            <tr>
+                                <th>Identificación:</th>
+                                <td>${ingreso.Asesor.id_number || 'No disponible'}</td>
+                            </tr>
+                            <tr>
+                                <th>Comisión:</th>
+                                <td>${formatCurrency(ingreso.valor_comision)} (${ingreso.porcentaje_comision}%)</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
         }
         
-        // Información del asesor y comisión si existe
-        const detalleAsesorElement = document.getElementById('detalleAsesor');
-        if (detalleAsesorElement) {
-            if (ingreso.asesor) {
-                const nombreAsesor = ingreso.asesor.full_name || 
-                                    `${ingreso.asesor.nombre || ''} ${ingreso.asesor.apellido || ''}`.trim();
-                detalleAsesorElement.textContent = nombreAsesor;
-                
-                document.getElementById('detallePorcentajeComision').textContent = `${ingreso.porcentaje_comision || 0}%`;
-                document.getElementById('detalleValorComision').textContent = formatCurrency(ingreso.valor_comision || 0);
-                
-                // Mostrar sección de comisión
-                document.getElementById('seccionDetalleComision').style.display = 'block';
-            } else {
-                document.getElementById('seccionDetalleComision').style.display = 'none';
-            }
+        // Información del usuario que registró el ingreso
+        if (ingreso.Usuario) {
+            html += `
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6>Información de Registro</h6>
+                        <table class="table table-sm table-striped">
+                            <tr>
+                                <th>Registrado por:</th>
+                                <td>${ingreso.Usuario.full_name}</td>
+                            </tr>
+                            <tr>
+                                <th>Usuario:</th>
+                                <td>${ingreso.Usuario.username}</td>
+                            </tr>
+                            <tr>
+                                <th>Fecha de registro:</th>
+                                <td>${new Date(ingreso.created_at).toLocaleString('es-CO')}</td>
+                            </tr>
+                            ${ingreso.updated_at !== ingreso.created_at ? `
+                            <tr>
+                                <th>Última actualización:</th>
+                                <td>${new Date(ingreso.updated_at).toLocaleString('es-CO')}</td>
+                            </tr>` : ''}
+                        </table>
+                    </div>
+                </div>
+            `;
         }
         
-        // Mostrar información de archivos adjuntos si hay
-        const detalleAdjuntoElement = document.getElementById('detalleAdjuntos');
-        if (detalleAdjuntoElement) {
-            if (ingreso.adjuntos && ingreso.adjuntos.length > 0) {
-                let adjuntosHTML = '';
-                ingreso.adjuntos.forEach(adjunto => {
-                    adjuntosHTML += `
-                        <div class="mb-2">
-                            <a href="${adjunto.url}" target="_blank" class="btn btn-sm btn-outline-info">
-                                <i class="fas fa-file-download"></i> ${adjunto.nombre_original || 'Adjunto'}
-                            </a>
+        // Archivos adjuntos si existen
+        if (ingreso.archivos_adjuntos) {
+            try {
+                const archivos = JSON.parse(ingreso.archivos_adjuntos);
+                if (archivos && archivos.length > 0) {
+                    html += `
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6>Archivos Adjuntos</h6>
+                                <ul class="list-group">
+                    `;
+                    
+                    archivos.forEach(archivo => {
+                        html += `
+                            <li class="list-group-item">
+                                <a href="${archivo.ruta}" target="_blank" class="text-decoration-none">
+                                    <i class="fas fa-file me-2"></i>${archivo.nombre_original}
+                                </a>
+                                <span class="badge bg-secondary ms-2">${formatFileSize(archivo.tamano)}</span>
+                            </li>
+                        `;
+                    });
+                    
+                    html += `
+                                </ul>
+                            </div>
                         </div>
                     `;
-                });
-                
-                detalleAdjuntoElement.innerHTML = adjuntosHTML;
-                document.getElementById('seccionDetalleAdjuntos').style.display = 'block';
+                }
+            } catch (e) {
+                console.error('Error al parsear archivos adjuntos:', e);
+            }
+        }
+        
+        // Asignar el HTML al contenido del modal
+        modalContent.innerHTML = html;
+        
+        // Configurar botones de acciones según el estado
+        const btnEditar = document.getElementById('btnEditarDesdeDetalle');
+        const btnAnular = document.getElementById('btnAnularDesdeDetalle');
+        
+        if (btnEditar && btnAnular) {
+            if (ingreso.estado === 'anulado') {
+                btnEditar.style.display = 'none';
+                btnAnular.style.display = 'none';
             } else {
-                document.getElementById('seccionDetalleAdjuntos').style.display = 'none';
+                btnEditar.style.display = 'inline-block';
+                btnAnular.style.display = 'inline-block';
+                
+                // Configurar eventos para los botones
+                btnEditar.onclick = () => {
+                    // Cerrar modal de detalle
+                    bootstrap.Modal.getInstance(document.getElementById('detalleIngresoModal')).hide();
+                    // Abrir modal de edición
+                    setTimeout(() => editarIngreso(ingreso.id), 500);
+                };
+                
+                btnAnular.onclick = () => {
+                    // Cerrar modal de detalle
+                    bootstrap.Modal.getInstance(document.getElementById('detalleIngresoModal')).hide();
+                    // Abrir modal de anulación
+                    setTimeout(() => anularIngreso(ingreso.id), 500);
+                };
             }
         }
         
@@ -1001,6 +1142,17 @@ async function verDetalleIngreso(id) {
 // Función para cargar un ingreso en el modal para editarlo
 async function editarIngreso(id) {
     try {
+        // Mostrar indicador de carga en el modal
+        const ingresoModalEl = document.getElementById('ingresoModal');
+        const ingresoModalLabel = document.getElementById('ingresoModalLabel');
+        if (ingresoModalLabel) {
+            ingresoModalLabel.textContent = 'Cargando Ingreso...';
+        }
+        
+        // Mostrar modal con animación de carga
+        const ingresoModal = new bootstrap.Modal(ingresoModalEl);
+        ingresoModal.show();
+        
         // Obtener los datos del ingreso desde la API
         const response = await fetch(`/api/ingresos/${id}`, {
             method: 'GET',
@@ -1023,7 +1175,7 @@ async function editarIngreso(id) {
         const ingreso = result.data;
         
         // Llenar el formulario con los datos del ingreso
-        document.getElementById('ingresoModalLabel').textContent = 'Editar Ingreso';
+        ingresoModalLabel.textContent = 'Editar Ingreso';
         
         // Guardar el ID del ingreso
         if (document.getElementById('ingresoId')) {
@@ -1074,6 +1226,15 @@ async function editarIngreso(id) {
             
             // Seleccionar cliente
             document.getElementById('clienteIngreso').value = ingreso.cliente_id;
+            
+            // Actualizar Select2 si está disponible
+            if (window.jQuery && $.fn.select2 && document.getElementById('clienteIngreso')) {
+                try {
+                    $('#clienteIngreso').val(ingreso.cliente_id).trigger('change');
+                } catch (e) {
+                    console.error('Error al actualizar Select2 para cliente:', e);
+                }
+            }
         }
         
         // Si tiene crédito, seleccionarlo
@@ -1085,6 +1246,15 @@ async function editarIngreso(id) {
             
             // Seleccionar crédito
             document.getElementById('creditoIngreso').value = ingreso.credito_id;
+            
+            // Actualizar Select2 si está disponible
+            if (window.jQuery && $.fn.select2 && document.getElementById('creditoIngreso')) {
+                try {
+                    $('#creditoIngreso').val(ingreso.credito_id).trigger('change');
+                } catch (e) {
+                    console.error('Error al actualizar Select2 para crédito:', e);
+                }
+            }
         }
         
         // Si tiene asesor y comisión
@@ -1100,6 +1270,15 @@ async function editarIngreso(id) {
             document.getElementById('asesorIngreso').value = ingreso.asesor_id;
             document.getElementById('porcentajeComision').value = ingreso.porcentaje_comision || 0;
             document.getElementById('valorComision').value = ingreso.valor_comision || 0;
+            
+            // Actualizar Select2 si está disponible
+            if (window.jQuery && $.fn.select2 && document.getElementById('asesorIngreso')) {
+                try {
+                    $('#asesorIngreso').val(ingreso.asesor_id).trigger('change');
+                } catch (e) {
+                    console.error('Error al actualizar Select2 para asesor:', e);
+                }
+            }
         }
         
         // Mostrar el botón de actualizar y ocultar el de guardar
@@ -1110,13 +1289,17 @@ async function editarIngreso(id) {
             document.getElementById('btnActualizarIngreso').style.display = 'block';
         }
         
-        // Abrir modal
-        const ingresoModal = new bootstrap.Modal(document.getElementById('ingresoModal'));
-        ingresoModal.show();
+        // Si ya está abierto el modal, no hacemos nada más
         
     } catch (error) {
         console.error('Error al cargar ingreso para editar:', error);
         showToast('Error: ' + error.message, 'error');
+        
+        // Cerrar el modal si está abierto
+        const modal = bootstrap.Modal.getInstance(document.getElementById('ingresoModal'));
+        if (modal) {
+            modal.hide();
+        }
     }
 }
 
@@ -1124,6 +1307,11 @@ async function editarIngreso(id) {
 function anularIngreso(id) {
     // Mostrar modal de confirmación
     const modal = new bootstrap.Modal(document.getElementById('confirmarAnulacionModal'));
+    
+    // Limpiar campo de motivo si existe
+    if (document.getElementById('motivoAnulacion')) {
+        document.getElementById('motivoAnulacion').value = '';
+    }
     
     // Configurar el botón de confirmar anulación con el ID correspondiente
     const btnConfirmar = document.getElementById('btnConfirmarAnulacion');
@@ -1134,9 +1322,20 @@ function anularIngreso(id) {
     
     // Agregar el evento al nuevo botón
     nuevoBoton.addEventListener('click', async () => {
-        const motivoAnulacion = document.getElementById('motivoAnulacion').value || 'Anulado por el usuario';
+        // Verificar que se haya ingresado un motivo
+        const motivoAnulacion = document.getElementById('motivoAnulacion').value;
+        if (!motivoAnulacion || motivoAnulacion.trim() === '') {
+            showToast('Por favor ingrese el motivo de la anulación', 'error');
+            return;
+        }
         
-        try {            const response = await fetch(`/api/ingresos/${id}/anular`, {
+        // Mostrar indicador de carga en el botón
+        nuevoBoton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        nuevoBoton.disabled = true;
+        
+        try {
+            // Realizar la petición al endpoint específico de anulación
+            const response = await fetch(`/api/ingresos/${id}/anular`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1146,6 +1345,10 @@ function anularIngreso(id) {
                     motivo_anulacion: motivoAnulacion
                 })
             });
+            
+            // Restaurar texto original del botón
+            nuevoBoton.innerHTML = 'Anular Ingreso';
+            nuevoBoton.disabled = false;
             
             if (!response.ok) {
                 // Si el endpoint específico de anulación no existe, intentar con una actualización general
@@ -1175,6 +1378,11 @@ function anularIngreso(id) {
             
         } catch (error) {
             console.error('Error al anular ingreso:', error);
+            
+            // Restaurar texto original del botón
+            nuevoBoton.innerHTML = 'Anular Ingreso';
+            nuevoBoton.disabled = false;
+            
             showToast('Error: ' + error.message, 'error');
         }
     });
@@ -1186,6 +1394,11 @@ function anularIngreso(id) {
 // Función alternativa para anular un ingreso si no existe el endpoint específico
 async function anularIngresoAlternativo(id, motivoAnulacion = 'Anulado por el usuario') {
     try {
+        console.log('Intentando método alternativo de anulación:', id, motivoAnulacion);
+        
+        // Mostrar indicador de carga
+        showToast('Procesando anulación...', 'warning');
+        
         const response = await fetch(`/api/ingresos/${id}`, {
             method: 'PUT',
             headers: {
@@ -1226,6 +1439,7 @@ async function anularIngresoAlternativo(id, motivoAnulacion = 'Anulado por el us
         return true;
     } catch (error) {
         console.error('Error en método alternativo de anulación:', error);
+        showToast('Error al anular ingreso: ' + error.message, 'error');
         throw error;
     }
 }
