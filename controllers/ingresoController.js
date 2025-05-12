@@ -284,6 +284,68 @@ exports.getIngresoById = async (req, res) => {
   }
 };
 
+// Función para calcular el siguiente vencimiento a partir de una fecha de pago
+function calcularSiguienteVencimiento(fechaPago, frecuencia = 'monthly') {
+  const fechaSiguiente = new Date(fechaPago);
+  
+  switch (frecuencia.toLowerCase()) {
+    case 'weekly':
+      fechaSiguiente.setDate(fechaSiguiente.getDate() + 7);
+      break;
+    case 'biweekly':
+      fechaSiguiente.setDate(fechaSiguiente.getDate() + 14);
+      break;
+    case 'monthly':
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 1);
+      break;
+    case 'quarterly':
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 3);
+      break;
+    case 'semiannual':
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 6);
+      break;
+    case 'annual':
+      fechaSiguiente.setFullYear(fechaSiguiente.getFullYear() + 1);
+      break;
+    default:
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 1);
+      break;
+  }
+  
+  return fechaSiguiente;
+}
+
+// Función para calcular el siguiente vencimiento a partir de una fecha de pago
+function calcularSiguienteVencimiento(fechaPago, frecuencia = 'monthly') {
+  const fechaSiguiente = new Date(fechaPago);
+  
+  switch (frecuencia.toLowerCase()) {
+    case 'weekly':
+      fechaSiguiente.setDate(fechaSiguiente.getDate() + 7);
+      break;
+    case 'biweekly':
+      fechaSiguiente.setDate(fechaSiguiente.getDate() + 14);
+      break;
+    case 'monthly':
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 1);
+      break;
+    case 'quarterly':
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 3);
+      break;
+    case 'semiannual':
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 6);
+      break;
+    case 'annual':
+      fechaSiguiente.setFullYear(fechaSiguiente.getFullYear() + 1);
+      break;
+    default:
+      fechaSiguiente.setMonth(fechaSiguiente.getMonth() + 1);
+      break;
+  }
+  
+  return fechaSiguiente;
+}
+
 // Crear un nuevo ingreso
 exports.createIngreso = async (req, res) => {
   // Validar entrada
@@ -307,7 +369,8 @@ exports.createIngreso = async (req, res) => {
     valor_retencion,
     metodo_pago,
     referencia_pago,
-    estado
+    estado,
+    fecha_pago
   } = req.body;
   
   // Extraer valores que pueden necesitar ser modificados usando let en lugar de const
@@ -326,7 +389,21 @@ exports.createIngreso = async (req, res) => {
         success: false,
         error: 'La categoría de ingreso no existe'
       });
-    }    // Si hay un crédito_id pero no cliente_id, intentar obtener el cliente del crédito directamente con SQL
+    }
+    
+    // Validar que si es un pago de crédito, se proporcione la fecha de pago
+    if (credito_id && (categoria.es_credito || 
+        categoria.nombre.toLowerCase().includes('crédito') || 
+        categoria.nombre.toLowerCase().includes('credito'))) {
+      if (!fecha_pago) {
+        return res.status(400).json({
+          success: false,
+          error: 'La fecha de pago es obligatoria para pagos de crédito'
+        });
+      }
+    }
+    
+    // Si hay un crédito_id pero no cliente_id, intentar obtener el cliente del crédito directamente con SQL
     let clienteVerificado = cliente_id;
     if (credito_id && !cliente_id) {
       console.log('Buscando cliente asociado al crédito ID:', credito_id);
@@ -472,20 +549,23 @@ exports.createIngreso = async (req, res) => {
           }
           
           console.log(`Actualizando cuotas pendientes: ${credito.remaining_installments} -> ${cuotasPendientes}`);
-          
-          // Actualizar saldo y cuotas pendientes
+            // Actualizar saldo y cuotas pendientes
           await credito.update({
             total_due: nuevoSaldo,
-            remaining_installments: cuotasPendientes,
-            // Si el saldo llega a cero, actualizar estado a "Pagado"
-            loan_status: nuevoSaldo <= 0 ? 'Pagado' : credito.loan_status
+            remaining_installments: cuotasPendientes,            // Si el saldo llega a cero, actualizar estado a "Pagado"
+            loan_status: nuevoSaldo <= 0 ? 'Pagado' : credito.loan_status,
+            // Actualizar la fecha del próximo pago si se proporcionó una fecha de pago
+            ...(fecha_pago && {
+              next_payment_date: calcularSiguienteVencimiento(new Date(fecha_pago), credito.payment_frequency || 'monthly')
+            })
           });
-            // Registrar historial de pago si existe el modelo correspondiente
+
+          // Registrar historial de pago si existe el modelo correspondiente
           try {
             const PaymentHistory = require('../models/PaymentHistory');
             await PaymentHistory.create({
               loan_id: credito_id,
-              payment_date: new Date(fecha),
+              payment_date: fecha_pago ? new Date(fecha_pago) : new Date(fecha),
               amount_paid: valor_bruto,
               payment_method: metodo_pago,
               payment_type: 'Abono a Capital',

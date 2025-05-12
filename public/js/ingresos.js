@@ -234,6 +234,65 @@ function manejarCambioCategoria() {
     calcularValores();
 }
 
+// Verificar y establecer la categoría correcta para pagos de crédito
+function verificarCategoriaCredito() {
+    // Verificar si hay un crédito seleccionado
+    const creditoId = document.getElementById('creditoIdSeleccionado')?.value;
+    if (!creditoId) {
+        console.log('No hay crédito seleccionado, no es necesario verificar la categoría');
+        return;
+    }
+
+    // Verificar si ya hay una categoría de crédito seleccionada
+    const categoriaSelect = document.getElementById('categoriaIngreso');
+    if (!categoriaSelect) {
+        console.log('No se encontró el selector de categorías');
+        return;
+    }
+
+    // Verificar la categoría seleccionada actualmente
+    const categoriaSeleccionada = categoriaSelect.options[categoriaSelect.selectedIndex];
+    if (categoriaSeleccionada && categoriaSeleccionada.value && 
+        (categoriaSeleccionada.dataset.credito === 'true' || 
+        categoriaSeleccionada.textContent.toLowerCase().includes('crédito') || 
+        categoriaSeleccionada.textContent.toLowerCase().includes('credito'))) {
+        console.log('Ya hay una categoría de crédito seleccionada:', categoriaSeleccionada.textContent);
+        return;
+    }
+
+    // Buscar una categoría de crédito adecuada
+    console.log('Buscando categoría de crédito...');
+    for (let i = 0; i < categoriaSelect.options.length; i++) {
+        const option = categoriaSelect.options[i];
+        if (option.dataset.credito === 'true' || 
+            option.textContent.toLowerCase().includes('crédito') || 
+            option.textContent.toLowerCase().includes('credito')) {
+            
+            // Seleccionar esta opción
+            categoriaSelect.selectedIndex = i;
+            categoriaSelect.value = option.value;
+            
+            // Actualizar Select2 si está disponible
+            if (window.jQuery && $.fn.select2) {
+                try {
+                    $(categoriaSelect).val(option.value).trigger('change');
+                } catch (e) {
+                    console.error('Error al actualizar Select2:', e);
+                    categoriaSelect.dispatchEvent(new Event('change'));
+                }
+            } else {
+                // Disparar el evento change
+                categoriaSelect.dispatchEvent(new Event('change'));
+            }
+            
+            console.log('Categoría de crédito establecida correctamente:', option.textContent);
+            return;
+        }
+    }
+    
+    console.log('No se encontró ninguna categoría de crédito adecuada');
+}
+
 // Función auxiliar para llenar el selector de clientes
 function llenarSelectorClientes() {
     const selectCliente = document.getElementById('clienteIngreso');
@@ -379,10 +438,30 @@ async function guardarIngreso() {
             return;
         }
     }
+      // Verificar si necesitamos buscar una categoría de crédito (cuando hay creditoId pero no se seleccionó categoría de crédito)
+    let categoria_id = categoriaIngreso;
+    
+    // Si es un pago de crédito pero no se ha seleccionado una categoría de tipo crédito, buscar una
+    if (creditoId && !document.querySelector('#categoriaIngreso option:checked').dataset.credito) {
+        console.log('Detectado pago de crédito sin categoría de crédito seleccionada. Buscando categoría adecuada...');
+        
+        // Buscar una categoría de tipo crédito entre las disponibles
+        const categoriasSelect = document.getElementById('categoriaIngreso');
+        for (let i = 0; i < categoriasSelect.options.length; i++) {
+            const option = categoriasSelect.options[i];
+            if (option.dataset.credito === 'true' || 
+                option.textContent.toLowerCase().includes('crédito') || 
+                option.textContent.toLowerCase().includes('credito')) {
+                categoria_id = option.value;
+                console.log('Categoría de crédito encontrada y seleccionada:', option.textContent);
+                break;
+            }
+        }
+    }
     
     // Crear objeto con los datos del ingreso
     const ingresoData = {
-        categoria_id: categoriaIngreso,
+        categoria_id: categoria_id, // Usar la categoría seleccionada o la que encontramos
         fecha: fechaIngreso,
         concepto: conceptoIngreso,
         descripcion: descripcionIngreso,
@@ -394,13 +473,25 @@ async function guardarIngreso() {
         valor_retencion: valorRetencion,
         valor_neto: valorNeto
     };
-    
-    // Agregar datos opcionales si existen
+      // Agregar datos opcionales si existen
     if (clienteId) {
         console.log('Agregando cliente_id al ingreso:', clienteId);
         ingresoData.cliente_id = clienteId;
     }
-    if (creditoId) ingresoData.credito_id = creditoId;
+    if (creditoId) {
+        ingresoData.credito_id = creditoId;
+        
+        // Si es un pago de crédito, verificar y agregar la fecha_pago desde fechaPagoModal
+        const fechaPagoModal = document.getElementById('fechaPagoModal');
+        if (fechaPagoModal && fechaPagoModal.value) {
+            ingresoData.fecha_pago = fechaPagoModal.value;
+            console.log('Agregando fecha_pago al ingreso:', fechaPagoModal.value);
+        } else if (cuotaSeleccionada) {
+            // Si no hay fechaPagoModal pero es un pago de cuota, mostrar error
+            showToast('La fecha de pago es obligatoria para pagos de crédito', 'error');
+            return; // Detener la ejecución para evitar enviar el formulario sin la fecha de pago
+        }
+    }
     if (asesorId) {
         ingresoData.asesor_id = asesorId;
         ingresoData.porcentaje_comision = porcentajeComision;
@@ -1132,21 +1223,28 @@ function actualizarTablaAmortizacion(detallesCredito) {
         
         document.getElementById('cuotasPagadas').innerText = cuotasPagadas;
         document.getElementById('cuotasPorPagar').innerText = cuotasPendientes;
-        
-        // Buscar la próxima fecha de vencimiento en las cuotas
+          // Buscar la próxima fecha de vencimiento en las cuotas
         let proximoVencimiento = '--/--/----';
         
         // Primero intentar encontrar la próxima cuota pendiente si hay datos disponibles
         if (detallesCredito.installments && Array.isArray(detallesCredito.installments)) {
-            // Buscar la primera cuota pendiente
-            const cuotaPendiente = detallesCredito.installments.find(cuota => 
-                (cuota.status || cuota.estado || '').toLowerCase() === 'pendiente');
+            // Ordenar las cuotas por fecha de vencimiento
+            const cuotasOrdenadas = [...detallesCredito.installments]
+                .filter(cuota => (cuota.status || cuota.estado || '').toLowerCase() === 'pendiente')
+                .sort((a, b) => {
+                    const fechaA = new Date(a.due_date || a.fecha_vencimiento || 0);
+                    const fechaB = new Date(b.due_date || b.fecha_vencimiento || 0);
+                    return fechaA - fechaB;
+                });
+            
+            // Tomar la primera cuota pendiente (la más próxima)
+            const cuotaPendiente = cuotasOrdenadas.length > 0 ? cuotasOrdenadas[0] : null;
             
             if (cuotaPendiente && (cuotaPendiente.due_date || cuotaPendiente.fecha_vencimiento)) {
                 const fecha = new Date(cuotaPendiente.due_date || cuotaPendiente.fecha_vencimiento);
                 if (!isNaN(fecha.getTime())) {
                     proximoVencimiento = fecha.toLocaleDateString('es-CO');
-                    console.log('Próximo vencimiento encontrado en cuotas:', proximoVencimiento);
+                    console.log('Próximo vencimiento encontrado en cuotas (ordenadas):', proximoVencimiento);
                 }
             }
         }
@@ -1563,31 +1661,44 @@ async function seleccionarCuota(creditoId, cuotaId, valorCuota) {
         ingresoModalEl.addEventListener('shown.bs.modal', function modalShownHandler() {
             // Solo ejecutar una vez y luego remover el listener
             ingresoModalEl.removeEventListener('shown.bs.modal', modalShownHandler);
-            
-            console.log('Modal de Nuevo Ingreso mostrada correctamente - actualizando valores...');
+              console.log('Modal de Nuevo Ingreso mostrada correctamente - actualizando valores...');
             
             // Obtener detalles del crédito y cliente desde la variable global
             const detallesCredito = window.creditoDetallesCompletos || {};
-              // Buscar la categoría de tipo crédito y seleccionarla
+            
+            // Buscar la categoría de tipo crédito y seleccionarla
             const categoriasSelect = document.getElementById('categoriaIngreso');
             if (categoriasSelect) {
                 // Buscar una categoría que sea de tipo crédito
                 let creditCategoryFound = false;
+                let creditCategory = null;
+                
                 for (let i = 0; i < categoriasSelect.options.length; i++) {
                     const option = categoriasSelect.options[i];
                     if (option.dataset.credito === 'true' || 
                         option.textContent.toLowerCase().includes('crédito') || 
                         option.textContent.toLowerCase().includes('credito')) {
+                        
+                        // Guardar la referencia a la categoría de crédito
+                        creditCategory = option;
+                        
+                        // Seleccionar esta opción
                         categoriasSelect.selectedIndex = i;
                         categoriasSelect.value = option.value;
                         
                         // Para select2, actualizar también visualmente
                         if (window.jQuery && $.fn.select2) {
-                            $(categoriasSelect).val(option.value).trigger('change');
+                            try {
+                                $(categoriasSelect).val(option.value).trigger('change');
+                                console.log('Categoría de crédito seleccionada con Select2:', option.textContent);
+                            } catch (e) {
+                                console.error('Error al actualizar Select2:', e);
+                                // Intentar método alternativo
+                                categoriasSelect.dispatchEvent(new Event('change'));
+                            }
                         } else {
                             // Disparar el evento change para activar manejarCambioCategoria
-                            const event = new Event('change');
-                            categoriasSelect.dispatchEvent(event);
+                            categoriasSelect.dispatchEvent(new Event('change'));
                         }
                         
                         creditCategoryFound = true;
@@ -1785,6 +1896,7 @@ function confirmarSeleccionCredito() {
         // Obtener valores de los campos
         const creditoId = document.getElementById('creditoIdSeleccionado').value;
         const montoPago = parseFloat(document.getElementById('montoPago').value) || 0;
+        const fechaPago = document.getElementById('fechaPagoModal').value;
         
         if (!creditoId) {
             showToast('Por favor seleccione un crédito primero', 'error');
@@ -1793,6 +1905,12 @@ function confirmarSeleccionCredito() {
         
         if (montoPago <= 0) {
             showToast('Por favor ingrese un monto válido para el pago', 'error');
+            return;
+        }
+        
+        // Verificar que la fecha de pago esté presente
+        if (!fechaPago) {
+            showToast('Por favor seleccione la fecha de pago', 'error');
             return;
         }
         
