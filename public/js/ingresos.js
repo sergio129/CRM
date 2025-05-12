@@ -1564,7 +1564,15 @@ function actualizarValorPagoSegunSeleccion(detallesCredito) {
 async function seleccionarCuota(creditoId, cuotaId, valorCuota) {
     try {
         console.log(`Seleccionando cuota: CréditoID=${creditoId}, CuotaID=${cuotaId}, Valor=${valorCuota}`);
-          // Primero cerrar cualquier modal que pudiera estar abierta
+        
+        // Verificar que la fecha de pago esté presente, similar a confirmarSeleccionCredito()
+        const fechaPagoModal = document.getElementById('fechaPagoModal');
+        if (fechaPagoModal && !fechaPagoModal.value) {
+            showToast('Por favor seleccione la fecha de pago');
+            return; // Detener la ejecución para evitar continuar sin la fecha de pago
+        }
+          
+        // Primero cerrar cualquier modal que pudiera estar abierta
         // Cerrar la modal de búsqueda de cliente si está abierta
         const clienteModal = document.getElementById('clienteCreditoModal');
         if (clienteModal) {
