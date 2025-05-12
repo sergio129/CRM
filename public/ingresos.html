@@ -1042,13 +1042,16 @@
                     console.log("Select2 selección detectada:", e.params.data.text);
                     const categoriaText = e.params.data.text.toLowerCase();
                     
-                    if (categoriaText.includes('credito') || categoriaText.includes('crédito') || categoriaText.includes('consumo')) {
+                    // Verificar si estamos en modo edición antes de mostrar el botón
+                    if ((categoriaText.includes('credito') || categoriaText.includes('crédito') || categoriaText.includes('consumo')) && !window.editingMode) {
                         console.log("Categoría de crédito seleccionada, mostrando botón...");
                         if (document.getElementById('btnBuscarClienteCredito')) {
                             document.getElementById('btnBuscarClienteCredito').style.display = 'block';
                         }
+                    } else if (window.editingMode) {
+                        console.log("Categoría de crédito seleccionada en modo edición, NO mostrando botón");
                     }
-                });            }, 1500);
+                });}, 1500);
         });
     </script>
     

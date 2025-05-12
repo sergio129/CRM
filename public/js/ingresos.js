@@ -7,7 +7,10 @@ let asesores = [];
 let paginaActual = 1;
 let totalPaginas = 1;
 let limitePorPagina = 10;
-let editingMode = false; // Indica si estamos en modo edición
+
+// Variable global para controlar el modo edición
+window.editingMode = false; // Hacer disponible globalmente
+let editingMode = false; // Mantener referencia local también
 
 // Formatear números como moneda
 function formatCurrency(amount) {
@@ -220,15 +223,29 @@ function manejarCambioCategoria() {
     document.getElementById('porcentajeRetencion').value = porcentajeRetencion;
     
     // Para categorías de crédito, abrir directamente la modal de búsqueda de clientes y créditos
-    if (esCreditoConsumo && !editingMode) {
-        // Ocultar la sección de cliente y crédito en la modal principal
-        document.getElementById('seccionCliente').style.display = 'none';
-        document.getElementById('seccionCredito').style.display = 'none';
+    if (esCreditoConsumo) {
+        console.log('Categoría de crédito detectada. Modo edición:', editingMode);
         
-        // Abrir automáticamente la modal de búsqueda de clientes y créditos
-        // Solo si no estamos en modo edición
-        const clienteCreditoModal = new bootstrap.Modal(document.getElementById('clienteCreditoModal'));
-        clienteCreditoModal.show();
+        // Si estamos editando, NO abrimos el modal de búsqueda
+        if (editingMode) {
+            console.log('En modo edición: NO abriendo modal de búsqueda de cliente');
+            
+            // En modo edición, asegurarnos que la sección cliente esté visible si hay cliente seleccionado
+            // pero evitamos abrir el modal de búsqueda
+            const btnBuscarClienteCredito = document.getElementById('btnBuscarClienteCredito');
+            if (btnBuscarClienteCredito) {
+                btnBuscarClienteCredito.style.display = 'none';
+            }
+        } else {
+            // En modo creación, ocultar la sección de cliente y crédito en la modal principal
+            document.getElementById('seccionCliente').style.display = 'none';
+            document.getElementById('seccionCredito').style.display = 'none';
+            
+            // Abrir automáticamente la modal de búsqueda de clientes y créditos
+            console.log('Abriendo modal de búsqueda de cliente/crédito (modo creación)');
+            const clienteCreditoModal = new bootstrap.Modal(document.getElementById('clienteCreditoModal'));
+            clienteCreditoModal.show();
+        }
     } 
     else if (requiereCliente) {
         // Para clientes sin crédito, mostrar la sección normal
@@ -1144,8 +1161,23 @@ async function verDetalleIngreso(id) {
 // Función para cargar un ingreso en el modal para editarlo
 async function editarIngreso(id) {
     try {
-        // Activar modo edición para evitar comportamientos automáticos
+        // Asegurar que cualquier modal de cliente/crédito abierto se cierre
+        const clienteModalEl = document.getElementById('clienteCreditoModal');
+        if (clienteModalEl) {
+            const clienteModalInstance = bootstrap.Modal.getInstance(clienteModalEl);
+            if (clienteModalInstance) {
+                clienteModalInstance.hide();
+            }
+        }
+        
+        // Limpiar cualquier modal backdrop existente antes de mostrar el modal
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+          // Activar modo edición para evitar comportamientos automáticos
         editingMode = true;
+        window.editingMode = true;
         console.log('Modo edición activado');
         
         // Mostrar indicador de carga en el modal
@@ -1156,7 +1188,10 @@ async function editarIngreso(id) {
         }
         
         // Mostrar modal con animación de carga
-        const ingresoModal = new bootstrap.Modal(ingresoModalEl);
+        const ingresoModal = new bootstrap.Modal(ingresoModalEl, {
+            backdrop: 'static',
+            keyboard: false
+        });
         ingresoModal.show();
         
         // Obtener los datos del ingreso desde la API
@@ -1179,9 +1214,16 @@ async function editarIngreso(id) {
         }
         
         const ingreso = result.data;
+          // Llenar el formulario con los datos del ingreso
+        if (ingresoModalLabel) {
+            ingresoModalLabel.textContent = 'Editar Ingreso';
+        }
         
-        // Llenar el formulario con los datos del ingreso
-        ingresoModalLabel.textContent = 'Editar Ingreso';
+        // Actualizar título también en la etiqueta
+        const modalTitleEl = document.querySelector('#ingresoModal .modal-title');
+        if (modalTitleEl) {
+            modalTitleEl.textContent = 'Editar Ingreso';
+        }
         
         // Guardar el ID del ingreso
         if (document.getElementById('ingresoId')) {
@@ -1230,10 +1272,16 @@ async function editarIngreso(id) {
                 console.log('Eventos de Select2 restaurados después de editar');
             }, 500);
         }
-        
-        // Si tiene cliente, seleccionarlo
+          // Si tiene cliente, seleccionarlo
         if (ingreso.cliente_id) {
+            // Asegurarnos de que la sección cliente sea visible en modo edición
             document.getElementById('seccionCliente').style.display = 'block';
+            
+            // Ocultar el botón de búsqueda de cliente/crédito en modo edición
+            const btnBuscarClienteCredito = document.getElementById('btnBuscarClienteCredito');
+            if (btnBuscarClienteCredito) {
+                btnBuscarClienteCredito.style.display = 'none';
+            }
             
             // Cargar clientes si aún no están cargados
             if (clientes.length === 0) {
@@ -1241,15 +1289,20 @@ async function editarIngreso(id) {
             }
             
             // Seleccionar cliente
-            document.getElementById('clienteIngreso').value = ingreso.cliente_id;
-            
-            // Actualizar Select2 si está disponible
-            if (window.jQuery && $.fn.select2 && document.getElementById('clienteIngreso')) {
-                try {
-                    $('#clienteIngreso').val(ingreso.cliente_id).trigger('change');
-                } catch (e) {
-                    console.error('Error al actualizar Select2 para cliente:', e);
+            const clienteSelect = document.getElementById('clienteIngreso');
+            if (clienteSelect) {
+                clienteSelect.value = ingreso.cliente_id;
+                
+                // Actualizar Select2 si está disponible
+                if (window.jQuery && $.fn.select2) {
+                    try {
+                        $('#clienteIngreso').val(ingreso.cliente_id).trigger('change');
+                    } catch (e) {
+                        console.error('Error al actualizar Select2 para cliente:', e);
+                    }
                 }
+            } else {
+                console.error('No se encontró el elemento select de cliente');
             }
         }
         
@@ -1309,9 +1362,9 @@ async function editarIngreso(id) {
           } catch (error) {
         console.error('Error al cargar ingreso para editar:', error);
         showToast('Error: ' + error.message, 'error');
-        
-        // Desactivar modo edición
+          // Desactivar modo edición
         editingMode = false;
+        window.editingMode = false;
         console.log('Modo edición desactivado por error');
         
         // Cerrar el modal si está abierto
@@ -2252,10 +2305,10 @@ function actualizarValorPagoSegunSeleccion(detallesCredito) {
 document.addEventListener('DOMContentLoaded', function() {
     const ingresoModalEl = document.getElementById('ingresoModal');
     
-    if (ingresoModalEl) {
-        ingresoModalEl.addEventListener('hidden.bs.modal', function () {
+    if (ingresoModalEl) {        ingresoModalEl.addEventListener('hidden.bs.modal', function () {
             // Desactivar modo edición cuando se cierre el modal
             editingMode = false;
+            window.editingMode = false;
             console.log('Modo edición desactivado');
         });
     }
