@@ -35,10 +35,31 @@ const CategoriaIngreso = sequelize.define('CategoriaIngreso', {
   es_credito: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  categoria_padre_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'categorias_ingresos',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'categorias_ingresos',
   timestamps: true
 });
+
+// Definir relación de auto-referencia para categorías y subcategorías
+CategoriaIngreso.associate = function(models) {
+  CategoriaIngreso.belongsTo(CategoriaIngreso, {
+    foreignKey: 'categoria_padre_id',
+    as: 'CategoriaPadre'
+  });
+  
+  CategoriaIngreso.hasMany(CategoriaIngreso, {
+    foreignKey: 'categoria_padre_id',
+    as: 'Subcategorias'
+  });
+};
 
 module.exports = CategoriaIngreso;

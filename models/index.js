@@ -78,6 +78,12 @@ Client.associate({ Loan });
 Loan.associate({ Client });
 Egreso.associate({ CategoriaEgreso, EgresoRecurrente, User: require('./User') });
 EgresoRecurrente.associate({ Egreso });
+
+// Relaciones de CategoriaIngreso (jerarquía de categorías)
+if (typeof CategoriaIngreso.associate === 'function') {
+  CategoriaIngreso.associate({ CategoriaIngreso });
+}
+
 Ingreso.associate({ CategoriaIngreso, Client, Employee, Loan, User: require('./User') });
 
 module.exports = {

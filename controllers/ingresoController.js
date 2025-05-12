@@ -78,36 +78,37 @@ exports.getIngresos = async (req, res) => {
         { concepto: { [Op.like]: `%${req.query.busqueda}%` } },
         { descripcion: { [Op.like]: `%${req.query.busqueda}%` } }
       ];
-    }
+    }    // Realizar la consulta con las asociaciones necesarias
+    let includeConfig = [
+      {
+        model: CategoriaIngreso,
+        as: 'Categoria',
+        attributes: ['id', 'nombre']
+      },
+      {
+        model: Client,
+        as: 'Cliente',
+        attributes: ['id', 'full_name', 'identification'] // Cliente usa full_name
+      },
+      {
+        model: Employee,
+        as: 'Asesor',
+        attributes: ['id', 'full_name', 'id_number'] // Employee también usa full_name
+      },
+      {
+        model: User,
+        as: 'Usuario',
+        attributes: ['id', 'full_name', 'username'] // User también usa full_name
+      }
+    ];
     
-    // Realizar la consulta con las asociaciones necesarias
-    const { count, rows } = await Ingreso.findAndCountAll({
+    // Realizar la consulta con paginación y asociaciones
+    const { rows, count } = await Ingreso.findAndCountAll({
       where,
-      order: [['fecha', 'DESC'], ['id', 'DESC']],
+      include: includeConfig,
       limit,
       offset,
-      include: [
-        {
-          model: CategoriaIngreso,
-          as: 'Categoria',
-          attributes: ['id', 'nombre']
-        },
-        {
-          model: Client,
-          as: 'Cliente',
-          attributes: ['id', 'full_name', 'identification'] // Cliente usa full_name
-        },
-        {
-          model: Employee,
-          as: 'Asesor',
-          attributes: ['id', 'full_name', 'id_number'] // Employee también usa full_name
-        },
-        {
-          model: User,
-          as: 'Usuario',
-          attributes: ['id', 'full_name', 'username'] // User también usa full_name
-        }
-      ]
+      order: [['fecha', 'DESC'], ['id', 'DESC']]
     });
     
     // Calcular totales
@@ -382,12 +383,20 @@ exports.createIngreso = async (req, res) => {
     valor_comision
   } = req.body;
     try {
-    // Verificar que la categoría exista
+    // Verificar que la categoría exista    // Verificar que la categoría exista
     const categoria = await CategoriaIngreso.findByPk(categoria_id);
     if (!categoria) {
       return res.status(400).json({
         success: false,
         error: 'La categoría de ingreso no existe'
+      });
+    }
+    
+    // Verificar que la categoría esté activa
+    if (!categoria.es_activo) {
+      return res.status(400).json({
+        success: false,
+        error: 'La categoría seleccionada está inactiva'
       });
     }
     

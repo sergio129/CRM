@@ -951,9 +951,12 @@ async function verDetalleIngreso(id) {
                             <th>Fecha:</th>
                             <td>${new Date(ingreso.fecha).toLocaleDateString('es-CO')}</td>
                         </tr>
-                        <tr>
-                            <th>Categoría:</th>
-                            <td>${ingreso.Categoria ? ingreso.Categoria.nombre : 'Sin categoría'}</td>
+                        <tr>                            <th>Categoría:</th>
+                            <td>${ingreso.Categoria 
+                                ? (ingreso.Categoria.CategoriaPadre 
+                                    ? `${ingreso.Categoria.CategoriaPadre.nombre} / ${ingreso.Categoria.nombre}` 
+                                    : ingreso.Categoria.nombre)
+                                : 'Sin categoría'}</td>
                         </tr>
                         <tr>
                             <th>Concepto:</th>
@@ -1519,7 +1522,7 @@ async function anularIngresoAlternativo(id, motivoAnulacion = 'Anulado por el us
 // Función para cargar las categorías
 async function cargarCategorias() {
     try {
-        const response = await fetch('/api/categorias-ingreso', {
+        const response = await fetch('/api/categorias-ingreso?incluirSubcategorias=true', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -1541,8 +1544,16 @@ async function cargarCategorias() {
         if (selectCategoriaFiltro) {
             selectCategoriaFiltro.innerHTML = '<option value="">Todas las categorías</option>';
             
-            categorias.forEach(categoria => {
+            // Agregar categorías principales primero
+            const categoriasPrincipales = categorias.filter(cat => !cat.categoria_padre_id);
+            categoriasPrincipales.forEach(categoria => {
                 selectCategoriaFiltro.innerHTML += `<option value="${categoria.id}">${categoria.nombre}</option>`;
+                
+                // Agregar subcategorías con sangría
+                const subcategorias = categorias.filter(subcat => subcat.categoria_padre_id === categoria.id);
+                subcategorias.forEach(subcategoria => {
+                    selectCategoriaFiltro.innerHTML += `<option value="${subcategoria.id}">&#8627; ${subcategoria.nombre}</option>`;
+                });
             });
         }
         
@@ -1551,18 +1562,36 @@ async function cargarCategorias() {
         if (selectCategoriaIngreso) {
             selectCategoriaIngreso.innerHTML = '<option value="">Seleccione una categoría</option>';
             
-            categorias.forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria.id;
-                option.textContent = categoria.nombre;
+            // Agregar categorías principales primero
+            const categoriasPrincipales = categorias.filter(cat => !cat.categoria_padre_id);
+            categoriasPrincipales.forEach(categoria => {
+                const optionPrincipal = document.createElement('option');
+                optionPrincipal.value = categoria.id;
+                optionPrincipal.textContent = categoria.nombre;
                 
                 // Agregar atributos de datos para usar en manejarCambioCategoria
-                option.dataset.retencion = categoria.porcentaje_retencion || 0;
-                option.dataset.cliente = categoria.requiere_cliente || false;
-                option.dataset.comision = categoria.permite_comision || false;
-                option.dataset.credito = categoria.es_credito || false;
+                optionPrincipal.dataset.retencion = categoria.porcentaje_retencion || 0;
+                optionPrincipal.dataset.cliente = categoria.requiere_cliente || false;
+                optionPrincipal.dataset.comision = categoria.permite_comision || false;
+                optionPrincipal.dataset.credito = categoria.es_credito || false;
                 
-                selectCategoriaIngreso.appendChild(option);
+                selectCategoriaIngreso.appendChild(optionPrincipal);
+                
+                // Agregar subcategorías con sangría
+                const subcategorias = categorias.filter(subcat => subcat.categoria_padre_id === categoria.id);
+                subcategorias.forEach(subcategoria => {
+                    const optionSubcat = document.createElement('option');
+                    optionSubcat.value = subcategoria.id;
+                    optionSubcat.textContent = `\u00A0\u00A0\u2514 ${subcategoria.nombre}`;
+                    
+                    // Agregar atributos de datos
+                    optionSubcat.dataset.retencion = subcategoria.porcentaje_retencion || 0;
+                    optionSubcat.dataset.cliente = subcategoria.requiere_cliente || false;
+                    optionSubcat.dataset.comision = subcategoria.permite_comision || false;
+                    optionSubcat.dataset.credito = subcategoria.es_credito || false;
+                    
+                    selectCategoriaIngreso.appendChild(optionSubcat);
+                });
             });
         }
         
