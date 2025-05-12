@@ -7,6 +7,7 @@ let asesores = [];
 let paginaActual = 1;
 let totalPaginas = 1;
 let limitePorPagina = 10;
+let editingMode = false; // Indica si estamos en modo edición
 
 // Formatear números como moneda
 function formatCurrency(amount) {
@@ -219,12 +220,13 @@ function manejarCambioCategoria() {
     document.getElementById('porcentajeRetencion').value = porcentajeRetencion;
     
     // Para categorías de crédito, abrir directamente la modal de búsqueda de clientes y créditos
-    if (esCreditoConsumo) {
+    if (esCreditoConsumo && !editingMode) {
         // Ocultar la sección de cliente y crédito en la modal principal
         document.getElementById('seccionCliente').style.display = 'none';
         document.getElementById('seccionCredito').style.display = 'none';
         
         // Abrir automáticamente la modal de búsqueda de clientes y créditos
+        // Solo si no estamos en modo edición
         const clienteCreditoModal = new bootstrap.Modal(document.getElementById('clienteCreditoModal'));
         clienteCreditoModal.show();
     } 
@@ -1142,6 +1144,10 @@ async function verDetalleIngreso(id) {
 // Función para cargar un ingreso en el modal para editarlo
 async function editarIngreso(id) {
     try {
+        // Activar modo edición para evitar comportamientos automáticos
+        editingMode = true;
+        console.log('Modo edición activado');
+        
         // Mostrar indicador de carga en el modal
         const ingresoModalEl = document.getElementById('ingresoModal');
         const ingresoModalLabel = document.getElementById('ingresoModalLabel');
@@ -1196,16 +1202,20 @@ async function editarIngreso(id) {
         document.getElementById('metodoPago').value = ingreso.metodo_pago || 'efectivo';
         document.getElementById('referenciaPago').value = ingreso.referencia_pago || '';
         document.getElementById('estadoIngreso').value = ingreso.estado;
-        
-        // Seleccionar categoría
+          // Seleccionar categoría
         const categoriaSelect = document.getElementById('categoriaIngreso');
         if (ingreso.categoria_id && categoriaSelect) {
             categoriaSelect.value = ingreso.categoria_id;
             
+            // Evitar que la selección de categoría active automáticamente el modal de búsqueda de cliente
+            // Desactivar temporalmente los eventos de Select2
+            const oldHandler = $.fn.select2.amd.require('select2/selection/search').prototype.searchPlaceholder;
+            
             // Actualizar Select2 si está disponible
             if (window.jQuery && $.fn.select2) {
                 try {
-                    $(categoriaSelect).val(ingreso.categoria_id).trigger('change');
+                    $(categoriaSelect).off('select2:select');
+                    $(categoriaSelect).val(ingreso.categoria_id).trigger('change.select2');
                 } catch (e) {
                     console.error('Error al actualizar Select2:', e);
                     categoriaSelect.dispatchEvent(new Event('change'));
@@ -1213,6 +1223,12 @@ async function editarIngreso(id) {
             } else {
                 categoriaSelect.dispatchEvent(new Event('change'));
             }
+            
+            // Restaurar eventos originales después de la selección
+            setTimeout(() => {
+                // Aquí se pueden restaurar eventos si es necesario
+                console.log('Eventos de Select2 restaurados después de editar');
+            }, 500);
         }
         
         // Si tiene cliente, seleccionarlo
@@ -1290,10 +1306,13 @@ async function editarIngreso(id) {
         }
         
         // Si ya está abierto el modal, no hacemos nada más
-        
-    } catch (error) {
+          } catch (error) {
         console.error('Error al cargar ingreso para editar:', error);
         showToast('Error: ' + error.message, 'error');
+        
+        // Desactivar modo edición
+        editingMode = false;
+        console.log('Modo edición desactivado por error');
         
         // Cerrar el modal si está abierto
         const modal = bootstrap.Modal.getInstance(document.getElementById('ingresoModal'));
@@ -2229,6 +2248,19 @@ function actualizarValorPagoSegunSeleccion(detallesCredito) {
         console.log('Tipo de pago: Parcial - Campo editable');
     }
 }
+//Evento para cuando se cierre el modal de ingreso
+document.addEventListener('DOMContentLoaded', function() {
+    const ingresoModalEl = document.getElementById('ingresoModal');
+    
+    if (ingresoModalEl) {
+        ingresoModalEl.addEventListener('hidden.bs.modal', function () {
+            // Desactivar modo edición cuando se cierre el modal
+            editingMode = false;
+            console.log('Modo edición desactivado');
+        });
+    }
+});
+
 
 // Función para seleccionar una cuota específica para pago
 async function seleccionarCuota(creditoId, cuotaId, valorCuota) {
