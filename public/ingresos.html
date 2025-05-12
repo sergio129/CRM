@@ -1048,9 +1048,31 @@
                             document.getElementById('btnBuscarClienteCredito').style.display = 'block';
                         }
                     }
-                });
-            }, 1500);
+                });            }, 1500);
         });
     </script>
+    
+    <!-- Modal para confirmar anulación de ingreso -->
+    <div class="modal fade" id="confirmarAnulacionModal" tabindex="-1" aria-labelledby="confirmarAnulacionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="confirmarAnulacionModalLabel">Confirmar Anulación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro que desea anular este ingreso? Esta acción no se puede deshacer.</p>
+                    <div class="form-group mb-3">
+                        <label for="motivoAnulacion" class="form-label">Motivo de anulación:</label>
+                        <textarea id="motivoAnulacion" class="form-control" rows="3" placeholder="Ingrese el motivo de anulación"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarAnulacion">Anular Ingreso</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

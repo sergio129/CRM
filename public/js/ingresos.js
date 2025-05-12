@@ -1121,52 +1121,72 @@ async function editarIngreso(id) {
 }
 
 // Función para anular un ingreso
-async function anularIngreso(id) {
-    // Mostrar confirmación antes de anular
-    if (!confirm('¿Está seguro que desea anular este ingreso? Esta acción no se puede deshacer.')) {
-        return; // Si el usuario cancela, no hacer nada
-    }
+function anularIngreso(id) {
+    // Mostrar modal de confirmación
+    const modal = new bootstrap.Modal(document.getElementById('confirmarAnulacionModal'));
     
-    try {
-        const response = await fetch(`/api/ingresos/${id}/anular`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                estado: 'anulado',
-                motivo_anulacion: 'Anulado por el usuario'
-            })
-        });
+    // Configurar el botón de confirmar anulación con el ID correspondiente
+    const btnConfirmar = document.getElementById('btnConfirmarAnulacion');
+    
+    // Eliminar eventos anteriores (para evitar duplicados si se llama múltiples veces)
+    const nuevoBoton = btnConfirmar.cloneNode(true);
+    btnConfirmar.parentNode.replaceChild(nuevoBoton, btnConfirmar);
+    
+    // Agregar el evento al nuevo botón
+    nuevoBoton.addEventListener('click', async () => {
+        const motivoAnulacion = document.getElementById('motivoAnulacion').value || 'Anulado por el usuario';
         
-        if (!response.ok) {
-            // Si el endpoint específico de anulación no existe, intentar con una actualización general
-            if (response.status === 404) {
-                return await anularIngresoAlternativo(id);
+        try {
+            const response = await fetch(`/api/ingresos/${id}/anular`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    estado: 'anulado',
+                    motivo_anulacion: motivoAnulacion
+                })
+            });
+            
+            if (!response.ok) {
+                // Si el endpoint específico de anulación no existe, intentar con una actualización general
+                if (response.status === 404) {
+                    await anularIngresoAlternativo(id, motivoAnulacion);
+                    return;
+                }
+                throw new Error(`Error al anular ingreso: ${response.status}`);
             }
-            throw new Error(`Error al anular ingreso: ${response.status}`);
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Error al anular el ingreso');
+            }
+            
+            // Cerrar el modal
+            modal.hide();
+            
+            // Limpiar el campo de motivo para futuras anulaciones
+            document.getElementById('motivoAnulacion').value = '';
+            
+            showToast('Ingreso anulado correctamente', 'success');
+            
+            // Recargar lista de ingresos para reflejar el cambio
+            cargarIngresos();
+            
+        } catch (error) {
+            console.error('Error al anular ingreso:', error);
+            showToast('Error: ' + error.message, 'error');
         }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Error al anular el ingreso');
-        }
-        
-        showToast('Ingreso anulado correctamente', 'success');
-        
-        // Recargar lista de ingresos para reflejar el cambio
-        cargarIngresos();
-        
-    } catch (error) {
-        console.error('Error al anular ingreso:', error);
-        showToast('Error: ' + error.message, 'error');
-    }
+    });
+    
+    // Mostrar el modal
+    modal.show();
 }
 
 // Función alternativa para anular un ingreso si no existe el endpoint específico
-async function anularIngresoAlternativo(id) {
+async function anularIngresoAlternativo(id, motivoAnulacion = 'Anulado por el usuario') {
     try {
         const response = await fetch(`/api/ingresos/${id}`, {
             method: 'PUT',
@@ -1176,7 +1196,7 @@ async function anularIngresoAlternativo(id) {
             },
             body: JSON.stringify({
                 estado: 'anulado',
-                motivo_anulacion: 'Anulado por el usuario'
+                motivo_anulacion: motivoAnulacion
             })
         });
         
@@ -1188,12 +1208,22 @@ async function anularIngresoAlternativo(id) {
         
         if (!result.success) {
             throw new Error(result.error || 'Error al anular el ingreso');
-        }
-        
+        }        
         showToast('Ingreso anulado correctamente', 'success');
         
         // Recargar lista de ingresos para reflejar el cambio
         cargarIngresos();
+        
+        // Cerrar el modal si está abierto
+        const confirmarModal = bootstrap.Modal.getInstance(document.getElementById('confirmarAnulacionModal'));
+        if (confirmarModal) {
+            confirmarModal.hide();
+        }
+        
+        // Limpiar el campo de motivo
+        if (document.getElementById('motivoAnulacion')) {
+            document.getElementById('motivoAnulacion').value = '';
+        }
         
         return true;
     } catch (error) {
