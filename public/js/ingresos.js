@@ -292,6 +292,105 @@ function verificarCategoriaCredito() {
     
     console.log('No se encontró ninguna categoría de crédito adecuada');
 }
+// Función para cargar y configurar categorías especiales
+async function cargarCategoriasEspeciales() {
+    try {
+        const response = await fetch('/api/categorias-ingresos', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error al cargar categorías: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+            // Buscar categorías específicas
+            const categorias = data.data || [];
+            
+            for (const categoria of categorias) {
+                // Categoría para pagos de crédito
+                if (categoria.es_credito || 
+                    categoria.nombre.toLowerCase().includes('crédit') ||
+                    categoria.nombre.toLowerCase().includes('credit')) {
+                    CATEGORIA_CREDITO_ID = categoria.id;
+                }
+                
+                // Categoría específica para pagos de cuotas
+                if (categoria.nombre.toLowerCase().includes('cuota') || 
+                    categoria.nombre.toLowerCase().includes('pago cuota') ||
+                    categoria.nombre.toLowerCase().includes('pago de cuota')) {
+                    CATEGORIA_PAGO_CUOTA_ID = categoria.id;
+                }
+            }
+            
+            console.log('Categorías especiales configuradas:', {
+                CATEGORIA_CREDITO_ID,
+                CATEGORIA_PAGO_CUOTA_ID
+            });
+            
+            // Crear categoría para pagos de cuotas si no existe
+            if (!CATEGORIA_PAGO_CUOTA_ID && CATEGORIA_CREDITO_ID) {
+                try {
+                    await crearCategoriaPagoCuotas();
+                } catch (e) {
+                    console.warn('No se pudo crear categoría para pagos de cuotas:', e);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error al configurar categorías especiales:', error);
+    }
+}
+
+// Función para crear una categoría específica para pagos de cuotas
+async function crearCategoriaPagoCuotas() {
+    try {
+        const nuevaCategoria = {
+            nombre: 'Pago de Cuota Préstamo',
+            descripcion: 'Categoría para pagos de cuotas de préstamos',
+            es_activo: true,
+            requiere_cliente: true,
+            porcentaje_retencion: 0,
+            permite_comision: false,
+            es_credito: true
+        };
+        
+        const response = await fetch('/api/categorias-ingresos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(nuevaCategoria)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error al crear categoría: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            CATEGORIA_PAGO_CUOTA_ID = result.data.id;
+            console.log('Categoría de pagos de cuotas creada con ID:', CATEGORIA_PAGO_CUOTA_ID);
+            
+            // Actualizar el selector de categorías
+            await cargarCategorias();
+            return true;
+        } else {
+            throw new Error(result.error || 'No se pudo crear la categoría');
+        }
+    } catch (error) {
+        console.error('Error al crear categoría para pagos de cuotas:', error);
+        return false;
+    }
+}
 
 // Función auxiliar para llenar el selector de clientes
 function llenarSelectorClientes() {
@@ -2534,7 +2633,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     await Promise.all([
         cargarCategorias(),
         cargarClientes(),
-        cargarAsesores()
+        cargarAsesores(),
+        cargarCategoriasEspeciales()
     ]);
     
     // Cargar ingresos iniciales
