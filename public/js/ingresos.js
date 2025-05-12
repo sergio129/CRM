@@ -1136,15 +1136,13 @@ function anularIngreso(id) {
     nuevoBoton.addEventListener('click', async () => {
         const motivoAnulacion = document.getElementById('motivoAnulacion').value || 'Anulado por el usuario';
         
-        try {
-            const response = await fetch(`/api/ingresos/${id}/anular`, {
-                method: 'PUT',
+        try {            const response = await fetch(`/api/ingresos/${id}/anular`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    estado: 'anulado',
                     motivo_anulacion: motivoAnulacion
                 })
             });
