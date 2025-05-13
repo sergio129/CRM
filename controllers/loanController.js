@@ -14,10 +14,14 @@ exports.getLoans = async (req, res) => {
         
         // Construir las condiciones de filtrado
         let where = {};
-        
-        // Filtrar por estado si se especifica
+          // Filtrar por estado si se especifica
         if (estado && estado !== 'todos') {
-            where.status = estado;
+            // Verificar los diferentes posibles nombres de columna para estado
+            where[Op.or] = [
+                { status: estado },
+                { estado: estado },
+                { loan_status: estado }
+            ];
         }
         
         // Filtrar por período si se especifica
@@ -49,9 +53,12 @@ exports.getLoans = async (req, res) => {
             }
             
             if (startDate && endDate) {
-                where.createdAt = {
-                    [Op.between]: [startDate, endDate]
-                };
+                // Buscar en todos los posibles campos de fecha
+                where[Op.or] = [
+                    { createdAt: { [Op.between]: [startDate, endDate] } },
+                    { fecha: { [Op.between]: [startDate, endDate] } },
+                    { date: { [Op.between]: [startDate, endDate] } }
+                ];
             }
         }
 

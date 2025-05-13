@@ -737,15 +737,18 @@ async function fetchPrestamosData() {
         if (tableBody) {
             tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando préstamos...</td></tr>';
         }
-        
-        // Construir los parámetros de filtrado
+          // Construir los parámetros de filtrado
         let params = new URLSearchParams();
         params.append('periodo', currentPrestamoPeriod);
         
-        // Solo añadir el estado si no es "todos"
-        if (currentPrestamoEstado !== 'todos') {
-            params.append('estado', currentPrestamoEstado);
-        }
+        // Añadir el estado al filtro
+        // Si es "todos", igualmente lo enviamos para que el backend lo procese
+        params.append('estado', currentPrestamoEstado);
+        
+        console.log('Filtros aplicados:', {
+            periodo: currentPrestamoPeriod,
+            estado: currentPrestamoEstado
+        });
         
         const response = await fetch(`/api/loans?${params.toString()}`, {
             headers: {
@@ -822,17 +825,21 @@ function prepareChartData(loans) {
             const dayIndex = loanDate.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
             const dayMapped = dayIndex === 0 ? 6 : dayIndex - 1; // Convertir a 0 = Lunes, ..., 6 = Domingo
             
-            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
-            const status = loan.estado || loan.status || '';
+            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);            // Normalizar el estado y tener en cuenta posibles variaciones
+            const status = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
             
-            if (status.toLowerCase() === 'activo') {
+            if (status.includes('activ')) {
                 activos[dayMapped] += amount;
-            } else if (status.toLowerCase() === 'completado') {
+            } else if (status.includes('complet') || status.includes('pagad')) {
                 completados[dayMapped] += amount;
-            } else if (status.toLowerCase() === 'cancelado') {
+            } else if (status.includes('cancel')) {
                 cancelados[dayMapped] += amount;
-            } else if (status.toLowerCase() === 'mora') {
+            } else if (status.includes('mora') || status.includes('vencid')) {
                 mora[dayMapped] += amount;
+            } else {
+                // Si no se puede determinar un estado específico, 
+                // asignar al estado activo por defecto
+                activos[dayMapped] += amount;
             }
         });
         
@@ -848,17 +855,21 @@ function prepareChartData(loans) {
             const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
             const monthIndex = loanDate.getMonth(); // 0 = Enero, ..., 11 = Diciembre
             
-            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
-            const status = loan.estado || loan.status || '';
+            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);            // Normalizar el estado y tener en cuenta posibles variaciones
+            const status = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
             
-            if (status.toLowerCase() === 'activo') {
+            if (status.includes('activ')) {
                 activos[monthIndex] += amount;
-            } else if (status.toLowerCase() === 'completado') {
+            } else if (status.includes('complet') || status.includes('pagad')) {
                 completados[monthIndex] += amount;
-            } else if (status.toLowerCase() === 'cancelado') {
+            } else if (status.includes('cancel')) {
                 cancelados[monthIndex] += amount;
-            } else if (status.toLowerCase() === 'mora') {
+            } else if (status.includes('mora') || status.includes('vencid')) {
                 mora[monthIndex] += amount;
+            } else {
+                // Si no se puede determinar un estado específico, 
+                // asignar al estado activo por defecto
+                activos[monthIndex] += amount;
             }
         });
         
@@ -876,18 +887,22 @@ function prepareChartData(loans) {
             const year = loanDate.getFullYear();
             const yearIndex = labels.indexOf(year);
             
-            if (yearIndex !== -1) {
-                const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
-                const status = loan.estado || loan.status || '';
+            if (yearIndex !== -1) {                const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+                // Normalizar el estado y tener en cuenta posibles variaciones
+                const status = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
                 
-                if (status.toLowerCase() === 'activo') {
+                if (status.includes('activ')) {
                     activos[yearIndex] += amount;
-                } else if (status.toLowerCase() === 'completado') {
+                } else if (status.includes('complet') || status.includes('pagad')) {
                     completados[yearIndex] += amount;
-                } else if (status.toLowerCase() === 'cancelado') {
+                } else if (status.includes('cancel')) {
                     cancelados[yearIndex] += amount;
-                } else if (status.toLowerCase() === 'mora') {
+                } else if (status.includes('mora') || status.includes('vencid')) {
                     mora[yearIndex] += amount;
+                } else {
+                    // Si no se puede determinar un estado específico, 
+                    // asignar al estado activo por defecto
+                    activos[yearIndex] += amount;
                 }
             }
         });
@@ -991,6 +1006,8 @@ function updatePrestamosChart(data) {
         return;
     }
     
+    console.log('Datos para el gráfico:', data.chartData);
+    
     // Preparar los datos según el periodo seleccionado
     let labels;
     
@@ -1001,6 +1018,14 @@ function updatePrestamosChart(data) {
     } else { // anual
         labels = data.chartData.labels || Array.from({length: 5}, (_, i) => (new Date().getFullYear() - 2 + i).toString());
     }
+    
+    // Verificar si hay datos en los arrays
+    const tieneActivos = Array.isArray(data.chartData.activos) && data.chartData.activos.some(v => v > 0);
+    const tieneCompletados = Array.isArray(data.chartData.completados) && data.chartData.completados.some(v => v > 0);
+    const tieneMora = Array.isArray(data.chartData.mora) && data.chartData.mora.some(v => v > 0);
+    const tieneCancelados = Array.isArray(data.chartData.cancelados) && data.chartData.cancelados.some(v => v > 0);
+    
+    console.log('Tiene datos:', {tieneActivos, tieneCompletados, tieneMora, tieneCancelados});
     
     // Determinar qué conjuntos de datos mostrar según el filtro de estado
     const allDatasets = [
@@ -1103,6 +1128,10 @@ function initPrestamoEvents() {
             document.querySelectorAll('.prestamo-estado-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentPrestamoEstado = this.dataset.estado;
+            
+            // Aplicar filtro inmediatamente
+            showToast('Información', 'Actualizando visualización...', 'info');
+            fetchPrestamosData();
         });
     });
     
@@ -1112,6 +1141,10 @@ function initPrestamoEvents() {
             document.querySelectorAll('.prestamo-periodo-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentPrestamoPeriod = this.dataset.periodo;
+            
+            // Aplicar filtro inmediatamente
+            showToast('Información', 'Actualizando visualización...', 'info');
+            fetchPrestamosData();
         });
     });
     
