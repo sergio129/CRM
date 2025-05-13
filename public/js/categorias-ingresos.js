@@ -484,8 +484,25 @@ async function cambiarEstadoCategoria(categoriaId, nuevoEstado) {
         if (!catData.success) {
             throw new Error('Error al obtener datos de la categoría');
         }
+          const categoriaActual = catData.data;
         
-        const categoriaActual = catData.data;
+        // Preparar el objeto de datos a enviar
+        const updateData = {
+            nombre: categoriaActual.nombre,
+            descripcion: categoriaActual.descripcion,
+            porcentaje_retencion: categoriaActual.porcentaje_retencion || 0,
+            requiere_cliente: categoriaActual.requiere_cliente || false,
+            permite_comision: categoriaActual.permite_comision || false,
+            es_credito: categoriaActual.es_credito || false,
+            es_activo: nuevoEstado
+        };
+        
+        // Solo incluir categoria_padre_id si existe y no es null
+        if (categoriaActual.categoria_padre_id) {
+            updateData.categoria_padre_id = categoriaActual.categoria_padre_id;
+        }
+        
+        console.log('Datos a enviar para actualizar estado:', updateData);
         
         // Llamar a la API para actualizar estado incluyendo todos los campos requeridos
         const response = await fetch(`/api/categorias-ingreso/${categoriaId}`, {
@@ -494,16 +511,7 @@ async function cambiarEstadoCategoria(categoriaId, nuevoEstado) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-                nombre: categoriaActual.nombre,
-                descripcion: categoriaActual.descripcion,
-                porcentaje_retencion: categoriaActual.porcentaje_retencion,
-                requiere_cliente: categoriaActual.requiere_cliente,
-                permite_comision: categoriaActual.permite_comision,
-                es_credito: categoriaActual.es_credito,
-                categoria_padre_id: categoriaActual.categoria_padre_id,
-                es_activo: nuevoEstado
-            })
+            body: JSON.stringify(updateData)
         });
         
         const result = await response.json();

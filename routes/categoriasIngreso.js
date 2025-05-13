@@ -27,7 +27,13 @@ router.post('/', [
 router.put('/:id', [
   check('nombre').not().isEmpty().withMessage('El nombre es obligatorio'),
   check('descripcion').optional(),
-  check('categoria_padre_id').optional().isNumeric().withMessage('La categoría padre debe ser un ID válido')
+  check('categoria_padre_id')
+    .optional()
+    .custom((value) => {
+      // Permitir null o un número válido
+      return value === null || value === undefined || (!isNaN(value) && Number.isInteger(Number(value)));
+    })
+    .withMessage('La categoría padre debe ser un ID válido o null')
 ], categoriaIngresoController.updateCategoria);
 
 // Eliminar una categoría
