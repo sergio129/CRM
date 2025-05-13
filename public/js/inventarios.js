@@ -917,6 +917,21 @@ function prepareChartData(loans) {
     };
 }
 
+// Función para validar si hay datos de préstamos para mostrar
+function hayDatosParaMostrar(chartData) {
+    if (!chartData) return false;
+    
+    const { activos, completados, cancelados, mora } = chartData;
+    
+    // Verificar si alguna de las series tiene datos mayores a 0
+    const tieneActivos = Array.isArray(activos) && activos.some(v => v > 0);
+    const tieneCompletados = Array.isArray(completados) && completados.some(v => v > 0);
+    const tieneCancelados = Array.isArray(cancelados) && cancelados.some(v => v > 0);
+    const tieneMora = Array.isArray(mora) && mora.some(v => v > 0);
+    
+    return tieneActivos || tieneCompletados || tieneCancelados || tieneMora;
+}
+
 // Función para actualizar la tabla de préstamos
 function updatePrestamosTable(data) {
     const tableBody = document.getElementById('tablaPrestamos');
@@ -934,13 +949,39 @@ function updatePrestamosTable(data) {
     }
     
     let html = '';
-    loans.forEach(loan => {
+    
+    // Filtrar los préstamos según el estado si es necesario
+    const loansToShow = loans.filter(loan => {
+        if (currentPrestamoEstado === 'todos') return true;
+        
+        const loanStatus = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
+        
+        if (currentPrestamoEstado === 'activos' && loanStatus.includes('activ')) return true;
+        if (currentPrestamoEstado === 'completados' && (loanStatus.includes('complet') || loanStatus.includes('pagad'))) return true;
+        if (currentPrestamoEstado === 'cancelados' && loanStatus.includes('cancel')) return true;
+        if (currentPrestamoEstado === 'mora' && (loanStatus.includes('mora') || loanStatus.includes('vencid'))) return true;
+        
+        return false;
+    });
+    
+    // Verificar si después del filtrado todavía hay préstamos
+    if (loansToShow.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No hay préstamos en estado "${currentPrestamoEstado}" en este momento</td></tr>`;
+        return;
+    }
+    
+    // Limitar a un máximo de 10 préstamos para mantener la tabla manejable
+    const maxToShow = Math.min(loansToShow.length, 10);
+    
+    for (let i = 0; i < maxToShow; i++) {
+        const loan = loansToShow[i];
+        
         // Normalizar datos del préstamo para manejar diferentes formatos de API
         const loanNumber = loan.loan_number || loan.numero || loan.id || '';
         const clientName = loan.client?.full_name || loan.Client?.full_name || loan.cliente_nombre || 'Cliente';
         const loanAmount = loan.amount_requested || loan.monto_total || loan.amount || 0;
         const loanDate = loan.fecha || loan.createdAt || loan.date || new Date();
-        const loanStatus = loan.estado || loan.status || 'Activo';
+        const loanStatus = loan.estado || loan.status || loan.loan_status || 'Activo';
         
         // Calcular progreso de pago
         let pagado = loan.pagado || loan.paid_amount || 0;
@@ -972,24 +1013,37 @@ function updatePrestamosTable(data) {
                 </td>
             </tr>
         `;
-    });
+    }
+    
+    // Si hay más préstamos de los que mostramos, añadir una fila informativa
+    if (loansToShow.length > maxToShow) {
+        const remaining = loansToShow.length - maxToShow;
+        html += `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>Y ${remaining} préstamo(s) más. Ver detalle completo para más información.
+                </td>
+            </tr>
+        `;
+    }
     
     tableBody.innerHTML = html;
 }
 
 // Función para obtener la clase CSS según el estado del préstamo
 function getEstadoClass(estado) {
-    switch (estado.toLowerCase()) {
-        case 'activo':
-            return 'bg-primary';
-        case 'completado':
-            return 'bg-success';
-        case 'cancelado':
-            return 'bg-danger';
-        case 'mora':
-            return 'bg-warning';
-        default:
-            return 'bg-secondary';
+    const estadoLower = estado.toLowerCase();
+    
+    if (estadoLower.includes('activ')) {
+        return 'bg-primary';
+    } else if (estadoLower.includes('complet') || estadoLower.includes('pagad')) {
+        return 'bg-success';
+    } else if (estadoLower.includes('cancel')) {
+        return 'bg-danger';
+    } else if (estadoLower.includes('mora') || estadoLower.includes('vencid')) {
+        return 'bg-warning';
+    } else {
+        return 'bg-secondary';
     }
 }
 
@@ -999,10 +1053,22 @@ function updatePrestamosChart(data) {
     
     if (prestamosChart) {
         prestamosChart.destroy();
-    }
-    
-    if (!data || !data.chartData) {
+    }    if (!data || !data.chartData || !hayDatosParaMostrar(data.chartData)) {
         console.error('No hay datos para el gráfico de préstamos');
+        // Mostrar un mensaje en el canvas cuando no hay datos
+        const canvas = document.getElementById('prestamosChart');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('No hay datos para el período y estado seleccionados', canvas.width / 2, canvas.height / 2);
+            
+            // Mensaje adicional con el estado y período actual
+            ctx.font = '14px Arial';
+            ctx.fillText(`Estado: ${currentPrestamoEstado} - Período: ${currentPrestamoPeriod}`, canvas.width / 2, (canvas.height / 2) + 30);
+        }
         return;
     }
     
@@ -1075,9 +1141,22 @@ function updatePrestamosChart(data) {
         datasets = allDatasets;
     }
     
-    // Crear el gráfico
+    // Crear el gráfico    // Determinar el tipo adecuado de gráfico según el período
+    let chartType = 'bar';
+    if (currentPrestamoPeriod === 'anual') {
+        // Para datos anuales es mejor usar líneas que barras
+        chartType = datasets.length > 1 ? 'bar' : 'line';
+    }
+    
+    // Título dinámico según el filtro seleccionado
+    let titulo = 'Estadísticas de Préstamos';
+    if (currentPrestamoEstado !== 'todos') {
+        titulo += ` - ${currentPrestamoEstado.charAt(0).toUpperCase() + currentPrestamoEstado.slice(1)}`;
+    }
+    titulo += ` (${currentPrestamoPeriod})`;
+    
     prestamosChart = new Chart(ctx, {
-        type: 'bar',
+        type: chartType,
         data: {
             labels: labels,
             datasets: datasets
@@ -1088,9 +1167,17 @@ function updatePrestamosChart(data) {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Estadísticas de Préstamos',
+                    text: titulo,
                     font: {
-                        size: 16
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 10
                     }
                 },
                 tooltip: {
@@ -1112,6 +1199,23 @@ function updatePrestamosChart(data) {
                     ticks: {
                         callback: function(value) {
                             return formatCurrency(value);
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Monto (COP)',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: currentPrestamoPeriod === 'semanal' ? 'Día' : 
+                             (currentPrestamoPeriod === 'mensual' ? 'Mes' : 'Año'),
+                        font: {
+                            weight: 'bold'
                         }
                     }
                 }

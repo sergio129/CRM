@@ -14,13 +14,16 @@ exports.getLoans = async (req, res) => {
         
         // Construir las condiciones de filtrado
         let where = {};
-          // Filtrar por estado si se especifica
+        
+        // Filtrar por estado si se especifica y no es 'todos'
         if (estado && estado !== 'todos') {
             // Verificar los diferentes posibles nombres de columna para estado
+            // Usar LIKE para hacer que la búsqueda sea más flexible
+            const estadoPattern = `%${estado}%`;
             where[Op.or] = [
-                { status: estado },
-                { estado: estado },
-                { loan_status: estado }
+                { status: { [Op.like]: estadoPattern } },
+                { estado: { [Op.like]: estadoPattern } },
+                { loan_status: { [Op.like]: estadoPattern } }
             ];
         }
         
@@ -53,16 +56,28 @@ exports.getLoans = async (req, res) => {
             }
             
             if (startDate && endDate) {
-                // Buscar en todos los posibles campos de fecha
-                where[Op.or] = [
-                    { createdAt: { [Op.between]: [startDate, endDate] } },
-                    { fecha: { [Op.between]: [startDate, endDate] } },
-                    { date: { [Op.between]: [startDate, endDate] } }
-                ];
+                // Usar un nuevo array para fecha para evitar sobrescribir los filtros de estado
+                const dateCondition = {
+                    [Op.or]: [
+                        { createdAt: { [Op.between]: [startDate, endDate] } },
+                        { fecha: { [Op.between]: [startDate, endDate] } },
+                        { date: { [Op.between]: [startDate, endDate] } }
+                    ]
+                };
+                
+                // Si ya hay condiciones para estado, combinarlos en AND
+                if (where[Op.or]) {
+                    where = {
+                        [Op.and]: [
+                            { [Op.or]: where[Op.or] },
+                            dateCondition
+                        ]
+                    };
+                } else {
+                    where = dateCondition;
+                }
             }
-        }
-
-        const loans = await Loan.findAll({
+        }const loans = await Loan.findAll({
             where,
             include: [
                 { model: Client, as: 'Client', attributes: ['full_name', 'id_number'] },
@@ -70,7 +85,25 @@ exports.getLoans = async (req, res) => {
             ]
         });
 
-        res.json(loans);
+        // Normalizar los estados de los préstamos para la visualización
+        const normalizedLoans = loans.map(loan => {
+            const loanObj = loan.toJSON();
+            
+            // Asegurar que el estado esté en formato estándar
+            if (loanObj.status && !loanObj.estado) {
+                loanObj.estado = loanObj.status;
+            } else if (!loanObj.status && loanObj.estado) {
+                loanObj.status = loanObj.estado;
+            } else if (!loanObj.status && !loanObj.estado) {
+                // Si no hay estado definido, asumir que está activo
+                loanObj.status = 'Activo';
+                loanObj.estado = 'Activo';
+            }
+            
+            return loanObj;
+        });
+
+        res.json(normalizedLoans);
     } catch (error) {
         console.error("Error al obtener préstamos:", error);
         res.status(500).json({ message: "Error al obtener préstamos", error });
