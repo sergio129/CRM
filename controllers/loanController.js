@@ -10,7 +10,53 @@ const { Op } = require('sequelize'); // Import Sequelize operators
 
 exports.getLoans = async (req, res) => {
     try {
+        const { periodo, estado } = req.query;
+        
+        // Construir las condiciones de filtrado
+        let where = {};
+        
+        // Filtrar por estado si se especifica
+        if (estado && estado !== 'todos') {
+            where.status = estado;
+        }
+        
+        // Filtrar por período si se especifica
+        if (periodo) {
+            const today = new Date();
+            let startDate, endDate;
+            
+            if (periodo === 'semanal') {
+                // Obtener el primer día de la semana actual (lunes)
+                const dayOfWeek = today.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+                const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Ajustar para que el lunes sea el primer día
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - diff);
+                startDate.setHours(0, 0, 0, 0);
+                
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                endDate.setHours(23, 59, 59, 999);
+            } else if (periodo === 'mensual') {
+                // Obtener el primer día del mes actual
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                // Obtener el último día del mes actual
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+            } else if (periodo === 'anual') {
+                // Obtener el primer día del año actual
+                startDate = new Date(today.getFullYear(), 0, 1);
+                // Obtener el último día del año actual
+                endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+            }
+            
+            if (startDate && endDate) {
+                where.createdAt = {
+                    [Op.between]: [startDate, endDate]
+                };
+            }
+        }
+
         const loans = await Loan.findAll({
+            where,
             include: [
                 { model: Client, as: 'Client', attributes: ['full_name', 'id_number'] },
                 { model: Client, as: 'CoSigner', attributes: ['full_name', 'id_number'] }

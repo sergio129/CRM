@@ -642,6 +642,17 @@ async function exportToPDF() {
             `;
         }
         
+        // Agregar sección de préstamos al reporte
+        if (prestamosChart) {
+            const prestamosImg = prestamosChart.toBase64Image();
+            reportContent.innerHTML += `
+                <div class="mb-4">
+                    <h4>Préstamos por Período</h4>
+                    <img src="${prestamosImg}" class="img-fluid" alt="Gráfico de Préstamos">
+                </div>
+            `;
+        }
+        
         // Agregar el elemento al cuerpo del documento temporalmente
         document.body.appendChild(reportContent);
         
@@ -712,15 +723,29 @@ function initEvents() {
 }
 
 // Inicialización cuando el documento esté listo
-// Función para cargar los datos de préstamos
+// Función para cargar los datos de préstamos según los filtros seleccionados
 async function fetchPrestamosData() {
     try {
         const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+            return null;
+        }
+        
+        // Mostrar indicador de carga
+        const tableBody = document.getElementById('tablaPrestamos');
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando préstamos...</td></tr>';
+        }
         
         // Construir los parámetros de filtrado
         let params = new URLSearchParams();
         params.append('periodo', currentPrestamoPeriod);
-        params.append('estado', currentPrestamoEstado);
+        
+        // Solo añadir el estado si no es "todos"
+        if (currentPrestamoEstado !== 'todos') {
+            params.append('estado', currentPrestamoEstado);
+        }
         
         const response = await fetch(`/api/loans?${params.toString()}`, {
             headers: {
@@ -737,8 +762,8 @@ async function fetchPrestamosData() {
         
         // Transformar los datos al formato esperado
         const data = {
-            loans: rawData,
-            chartData: prepareChartData(rawData)
+            loans: Array.isArray(rawData) ? rawData : (rawData.loans || []),
+            chartData: prepareChartData(Array.isArray(rawData) ? rawData : (rawData.loans || []))
         };
         
         prestamosData = data;
@@ -751,6 +776,15 @@ async function fetchPrestamosData() {
     } catch (error) {
         console.error('Error al cargar datos de préstamos:', error);
         showToast('Error', `No se pudieron cargar los préstamos: ${error.message}`, 'danger');
+        
+        // Mostrar mensaje de error en la tabla
+        const tableBody = document.getElementById('tablaPrestamos');
+        if (tableBody) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>Error al cargar datos: ${error.message}
+            </td></tr>`;
+        }
+        
         return null;
     }
 }
@@ -1067,8 +1101,8 @@ function initPrestamoEvents() {
     document.querySelectorAll('.prestamo-estado-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.prestamo-estado-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentPrestamoEstado = btn.dataset.estado;
+            this.classList.add('active');
+            currentPrestamoEstado = this.dataset.estado;
         });
     });
     
@@ -1076,39 +1110,55 @@ function initPrestamoEvents() {
     document.querySelectorAll('.prestamo-periodo-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.prestamo-periodo-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentPrestamoPeriod = btn.dataset.periodo;
+            this.classList.add('active');
+            currentPrestamoPeriod = this.dataset.periodo;
         });
     });
     
     // Botón aplicar filtros de préstamos
-    document.getElementById('aplicarFiltroPrestamos').addEventListener('click', function() {
-        fetchPrestamosData();
-    });
+    const aplicarBtn = document.getElementById('aplicarFiltroPrestamos');
+    if (aplicarBtn) {
+        aplicarBtn.addEventListener('click', function() {
+            showToast('Información', 'Actualizando datos de préstamos...', 'info');
+            fetchPrestamosData();
+        });
+    }
     
     // Botón reiniciar filtros de préstamos
-    document.getElementById('reiniciarFiltroPrestamos').addEventListener('click', function() {
-        // Resetear a los valores por defecto
-        currentPrestamoPeriod = 'semanal';
-        currentPrestamoEstado = 'todos';
-        
-        // Actualizar UI para reflejar estos cambios
-        document.querySelectorAll('.prestamo-periodo-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.periodo === 'semanal') {
-                btn.classList.add('active');
-            }
+    const reiniciarBtn = document.getElementById('reiniciarFiltroPrestamos');
+    if (reiniciarBtn) {
+        reiniciarBtn.addEventListener('click', function() {
+            // Resetear a los valores por defecto
+            currentPrestamoPeriod = 'semanal';
+            currentPrestamoEstado = 'todos';
+            
+            // Actualizar UI para reflejar estos cambios
+            document.querySelectorAll('.prestamo-periodo-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.periodo === 'semanal') {
+                    btn.classList.add('active');
+                }
+            });
+            
+            document.querySelectorAll('.prestamo-estado-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.estado === 'todos') {
+                    btn.classList.add('active');
+                }
+            });
+            
+            showToast('Información', 'Filtros reiniciados', 'info');
+            fetchPrestamosData();
         });
-        
-        document.querySelectorAll('.prestamo-estado-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.estado === 'todos') {
-                btn.classList.add('active');
-            }
+    }
+    
+    // Botón de detalle completo
+    const detalleBtn = document.getElementById('verDetallePrestamoBtn');
+    if (detalleBtn) {
+        detalleBtn.addEventListener('click', function() {
+            window.location.href = '/loans.html';
         });
-        
-        fetchPrestamosData();
-    });
+    }
 }
 
 // Función para formatear fechas
