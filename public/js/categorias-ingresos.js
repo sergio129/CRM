@@ -471,8 +471,23 @@ async function cambiarEstadoCategoria(categoriaId, nuevoEstado) {
         if (!confirmAction.isConfirmed) {
             return;
         }
+          // Primero obtener todos los datos actuales de la categoría
+        const catResponse = await fetch(`/api/categorias-ingreso/${categoriaId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
         
-        // Llamar a la API para actualizar estado
+        const catData = await catResponse.json();
+        if (!catData.success) {
+            throw new Error('Error al obtener datos de la categoría');
+        }
+        
+        const categoriaActual = catData.data;
+        
+        // Llamar a la API para actualizar estado incluyendo todos los campos requeridos
         const response = await fetch(`/api/categorias-ingreso/${categoriaId}`, {
             method: 'PUT',
             headers: {
@@ -480,6 +495,13 @@ async function cambiarEstadoCategoria(categoriaId, nuevoEstado) {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
+                nombre: categoriaActual.nombre,
+                descripcion: categoriaActual.descripcion,
+                porcentaje_retencion: categoriaActual.porcentaje_retencion,
+                requiere_cliente: categoriaActual.requiere_cliente,
+                permite_comision: categoriaActual.permite_comision,
+                es_credito: categoriaActual.es_credito,
+                categoria_padre_id: categoriaActual.categoria_padre_id,
                 es_activo: nuevoEstado
             })
         });
