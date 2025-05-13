@@ -144,12 +144,14 @@ function highlightCurrentModule() {
             document.getElementById('nav-roles')?.classList.add('active');
             document.getElementById('nav-administracion')?.classList.add('active');
             document.getElementById('administracionSubmenu')?.classList.add('show');
-            break;
-        case 'loans.html':
+            break;        case 'loans.html':
             document.getElementById('nav-loans')?.classList.add('active');
             break;
         case 'egresos.html':
             document.getElementById('nav-egresos')?.classList.add('active');
+            break;
+        case 'inventarios.html':
+            document.getElementById('nav-inventarios')?.classList.add('active');
             break;
         default:
             // No se encontró coincidencia
@@ -285,13 +287,22 @@ function setupModuleSpecificActions() {
                     <i class="fas fa-history me-1"></i> Historial
                 </button>
             `;
-            break;
-        case 'egresos.html':
+            break;        case 'egresos.html':
             actionsHtml = `
                 <!-- Los botones de acción para egresos ahora están en la interfaz principal -->
                 <div class="alert alert-info">
                     <small>Utilice los botones en la parte superior de la página</small>
                 </div>
+            `;
+            break;
+        case 'inventarios.html':
+            actionsHtml = `
+                <button class="btn btn-success btn-sm mb-2 w-100" id="exportExcel">
+                    <i class="fas fa-file-excel me-1"></i> Exportar Excel
+                </button>
+                <button class="btn btn-danger btn-sm mb-2 w-100" id="exportPDF">
+                    <i class="fas fa-file-pdf me-1"></i> Exportar PDF
+                </button>
             `;
             break;
         default:
