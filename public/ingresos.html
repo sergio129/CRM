@@ -275,8 +275,7 @@
                                     <div class="d-flex flex-wrap gap-2">
                                         <button class="btn btn-primary" id="btnNuevoIngreso">
                                             <i class="fas fa-plus me-1"></i> Nuevo Ingreso
-                                        </button>
-                                        <button class="btn btn-warning" id="btnAdministrarCategorias">
+                                        </button>                                        <button class="btn btn-warning" id="btnAdministrarCategorias" onclick="return irACategorias()">
                                             <i class="fas fa-tags me-1"></i> Categorías
                                         </button>
                                         <a href="/retenciones" class="btn btn-info">
@@ -1008,11 +1007,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
     <!-- Agregar el script del sidebar compartido -->
     <script src="js/sidebar-handler.js"></script>
-    <script src="js/ingresos.js"></script>
-    <script>
+    <script src="js/ingresos.js"></script>    <script>
         function logout() {
             localStorage.removeItem('token');
             window.location.href = '/login.html';
+        }
+        
+        function irACategorias() {
+            console.log("Función irACategorias ejecutada");
+            window.location.href = '/categorias-ingresos.html';
+            return false;
         }
 
         document.addEventListener('DOMContentLoaded', function() {

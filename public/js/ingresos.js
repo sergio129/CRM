@@ -3395,4 +3395,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Evento para filtrar clientes en la tabla
     document.getElementById('filtroBusquedaClientes').addEventListener('input', filtrarClientes);
+      // Evento para el botón de administrar categorías
+    const btnAdministrarCategorias = document.getElementById('btnAdministrarCategorias');
+    if (btnAdministrarCategorias) {
+        btnAdministrarCategorias.addEventListener('click', function(event) {
+            event.preventDefault(); // Prevenir comportamiento predeterminado
+            console.log("Botón Categorías clickeado - Redirigiendo a categorías de ingresos");
+            window.location.href = '/categorias-ingresos.html';
+        }, false);
+    } else {
+        console.error("No se encontró el botón con ID 'btnAdministrarCategorias'");
+    }
 });
