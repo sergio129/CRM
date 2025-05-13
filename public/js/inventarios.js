@@ -73,7 +73,7 @@ async function refreshToken() {
             return false;
         }
         
-        const response = await fetch('/api/users/verify-token', {
+        const response = await fetch('/api/auth/verify', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
