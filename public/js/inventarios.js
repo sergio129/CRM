@@ -13,6 +13,12 @@ let egresosMensualesChart = null;
 let comparativoFinancieroChart = null;
 let dashboardData = null;
 
+// Variables para préstamos
+let prestamosChart = null;
+let currentPrestamoPeriod = 'semanal';
+let currentPrestamoEstado = 'todos';
+let prestamosData = null;
+
 // Función para formatear moneda
 function formatCurrency(value) {
     return new Intl.NumberFormat('es-CO', { 
@@ -706,6 +712,415 @@ function initEvents() {
 }
 
 // Inicialización cuando el documento esté listo
+// Función para cargar los datos de préstamos
+async function fetchPrestamosData() {
+    try {
+        const token = localStorage.getItem('token');
+        
+        // Construir los parámetros de filtrado
+        let params = new URLSearchParams();
+        params.append('periodo', currentPrestamoPeriod);
+        params.append('estado', currentPrestamoEstado);
+        
+        const response = await fetch(`/api/loans?${params.toString()}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        // Obtener datos de la API
+        const rawData = await response.json();
+        
+        // Transformar los datos al formato esperado
+        const data = {
+            loans: rawData,
+            chartData: prepareChartData(rawData)
+        };
+        
+        prestamosData = data;
+        
+        // Actualizar la tabla y el gráfico
+        updatePrestamosTable(data);
+        updatePrestamosChart(data);
+        
+        return data;
+    } catch (error) {
+        console.error('Error al cargar datos de préstamos:', error);
+        showToast('Error', `No se pudieron cargar los préstamos: ${error.message}`, 'danger');
+        return null;
+    }
+}
+
+// Función para preparar los datos del gráfico basado en los préstamos recibidos
+function prepareChartData(loans) {
+    // Verificar si hay préstamos
+    if (!loans || !Array.isArray(loans) || loans.length === 0) {
+        return {
+            labels: [],
+            activos: [],
+            completados: [],
+            cancelados: [],
+            mora: []
+        };
+    }
+    
+    // Inicializar contadores según el período
+    let labels = [];
+    let activos = [];
+    let completados = [];
+    let cancelados = [];
+    let mora = [];
+    
+    if (currentPrestamoPeriod === 'semanal') {
+        labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        activos = new Array(7).fill(0);
+        completados = new Array(7).fill(0);
+        cancelados = new Array(7).fill(0);
+        mora = new Array(7).fill(0);
+        
+        // Procesar los préstamos para el período semanal
+        loans.forEach(loan => {
+            const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
+            const dayIndex = loanDate.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+            const dayMapped = dayIndex === 0 ? 6 : dayIndex - 1; // Convertir a 0 = Lunes, ..., 6 = Domingo
+            
+            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+            const status = loan.estado || loan.status || '';
+            
+            if (status.toLowerCase() === 'activo') {
+                activos[dayMapped] += amount;
+            } else if (status.toLowerCase() === 'completado') {
+                completados[dayMapped] += amount;
+            } else if (status.toLowerCase() === 'cancelado') {
+                cancelados[dayMapped] += amount;
+            } else if (status.toLowerCase() === 'mora') {
+                mora[dayMapped] += amount;
+            }
+        });
+        
+    } else if (currentPrestamoPeriod === 'mensual') {
+        labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        activos = new Array(12).fill(0);
+        completados = new Array(12).fill(0);
+        cancelados = new Array(12).fill(0);
+        mora = new Array(12).fill(0);
+        
+        // Procesar los préstamos para el período mensual
+        loans.forEach(loan => {
+            const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
+            const monthIndex = loanDate.getMonth(); // 0 = Enero, ..., 11 = Diciembre
+            
+            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+            const status = loan.estado || loan.status || '';
+            
+            if (status.toLowerCase() === 'activo') {
+                activos[monthIndex] += amount;
+            } else if (status.toLowerCase() === 'completado') {
+                completados[monthIndex] += amount;
+            } else if (status.toLowerCase() === 'cancelado') {
+                cancelados[monthIndex] += amount;
+            } else if (status.toLowerCase() === 'mora') {
+                mora[monthIndex] += amount;
+            }
+        });
+        
+    } else { // anual
+        const currentYear = new Date().getFullYear();
+        labels = [currentYear-2, currentYear-1, currentYear, currentYear+1, currentYear+2];
+        activos = new Array(5).fill(0);
+        completados = new Array(5).fill(0);
+        cancelados = new Array(5).fill(0);
+        mora = new Array(5).fill(0);
+        
+        // Procesar los préstamos para el período anual
+        loans.forEach(loan => {
+            const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
+            const year = loanDate.getFullYear();
+            const yearIndex = labels.indexOf(year);
+            
+            if (yearIndex !== -1) {
+                const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+                const status = loan.estado || loan.status || '';
+                
+                if (status.toLowerCase() === 'activo') {
+                    activos[yearIndex] += amount;
+                } else if (status.toLowerCase() === 'completado') {
+                    completados[yearIndex] += amount;
+                } else if (status.toLowerCase() === 'cancelado') {
+                    cancelados[yearIndex] += amount;
+                } else if (status.toLowerCase() === 'mora') {
+                    mora[yearIndex] += amount;
+                }
+            }
+        });
+    }
+    
+    return {
+        labels,
+        activos,
+        completados,
+        cancelados,
+        mora
+    };
+}
+
+// Función para actualizar la tabla de préstamos
+function updatePrestamosTable(data) {
+    const tableBody = document.getElementById('tablaPrestamos');
+    const loans = data?.loans || [];
+    
+    if (!tableBody || loans.length === 0) {
+        let messageText = 'No hay préstamos';
+        
+        if (currentPrestamoEstado !== 'todos') {
+            messageText += ` en estado "${currentPrestamoEstado}"`;
+        }
+        
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center">${messageText} en este momento</td></tr>`;
+        return;
+    }
+    
+    let html = '';
+    loans.forEach(loan => {
+        // Normalizar datos del préstamo para manejar diferentes formatos de API
+        const loanNumber = loan.loan_number || loan.numero || loan.id || '';
+        const clientName = loan.client?.full_name || loan.Client?.full_name || loan.cliente_nombre || 'Cliente';
+        const loanAmount = loan.amount_requested || loan.monto_total || loan.amount || 0;
+        const loanDate = loan.fecha || loan.createdAt || loan.date || new Date();
+        const loanStatus = loan.estado || loan.status || 'Activo';
+        
+        // Calcular progreso de pago
+        let pagado = loan.pagado || loan.paid_amount || 0;
+        let progreso = loanAmount > 0 ? (pagado / loanAmount) * 100 : 0;
+        // Si no hay información de pago pero hay dato de cuotas
+        if (progreso === 0 && loan.total_installments && loan.remaining_installments) {
+            progreso = ((loan.total_installments - loan.remaining_installments) / loan.total_installments) * 100;
+        }
+        
+        const estadoClass = getEstadoClass(loanStatus);
+        
+        html += `
+            <tr>
+                <td>${loanNumber}</td>
+                <td>${clientName}</td>
+                <td>${formatCurrency(loanAmount)}</td>
+                <td>${formatDate(loanDate)}</td>
+                <td><span class="badge ${estadoClass}">${loanStatus}</span></td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                            style="width: ${progreso}%" 
+                            aria-valuenow="${progreso}" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100">
+                            ${Math.round(progreso)}%
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tableBody.innerHTML = html;
+}
+
+// Función para obtener la clase CSS según el estado del préstamo
+function getEstadoClass(estado) {
+    switch (estado.toLowerCase()) {
+        case 'activo':
+            return 'bg-primary';
+        case 'completado':
+            return 'bg-success';
+        case 'cancelado':
+            return 'bg-danger';
+        case 'mora':
+            return 'bg-warning';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+// Función para actualizar el gráfico de préstamos
+function updatePrestamosChart(data) {
+    const ctx = document.getElementById('prestamosChart').getContext('2d');
+    
+    if (prestamosChart) {
+        prestamosChart.destroy();
+    }
+    
+    if (!data || !data.chartData) {
+        console.error('No hay datos para el gráfico de préstamos');
+        return;
+    }
+    
+    // Preparar los datos según el periodo seleccionado
+    let labels;
+    
+    if (currentPrestamoPeriod === 'semanal') {
+        labels = data.chartData.labels || ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    } else if (currentPrestamoPeriod === 'mensual') {
+        labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    } else { // anual
+        labels = data.chartData.labels || Array.from({length: 5}, (_, i) => (new Date().getFullYear() - 2 + i).toString());
+    }
+    
+    // Determinar qué conjuntos de datos mostrar según el filtro de estado
+    const allDatasets = [
+        {
+            label: 'Préstamos Activos',
+            data: data.chartData.activos || Array(labels.length).fill(0),
+            backgroundColor: 'rgba(13, 110, 253, 0.5)',
+            borderColor: 'rgba(13, 110, 253, 1)',
+            borderWidth: 1
+        },
+        {
+            label: 'Préstamos Completados',
+            data: data.chartData.completados || Array(labels.length).fill(0),
+            backgroundColor: 'rgba(25, 135, 84, 0.5)',
+            borderColor: 'rgba(25, 135, 84, 1)',
+            borderWidth: 1
+        },
+        {
+            label: 'Préstamos en Mora',
+            data: data.chartData.mora || Array(labels.length).fill(0),
+            backgroundColor: 'rgba(255, 193, 7, 0.5)',
+            borderColor: 'rgba(255, 193, 7, 1)',
+            borderWidth: 1
+        },
+        {
+            label: 'Préstamos Cancelados',
+            data: data.chartData.cancelados || Array(labels.length).fill(0),
+            backgroundColor: 'rgba(220, 53, 69, 0.5)',
+            borderColor: 'rgba(220, 53, 69, 1)',
+            borderWidth: 1
+        }
+    ];
+    
+    // Filtrar los datasets según el estado seleccionado
+    let datasets;
+    if (currentPrestamoEstado === 'todos') {
+        datasets = allDatasets;
+    } else if (currentPrestamoEstado === 'activos') {
+        datasets = [allDatasets[0]];
+    } else if (currentPrestamoEstado === 'completados') {
+        datasets = [allDatasets[1]];
+    } else if (currentPrestamoEstado === 'mora') {
+        datasets = [allDatasets[2]];
+    } else if (currentPrestamoEstado === 'cancelados') {
+        datasets = [allDatasets[3]];
+    } else {
+        datasets = allDatasets;
+    }
+    
+    // Crear el gráfico
+    prestamosChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Estadísticas de Préstamos',
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += formatCurrency(context.raw);
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Función para inicializar los eventos relacionados con préstamos
+function initPrestamoEvents() {
+    // Botones de filtro de estado de préstamos
+    document.querySelectorAll('.prestamo-estado-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.prestamo-estado-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentPrestamoEstado = btn.dataset.estado;
+        });
+    });
+    
+    // Botones de filtro de período de préstamos
+    document.querySelectorAll('.prestamo-periodo-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.prestamo-periodo-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentPrestamoPeriod = btn.dataset.periodo;
+        });
+    });
+    
+    // Botón aplicar filtros de préstamos
+    document.getElementById('aplicarFiltroPrestamos').addEventListener('click', function() {
+        fetchPrestamosData();
+    });
+    
+    // Botón reiniciar filtros de préstamos
+    document.getElementById('reiniciarFiltroPrestamos').addEventListener('click', function() {
+        // Resetear a los valores por defecto
+        currentPrestamoPeriod = 'semanal';
+        currentPrestamoEstado = 'todos';
+        
+        // Actualizar UI para reflejar estos cambios
+        document.querySelectorAll('.prestamo-periodo-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.periodo === 'semanal') {
+                btn.classList.add('active');
+            }
+        });
+        
+        document.querySelectorAll('.prestamo-estado-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.estado === 'todos') {
+                btn.classList.add('active');
+            }
+        });
+        
+        fetchPrestamosData();
+    });
+}
+
+// Función para formatear fechas
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(date);
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     try {
         // Verificar autenticación
@@ -716,9 +1131,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Inicializar eventos
         initEvents();
+        initPrestamoEvents();
         
         // Cargar datos iniciales
         fetchDashboardData();
+        fetchPrestamosData();
         
     } catch (error) {
         console.error('Error al inicializar la página:', error);

@@ -123,7 +123,7 @@
                 <!-- Filtros de período -->
                 <div class="filter-section periodo-selector">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <h5 class="mb-3"><i class="fas fa-calendar"></i> Seleccionar Período</h5>
                             <div class="btn-group" role="group" aria-label="Selección de período">
                                 <button type="button" class="btn btn-outline-primary periodo-btn active" data-periodo="semanal">Semanal</button>
@@ -131,14 +131,19 @@
                                 <button type="button" class="btn btn-outline-primary periodo-btn" data-periodo="anual">Anual</button>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <h5 class="mb-3"><i class="fas fa-filter"></i> Fecha</h5>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
                                 <input type="text" id="periodoDateRange" class="form-control" placeholder="Seleccionar rango de fechas">
-                                <button class="btn btn-primary" id="aplicarFiltro">Aplicar</button>
-                                <button class="btn btn-outline-secondary" id="reiniciarFiltro">Reiniciar</button>
                             </div>
+                        </div>
+                        
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12 text-end">
+                            <button class="btn btn-primary" id="aplicarFiltro">Aplicar Filtros</button>
+                            <button class="btn btn-outline-secondary" id="reiniciarFiltro">Reiniciar</button>
                         </div>
                     </div>
                 </div>
@@ -243,6 +248,46 @@
                                     <i class="fas fa-search me-1"></i> Ver detalle completo
                                 </button>
                             </div>
+                            
+                            <!-- Filtros específicos para préstamos -->
+                            <div class="filter-section mb-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-3"><i class="fas fa-filter"></i> Estado de Préstamos</h6>
+                                        <div class="btn-group" role="group" aria-label="Filtros de estado préstamos">
+                                            <button type="button" class="btn btn-outline-secondary prestamo-estado-btn active" data-estado="todos">Todos</button>
+                                            <button type="button" class="btn btn-outline-primary prestamo-estado-btn" data-estado="activos">Activos</button>
+                                            <button type="button" class="btn btn-outline-success prestamo-estado-btn" data-estado="completados">Completados</button>
+                                            <button type="button" class="btn btn-outline-danger prestamo-estado-btn" data-estado="cancelados">Cancelados</button>
+                                            <button type="button" class="btn btn-outline-warning prestamo-estado-btn" data-estado="mora">En Mora</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="mb-3"><i class="fas fa-calendar"></i> Período</h6>
+                                        <div class="btn-group" role="group" aria-label="Filtros de período préstamos">
+                                            <button type="button" class="btn btn-outline-primary prestamo-periodo-btn active" data-periodo="semanal">Semanal</button>
+                                            <button type="button" class="btn btn-outline-primary prestamo-periodo-btn" data-periodo="mensual">Mensual</button>
+                                            <button type="button" class="btn btn-outline-primary prestamo-periodo-btn" data-periodo="anual">Anual</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-12 text-end">
+                                        <button class="btn btn-primary" id="aplicarFiltroPrestamos">Aplicar Filtros</button>
+                                        <button class="btn btn-outline-secondary" id="reiniciarFiltroPrestamos">Reiniciar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Gráfico de préstamos -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="chart-container">
+                                        <canvas id="prestamosChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead class="table-dark">
