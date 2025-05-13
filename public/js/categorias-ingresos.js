@@ -20,44 +20,66 @@ function showToast(message, type = 'success') {
     `;
     
     const toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) {
-        const container = document.createElement('div');
-        container.id = 'toastContainer';
-        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        container.style.zIndex = '1080';
-        document.body.appendChild(container);
+    if (toastContainer) {
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+        
+        // Auto-remove after hiding
+        toastElement.addEventListener('hidden.bs.toast', function () {
+            toastElement.remove();
+        });
     }
-    
-    document.getElementById('toastContainer').innerHTML += toastHTML;
-    const toastElement = new bootstrap.Toast(document.getElementById(toastId));
-    toastElement.show();
 }
 
 // Inicializar interfaz
 async function inicializarInterfaz() {
+    console.log('Inicializando interfaz...');
+    
     // Mostrar nombre de usuario actual
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     if (userData.name) {
-        document.getElementById('currentUser').innerText = userData.name;
+        const currentUserElement = document.getElementById('currentUser');
+        if (currentUserElement) {
+            currentUserElement.innerText = userData.name;
+        } else {
+            console.warn('Elemento currentUser no encontrado');
+        }
     }
     
     // Evento de cierre de sesión
-    document.getElementById('logoutBtn').addEventListener('click', (e) => {
-        e.preventDefault();
-        localStorage.removeItem('token');
-        localStorage.removeItem('userData');
-        window.location.href = 'login.html';
-    });
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            localStorage.removeItem('userData');
+            window.location.href = 'login.html';
+        });
+    } else {
+        console.warn('Elemento logoutBtn no encontrado');
+    }
     
     // Evento para abrir modal de nueva categoría
-    document.getElementById('nuevaCategoriaBtn').addEventListener('click', () => {
-        abrirModalNuevaCategoria();
-    });
+    const nuevaCategoriaBtn = document.getElementById('nuevaCategoriaBtn');
+    if (nuevaCategoriaBtn) {
+        nuevaCategoriaBtn.addEventListener('click', () => {
+            abrirModalNuevaCategoria();
+        });
+    } else {
+        console.warn('Elemento nuevaCategoriaBtn no encontrado');
+    }
     
     // Evento para guardar categoría
-    document.getElementById('guardarCategoriaBtn').addEventListener('click', () => {
-        guardarCategoria();
-    });
+    const guardarCategoriaBtn = document.getElementById('guardarCategoriaBtn');
+    if (guardarCategoriaBtn) {
+        guardarCategoriaBtn.addEventListener('click', () => {
+            guardarCategoria();
+        });
+    } else {
+        console.warn('Elemento guardarCategoriaBtn no encontrado');
+    }
     
     // Cargar las categorías iniciales
     await cargarCategorias();
@@ -66,22 +88,78 @@ async function inicializarInterfaz() {
 // Cargar categorías desde el servidor
 async function cargarCategorias() {
     try {
-        const response = await fetch('/api/categorias-ingreso?incluirSubcategorias=true', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        console.log('Iniciando carga de categorías...');
+        console.log('Token disponible:', !!token);
         
-        const result = await response.json();
+        // Debug para verificar el toastContainer
+        const toastContainer = document.getElementById('toastContainer');
+        console.log('¿Existe toast container?', !!toastContainer);
         
-        if (!result.success) {
-            throw new Error(result.error || 'Error al cargar categorías');
+        try {
+            showToast('Cargando categorías...', 'success');
+        } catch (e) {
+            console.error('Error al mostrar toast:', e);
         }
         
-        categorias = result.data;
+        const url = '/api/categorias-ingreso?incluirSubcategorias=true';
+        console.log('URL de la petición:', url);
+        
+        // Para debugging - mostrar todos los headers
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+        console.log('Headers enviados:', headers);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        console.log('Respuesta recibida, status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`Error de servidor: ${response.status} ${response.statusText}`);
+        }
+          const result = await response.json();
+        console.log('Respuesta parseada:', result);
+        
+        if (result && typeof result === 'object') {
+            if (!result.success) {
+                throw new Error(result.error || 'Error al cargar categorías');
+            }
+            
+            if (Array.isArray(result.data)) {
+                categorias = result.data;
+            } else if (result.data === null || result.data === undefined) {
+                categorias = [];
+                console.warn('Los datos de categorías son null o undefined, usando array vacío');
+            } else if (typeof result.data === 'object') {
+                categorias = [result.data];
+                console.warn('Los datos de categorías no son un array pero son un objeto, convirtiéndolo a array');
+            } else {
+                categorias = [];
+                console.error('Formato de datos inesperado:', result.data);
+            }
+        } else {
+            // Si result no es un objeto, intentamos usarlo directamente como array de categorías
+            if (Array.isArray(result)) {
+                categorias = result;
+                console.warn('La respuesta no tiene el formato esperado (success, data), usando la respuesta directamente');
+            } else {
+                categorias = [];
+                console.error('Respuesta en formato desconocido, usando array vacío');
+            }
+        }
+        
         console.log('Categorías cargadas:', categorias);
+        
+        // Mostrar mensaje si no hay categorías
+        if (categorias.length === 0) {
+            document.getElementById('tablaCategorias').innerHTML = '<tr><td colspan="8" class="text-center">No hay categorías registradas</td></tr>';
+            showToast('No hay categorías para mostrar', 'info');
+            return;
+        }
         
         // Renderizar tabla de categorías
         renderizarTablaCategorias();
@@ -89,26 +167,56 @@ async function cargarCategorias() {
         // Actualizar select de categorías padre en el modal
         actualizarSelectCategoriaPadre();
         
+        showToast(`${categorias.length} categorías cargadas exitosamente`, 'success');
+        
     } catch (error) {
         console.error('Error al cargar categorías:', error);
+        document.getElementById('tablaCategorias').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error al cargar categorías</td></tr>';
         showToast('Error al cargar categorías: ' + error.message, 'error');
     }
 }
 
 // Función para renderizar la tabla de categorías
 function renderizarTablaCategorias() {
+    console.log('Renderizando tabla de categorías, total categorías:', categorias ? categorias.length : 0);
+    
     const tablaCategorias = document.getElementById('tablaCategorias');
+    if (!tablaCategorias) {
+        console.error('Error: Elemento tablaCategorias no encontrado en el DOM');
+        alert('Error al mostrar las categorías: No se pudo encontrar la tabla en la página.');
+        return;
+    }
+    
     tablaCategorias.innerHTML = '';
+    
+    if (!categorias || categorias.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="8" class="text-center">No hay categorías registradas</td>';
+        tablaCategorias.appendChild(tr);
+        return;
+    }
     
     // Primero agregar las categorías principales
     const categoriasPrincipales = categorias.filter(cat => !cat.categoria_padre_id);
+    console.log('Categorías principales:', categoriasPrincipales.length);
     
+    // Si no hay categorías principales, mostrar todas
+    if (categoriasPrincipales.length === 0) {
+        console.log('No hay categorías principales, mostrando todas las categorías');
+        categorias.forEach(categoria => {
+            tablaCategorias.appendChild(crearFilaCategoria(categoria, false));
+        });
+        return;
+    }
+    
+    // Mostrar categorías principales y sus subcategorías
     categoriasPrincipales.forEach(categoria => {
         // Renderizar categoría principal
         tablaCategorias.appendChild(crearFilaCategoria(categoria, false));
         
         // Renderizar subcategorías
         const subcategorias = categorias.filter(subcat => subcat.categoria_padre_id === categoria.id);
+        console.log(`Subcategorías de ${categoria.nombre}:`, subcategorias.length);
         subcategorias.forEach(subcategoria => {
             tablaCategorias.appendChild(crearFilaCategoria(subcategoria, true));
         });
@@ -395,13 +503,43 @@ async function cambiarEstadoCategoria(categoriaId, nuevoEstado) {
 }
 
 // Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM cargado, iniciando aplicación de categorías');
+    
     // Verificar token
     if (!token) {
+        console.warn('No hay token de autenticación');
         window.location.href = 'login.html';
         return;
     }
     
-    // Inicializar interfaz
-    inicializarInterfaz();
+    try {
+        // Añadir un mensaje inicial si existe el elemento tablaCategorias
+        const tablaCategorias = document.getElementById('tablaCategorias');
+        if (tablaCategorias) {
+            tablaCategorias.innerHTML = '<tr><td colspan="8" class="text-center">Cargando categorías...</td></tr>';
+        } else {
+            console.warn('Elemento tablaCategorias no encontrado');
+        }
+        
+        // Inicializar interfaz y añadir manejadores de eventos
+        await inicializarInterfaz();
+        
+        // Cargar las categorías
+        await cargarCategorias();
+    } catch (error) {
+        console.error('Error al inicializar la aplicación:', error);
+        if (typeof showToast === 'function') {
+            showToast('Error al inicializar: ' + error.message, 'error');
+        } else {
+            console.error('Función showToast no disponible');
+            alert('Error al inicializar la aplicación: ' + error.message);
+        }
+        
+        // Mostrar mensaje de error en la tabla si existe el elemento
+        const tablaCategorias = document.getElementById('tablaCategorias');
+        if (tablaCategorias) {
+            tablaCategorias.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error al cargar: ' + error.message + '</td></tr>';
+        }
+    }
 });
