@@ -1428,6 +1428,73 @@ function asegurarInputMontoPago() {
     return document.getElementById('montoPago');
 }
 
+// Función para actualizar la información del crédito seleccionado en el formulario principal
+function actualizarInfoCreditoSeleccionado(creditoId, numeroCredito, tipoCredito, montoPago) {
+    console.log('Actualizando información del crédito seleccionado', {
+        creditoId,
+        numeroCredito,
+        tipoCredito,
+        montoPago
+    });
+    
+    // Asegurar que los elementos existan
+    const creditoIdElement = asegurarInputCreditoIdSeleccionado();
+    const montoPagoElement = asegurarInputMontoPago();
+    
+    // Actualizar los valores
+    creditoIdElement.value = creditoId;
+    montoPagoElement.value = montoPago;
+    
+    // Actualizar información visible en el formulario si existen los elementos
+    const infoCredito = document.getElementById('infoCredito');
+    if (infoCredito) {
+        infoCredito.textContent = `Crédito #${numeroCredito} (${tipoCredito})`;
+        infoCredito.style.display = 'block';
+    }
+    
+    const infoMontoPago = document.getElementById('infoMontoPago');
+    if (infoMontoPago) {
+        infoMontoPago.textContent = `Monto a pagar: $${formatearNumero(montoPago)}`;
+        infoMontoPago.style.display = 'block';
+    } else {
+        // Si no existe el elemento de información, crear uno
+        const categoriaDiv = document.querySelector('.categoria-container') || document.getElementById('categoriaContainer');
+        if (categoriaDiv) {
+            const nuevoInfoMonto = document.createElement('div');
+            nuevoInfoMonto.id = 'infoMontoPago';
+            nuevoInfoMonto.className = 'alert alert-info mt-2';
+            nuevoInfoMonto.textContent = `Monto a pagar: $${formatearNumero(montoPago)}`;
+            categoriaDiv.appendChild(nuevoInfoMonto);
+        }
+    }
+    
+    // Actualizar el campo de monto visible si existe
+    const montoInput = document.getElementById('monto');
+    if (montoInput) {
+        montoInput.value = montoPago;
+        // Disparar evento de cambio para recalcular valores si es necesario
+        const event = new Event('input', { bubbles: true });
+        montoInput.dispatchEvent(event);
+    }
+    
+    // Actualizar el campo de categoría a "Pago de Cuota" si existe
+    const categoriaSelect = document.getElementById('categoriaIngreso');
+    if (categoriaSelect && typeof CATEGORIA_PAGO_CUOTA_ID !== 'undefined') {
+        $(categoriaSelect).val(CATEGORIA_PAGO_CUOTA_ID).trigger('change');
+    }
+    
+    // Establecer que es un pago de crédito
+    const esPagoCreditoInput = document.getElementById('esPagoCredito') || document.createElement('input');
+    if (!document.getElementById('esPagoCredito')) {
+        esPagoCreditoInput.type = 'hidden';
+        esPagoCreditoInput.id = 'esPagoCredito';
+        esPagoCreditoInput.name = 'esPagoCredito';
+        const form = document.getElementById('ingresoForm') || document.body;
+        form.appendChild(esPagoCreditoInput);
+    }
+    esPagoCreditoInput.value = '1';
+}
+
 // Función para anular un ingreso
 function anularIngreso(id) {
     // Mostrar modal de confirmación
