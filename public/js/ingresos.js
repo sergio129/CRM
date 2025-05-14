@@ -1396,6 +1396,38 @@ function asegurarInputCreditoIdSeleccionado() {
     return document.getElementById('creditoIdSeleccionado');
 }
 
+// Función para asegurar que existe el input montoPago
+function asegurarInputMontoPago() {
+    if (!document.getElementById('montoPago')) {
+        console.log('Creando elemento montoPago');
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.id = 'montoPago';
+        input.name = 'montoPago';
+        input.value = '0';
+        
+        // Si existe valorPagoModal, tomar su valor
+        const valorPagoModal = document.getElementById('valorPagoModal');
+        if (valorPagoModal) {
+            input.value = valorPagoModal.value || '0';
+            
+            // Actualizar montoPago cuando cambie valorPagoModal
+            valorPagoModal.addEventListener('change', function() {
+                document.getElementById('montoPago').value = this.value;
+            });
+            
+            valorPagoModal.addEventListener('input', function() {
+                document.getElementById('montoPago').value = this.value;
+            });
+        }
+        
+        // Insertar en el formulario o en el body si no hay formulario
+        const form = document.getElementById('ingresoForm') || document.body;
+        form.appendChild(input);
+    }
+    return document.getElementById('montoPago');
+}
+
 // Función para anular un ingreso
 function anularIngreso(id) {
     // Mostrar modal de confirmación
@@ -2139,13 +2171,14 @@ async function seleccionarCredito(creditoId, numeroCredito, tipoCredito, saldoAc
             if (montoPago) {
                 montoPago.value = saldoActual;
                 montoPago.max = saldoActual;
-            }
+            }            // Guardar ID del crédito en campo oculto para su uso posterior
+            // Asegurar que el elemento exista usando la función auxiliar
+            const creditoIdInput = asegurarInputCreditoIdSeleccionado();
+            creditoIdInput.value = creditoId;
             
-            // Guardar ID del crédito en campo oculto para su uso posterior
-            const creditoIdInput = document.getElementById('creditoIdSeleccionado');
-            if (creditoIdInput) {
-                creditoIdInput.value = creditoId;
-            }
+            // También asegurar que exista el elemento montoPago
+            const montoPagoInput = asegurarInputMontoPago();
+            montoPagoInput.value = saldoActual;
             
             // Mostrar botón de confirmación
             const btnConfirmar = document.getElementById('btnConfirmarSeleccion');
@@ -2703,27 +2736,34 @@ function confirmarSeleccionCredito() {
     try {
         console.log('Confirmando selección de crédito');
         
-        // Obtener valores de los campos - con verificación para evitar errores
-        const creditoIdElement = document.getElementById('creditoIdSeleccionado');
-        if (!creditoIdElement) {
-            console.error('Elemento creditoIdSeleccionado no encontrado');
+        // Asegurar que el elemento creditoIdSeleccionado exista
+        const creditoIdElement = asegurarInputCreditoIdSeleccionado();
+        if (!creditoIdElement.value) {
+            console.error('Elemento creditoIdSeleccionado existe pero no tiene valor');
             showToast('Error al obtener datos del crédito', 'error');
             return;
         }
         
-        const creditoId = creditoIdElement.value;
-        
-        // Verificar el elemento de montoPago o usar valorPagoModal como alternativa
+        const creditoId = creditoIdElement.value;        // Verificar el elemento de montoPago o usar valorPagoModal como alternativa
         let montoPago = 0;
-        const montoPagoElement = document.getElementById('montoPago');
-        const valorPagoModalElement = document.getElementById('valorPagoModal');
+        // Usar la función para asegurar que el elemento montoPago exista
+        const montoPagoElement = asegurarInputMontoPago();
         
-        if (montoPagoElement) {
-            montoPago = parseFloat(montoPagoElement.value) || 0;
-        } else if (valorPagoModalElement) {
-            montoPago = parseFloat(valorPagoModalElement.value) || 0;
-        } else {
-            console.error('No se encontró elemento montoPago ni valorPagoModal');
+        // Leer el valor del elemento montoPago
+        montoPago = parseFloat(montoPagoElement.value) || 0;
+        
+        if (montoPago <= 0) {
+            // Si el monto es 0, intentar leer directamente de valorPagoModal
+            const valorPagoModalElement = document.getElementById('valorPagoModal');
+            if (valorPagoModalElement) {
+                montoPago = parseFloat(valorPagoModalElement.value) || 0;
+                // Actualizar el elemento montoPago con este valor
+                montoPagoElement.value = valorPagoModalElement.value || '0';
+            }
+        }
+        
+        if (montoPago <= 0) {
+            console.error('No se pudo obtener un monto de pago válido');
             showToast('Error al obtener el monto del pago', 'error');
             return;
         }
@@ -2792,6 +2832,10 @@ function confirmarSeleccionCredito() {
 
 // Añadir inicialización para confirmar pago cuando el documento esté cargado
 document.addEventListener('DOMContentLoaded', function() {
+    // Asegurar que existan los inputs ocultos necesarios
+    asegurarInputCreditoIdSeleccionado();
+    asegurarInputMontoPago();
+
     // Intentar asignar el evento al botón de confirmar pago
     const btnConfirmarPago = document.getElementById('btnConfirmarPago');
     if (btnConfirmarPago) {
@@ -2812,6 +2856,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (clienteCreditoModal) {
             clienteCreditoModal.addEventListener('shown.bs.modal', function() {
                 console.log('Modal mostrada, buscando el botón btnConfirmarPagoCredito');
+                // Asegurar nuevamente que existan los inputs ocultos necesarios
+                asegurarInputCreditoIdSeleccionado();
+                asegurarInputMontoPago();
+                
                 const btnPagoCredito = document.getElementById('btnConfirmarPagoCredito');
                 if (btnPagoCredito) {
                     console.log('Botón encontrado, asignando evento');
@@ -2863,11 +2911,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ejecutar una vez al inicio para configurar estado inicial
         actualizarValorPagoSegunTipo();
-    }
-
-    // Asignar eventos dinámicamente cuando se abra el modal
+    }    // Asignar eventos dinámicamente cuando se abra el modal
     $('#clienteCreditoModal').on('shown.bs.modal', function () {
         console.log('Modal de crédito abierta - asignando eventos');
+        
+        // Asegurar que exista el input creditoIdSeleccionado
+        asegurarInputCreditoIdSeleccionado();
         
         // Buscar por todos los posibles IDs de botones
         const posiblesIdsBotones = ['btnConfirmarPago', 'btnConfirmarSeleccion', 'btnConfirmarPagoCredito'];
@@ -2876,7 +2925,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const boton = document.getElementById(id);
             if (boton) {
                 console.log(`Encontrado botón con ID ${id} - asignando evento`);
-                boton.onclick = confirmarSeleccionCredito;
+                // Usar addEventListener en lugar de onclick para evitar sobreescribir otros eventos
+                boton.removeEventListener('click', confirmarSeleccionCredito); // Remover para evitar duplicados
+                boton.addEventListener('click', confirmarSeleccionCredito);
             }
         });
     });
@@ -3448,18 +3499,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Evento para guardar ingreso
     document.getElementById('btnGuardarIngreso').addEventListener('click', guardarIngreso);
-    
-    // Evento para buscar cliente por documento
-    document.getElementById('btnBuscarCliente').addEventListener('click', buscarClientePorDocumento);
+      // Evento para buscar cliente por documento
+    const btnBuscarCliente = document.getElementById('btnBuscarCliente');
+    if (btnBuscarCliente) {
+        btnBuscarCliente.addEventListener('click', buscarClientePorDocumento);
+    } else {
+        console.log('Elemento btnBuscarCliente no encontrado');
+    }
     
     // Evento para buscar cliente por documento en el modal
-    document.getElementById('btnBuscarClienteModal').addEventListener('click', buscarClientePorDocumentoModal);
+    const btnBuscarClienteModal = document.getElementById('btnBuscarClienteModal');
+    if (btnBuscarClienteModal) {
+        btnBuscarClienteModal.addEventListener('click', buscarClientePorDocumentoModal);
+    } else {
+        console.log('Elemento btnBuscarClienteModal no encontrado');
+    }
     
     // Evento para cargar lista completa de clientes
-    document.getElementById('btnCargarListaClientes').addEventListener('click', cargarListaClientes);
+    const btnCargarListaClientes = document.getElementById('btnCargarListaClientes');
+    if (btnCargarListaClientes) {
+        btnCargarListaClientes.addEventListener('click', cargarListaClientes);
+    } else {
+        console.log('Elemento btnCargarListaClientes no encontrado');
+    }
     
     // Evento para filtrar clientes en la tabla
-    document.getElementById('filtroBusquedaClientes').addEventListener('input', filtrarClientes);
+    const filtroBusquedaClientes = document.getElementById('filtroBusquedaClientes');
+    if (filtroBusquedaClientes) {
+        filtroBusquedaClientes.addEventListener('input', filtrarClientes);
+    } else {
+        console.log('Elemento filtroBusquedaClientes no encontrado');
+    }
       // Evento para el botón de administrar categorías
     const btnAdministrarCategorias = document.getElementById('btnAdministrarCategorias');
     if (btnAdministrarCategorias) {
