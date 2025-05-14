@@ -762,11 +762,18 @@ async function fetchPrestamosData() {
         
         // Obtener datos de la API
         const rawData = await response.json();
+          // Transformar los datos al formato esperado
+        const loansArray = Array.isArray(rawData) ? rawData : (rawData.loans || []);
         
-        // Transformar los datos al formato esperado
+        console.log(`Se recibieron ${loansArray.length} préstamos del servidor`);
+        if (loansArray.length > 0) {
+            console.log(`Primer préstamo:`, loansArray[0]);
+            console.log(`Último préstamo:`, loansArray[loansArray.length - 1]);
+        }
+        
         const data = {
-            loans: Array.isArray(rawData) ? rawData : (rawData.loans || []),
-            chartData: prepareChartData(Array.isArray(rawData) ? rawData : (rawData.loans || []))
+            loans: loansArray,
+            chartData: prepareChartData(loansArray)
         };
         
         prestamosData = data;
@@ -796,6 +803,7 @@ async function fetchPrestamosData() {
 function prepareChartData(loans) {
     // Verificar si hay préstamos
     if (!loans || !Array.isArray(loans) || loans.length === 0) {
+        console.log('No hay préstamos disponibles para generar el gráfico');
         return {
             labels: [],
             activos: [],
@@ -804,6 +812,8 @@ function prepareChartData(loans) {
             mora: []
         };
     }
+    
+    console.log(`Preparando datos para gráfico con ${loans.length} préstamos. Período: ${currentPrestamoPeriod}, Estado: ${currentPrestamoEstado}`);
     
     // Inicializar contadores según el período
     let labels = [];
@@ -842,67 +852,83 @@ function prepareChartData(loans) {
                 activos[dayMapped] += amount;
             }
         });
+        } else if (currentPrestamoPeriod === 'mensual') {
+        // Crear etiquetas para cada día del mes actual
+        const today = new Date();
+        const daysInCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         
-    } else if (currentPrestamoPeriod === 'mensual') {
+        labels = Array.from({ length: daysInCurrentMonth }, (_, i) => (i + 1).toString());
+        activos = new Array(daysInCurrentMonth).fill(0);
+        completados = new Array(daysInCurrentMonth).fill(0);
+        cancelados = new Array(daysInCurrentMonth).fill(0);
+        mora = new Array(daysInCurrentMonth).fill(0);
+        
+        console.log(`Generando datos para vista mensual: ${daysInCurrentMonth} días en el mes actual`);
+        console.log(`Mes actual: ${today.getMonth() + 1}/${today.getFullYear()}`);
+        
+        // Procesar los préstamos para mostrar por día
+        loans.forEach(loan => {
+            const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
+            
+            // Solo procesar préstamos del mes actual
+            if (loanDate.getMonth() === today.getMonth() && loanDate.getFullYear() === today.getFullYear()) {
+                const dayIndex = loanDate.getDate() - 1; // Los días empiezan en 1, pero los arrays en 0
+                
+                const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+                const status = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
+                
+                console.log(`Préstamo encontrado para el día ${loanDate.getDate()}, monto: ${amount}, estado: ${status}`);
+                
+                if (status.includes('activ')) {
+                    activos[dayIndex] += amount;
+                } else if (status.includes('complet') || status.includes('pagad')) {
+                    completados[dayIndex] += amount;
+                } else if (status.includes('cancel')) {
+                    cancelados[dayIndex] += amount;
+                } else if (status.includes('mora') || status.includes('vencid')) {
+                    mora[dayIndex] += amount;
+                } else {
+                    activos[dayIndex] += amount;
+                }
+            }
+        });
+          } else { // anual
+        // Mostrar los meses del año actual
+        const currentYear = new Date().getFullYear();
         labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         activos = new Array(12).fill(0);
         completados = new Array(12).fill(0);
         cancelados = new Array(12).fill(0);
         mora = new Array(12).fill(0);
         
-        // Procesar los préstamos para el período mensual
-        loans.forEach(loan => {
-            const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
-            const monthIndex = loanDate.getMonth(); // 0 = Enero, ..., 11 = Diciembre
-            
-            const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);            // Normalizar el estado y tener en cuenta posibles variaciones
-            const status = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
-            
-            if (status.includes('activ')) {
-                activos[monthIndex] += amount;
-            } else if (status.includes('complet') || status.includes('pagad')) {
-                completados[monthIndex] += amount;
-            } else if (status.includes('cancel')) {
-                cancelados[monthIndex] += amount;
-            } else if (status.includes('mora') || status.includes('vencid')) {
-                mora[monthIndex] += amount;
-            } else {
-                // Si no se puede determinar un estado específico, 
-                // asignar al estado activo por defecto
-                activos[monthIndex] += amount;
-            }
-        });
-        
-    } else { // anual
-        const currentYear = new Date().getFullYear();
-        labels = [currentYear-2, currentYear-1, currentYear, currentYear+1, currentYear+2];
-        activos = new Array(5).fill(0);
-        completados = new Array(5).fill(0);
-        cancelados = new Array(5).fill(0);
-        mora = new Array(5).fill(0);
+        console.log(`Generando datos para vista anual del año ${currentYear}`);
         
         // Procesar los préstamos para el período anual
         loans.forEach(loan => {
             const loanDate = new Date(loan.createdAt || loan.fecha || loan.date);
-            const year = loanDate.getFullYear();
-            const yearIndex = labels.indexOf(year);
             
-            if (yearIndex !== -1) {                const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+            // Solo procesar préstamos del año actual
+            if (loanDate.getFullYear() === currentYear) {
+                const monthIndex = loanDate.getMonth(); // 0 = Enero, 1 = Febrero, etc.
+                const amount = parseFloat(loan.amount_requested || loan.monto_total || loan.amount || 0);
+                
                 // Normalizar el estado y tener en cuenta posibles variaciones
                 const status = (loan.estado || loan.status || loan.loan_status || '').toLowerCase();
                 
+                console.log(`Préstamo encontrado para el mes ${monthIndex + 1}, monto: ${amount}, estado: ${status}`);
+                
                 if (status.includes('activ')) {
-                    activos[yearIndex] += amount;
+                    activos[monthIndex] += amount;
                 } else if (status.includes('complet') || status.includes('pagad')) {
-                    completados[yearIndex] += amount;
+                    completados[monthIndex] += amount;
                 } else if (status.includes('cancel')) {
-                    cancelados[yearIndex] += amount;
+                    cancelados[monthIndex] += amount;
                 } else if (status.includes('mora') || status.includes('vencid')) {
-                    mora[yearIndex] += amount;
+                    mora[monthIndex] += amount;
                 } else {
                     // Si no se puede determinar un estado específico, 
                     // asignar al estado activo por defecto
-                    activos[yearIndex] += amount;
+                    activos[monthIndex] += amount;
                 }
             }
         });
@@ -1053,7 +1079,9 @@ function updatePrestamosChart(data) {
     
     if (prestamosChart) {
         prestamosChart.destroy();
-    }    if (!data || !data.chartData || !hayDatosParaMostrar(data.chartData)) {
+    }
+    
+    if (!data || !data.chartData || !hayDatosParaMostrar(data.chartData)) {
         console.error('No hay datos para el gráfico de préstamos');
         // Mostrar un mensaje en el canvas cuando no hay datos
         const canvas = document.getElementById('prestamosChart');
@@ -1071,18 +1099,45 @@ function updatePrestamosChart(data) {
         }
         return;
     }
-    
-    console.log('Datos para el gráfico:', data.chartData);
-    
-    // Preparar los datos según el periodo seleccionado
-    let labels;
+      // Determinar el título adecuado según el período
+    let chartTitle = 'Estadísticas de Préstamos';
+    let xAxisTitle = '';
     
     if (currentPrestamoPeriod === 'semanal') {
-        labels = data.chartData.labels || ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        chartTitle += ' (semanal)';
+        xAxisTitle = 'Día de la Semana';
     } else if (currentPrestamoPeriod === 'mensual') {
-        labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    } else { // anual
-        labels = data.chartData.labels || Array.from({length: 5}, (_, i) => (new Date().getFullYear() - 2 + i).toString());
+        chartTitle += ' (mensual)';
+        xAxisTitle = 'Día del Mes';
+    } else if (currentPrestamoPeriod === 'anual') {
+        chartTitle += ' (anual)';
+        xAxisTitle = 'Mes';
+    }
+    
+    // Añadir estado al título si no es "todos"
+    if (currentPrestamoEstado !== 'todos') {
+        chartTitle += ` - ${currentPrestamoEstado.charAt(0).toUpperCase() + currentPrestamoEstado.slice(1)}`;
+    }
+    
+    // Usar la variable chartTitle como título del gráfico
+    const titulo = chartTitle;
+    
+    console.log('Datos para el gráfico:', data.chartData);
+      // Preparar los datos según el periodo seleccionado
+    // Usar las etiquetas que ya fueron generadas en prepareChartData
+    let labels = data.chartData.labels || [];
+    
+    // Solo usamos etiquetas de respaldo si no tenemos datos
+    if (labels.length === 0) {
+        if (currentPrestamoPeriod === 'semanal') {
+            labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        } else if (currentPrestamoPeriod === 'mensual') {
+            // Para mensual, creamos etiquetas para cada día del mes actual
+            const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            labels = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+        } else { // anual
+            labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        }
     }
     
     // Verificar si hay datos en los arrays
@@ -1147,13 +1202,8 @@ function updatePrestamosChart(data) {
         // Para datos anuales es mejor usar líneas que barras
         chartType = datasets.length > 1 ? 'bar' : 'line';
     }
-    
-    // Título dinámico según el filtro seleccionado
-    let titulo = 'Estadísticas de Préstamos';
-    if (currentPrestamoEstado !== 'todos') {
-        titulo += ` - ${currentPrestamoEstado.charAt(0).toUpperCase() + currentPrestamoEstado.slice(1)}`;
-    }
-    titulo += ` (${currentPrestamoPeriod})`;
+      // Usar el título que ya definimos arriba (chartTitle) para mantener consistencia
+    // No necesitamos redefinir el título aquí
     
     prestamosChart = new Chart(ctx, {
         type: chartType,
@@ -1192,14 +1242,23 @@ function updatePrestamosChart(data) {
                         }
                     }
                 }
-            },
-            scales: {
+            },            scales: {
                 y: {
                     beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Monto (COP)'
+                    },
                     ticks: {
                         callback: function(value) {
                             return formatCurrency(value);
                         }
+                    },
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: xAxisTitle
                     },
                     title: {
                         display: true,

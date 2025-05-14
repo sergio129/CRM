@@ -55,17 +55,21 @@ exports.getLoans = async (req, res) => {
                 
                 endDate = new Date(startDate);
                 endDate.setDate(startDate.getDate() + 6);
-                endDate.setHours(23, 59, 59, 999);
-            } else if (periodo === 'mensual') {
+                endDate.setHours(23, 59, 59, 999);            } else if (periodo === 'mensual') {
                 // Obtener el primer día del mes actual
                 startDate = new Date(today.getFullYear(), today.getMonth(), 1);
                 // Obtener el último día del mes actual
                 endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+                
+                // Log para depuración
+                console.log(`Filtro mensual: Buscando préstamos entre ${startDate.toISOString()} y ${endDate.toISOString()}`);
             } else if (periodo === 'anual') {
                 // Obtener el primer día del año actual
                 startDate = new Date(today.getFullYear(), 0, 1);
                 // Obtener el último día del año actual
                 endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+                
+                console.log(`Filtro anual: Buscando préstamos entre ${startDate.toISOString()} y ${endDate.toISOString()}`);
             }
             
             if (startDate && endDate) {
